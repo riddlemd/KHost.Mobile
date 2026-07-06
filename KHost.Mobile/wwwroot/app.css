@@ -217,7 +217,12 @@ html, body {
 
 /* ---- Sortable song table ------------------------------------------------ */
 
-.table-scroll { overflow-x: hidden; }   /* no horizontal scroll — columns share the width instead */
+/* Full-bleed: pull the table out past the page's 1rem side padding so rows span edge-to-edge. */
+.table-scroll {
+    overflow-x: hidden;   /* no horizontal scroll — columns share the width instead */
+    margin-left: -1rem;
+    margin-right: -1rem;
+}
 
 .song-table {
     width: 100%;
@@ -278,6 +283,12 @@ html, body {
     border-bottom: 1px solid var(--kh-border);
     overflow-wrap: anywhere;   /* wrap long titles/artists instead of forcing the table wider */
 }
+
+/* Keep content off the very screen edge now that rows are full-bleed. */
+.song-table th:first-child,
+.song-table td:first-child { padding-left: 0.9rem; }
+.song-table th:last-child,
+.song-table td:last-child { padding-right: 0.9rem; }
 
 .song-table thead th {
     font-size: 0.62rem;
