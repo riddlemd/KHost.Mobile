@@ -175,7 +175,7 @@ html, body {
 
 /* ---- Star / confidence rating ------------------------------------------- */
 
-.stars { display: inline-flex; gap: 0.15rem; }
+.stars { position: relative; display: inline-flex; gap: 0.15rem; }
 
 .stars__star {
     background: none;
@@ -190,6 +190,22 @@ html, body {
 .stars__star.is-filled { color: #f5b301; }   /* filled = gold, brand-neutral and readable in both themes */
 .stars__star:disabled { cursor: default; }
 .stars--readonly .stars__star { cursor: default; }
+
+/* Unrated (0) = unsung: fade the empty stars and float an "unsung" label over them. */
+.stars--unrated .stars__star { opacity: 0.35; }
+.stars__unsung {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;   /* taps fall straight through to the stars underneath */
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--kh-text-muted);
+}
 
 .empty-state {
     text-align: center;
@@ -210,17 +226,53 @@ html, body {
     font-size: 0.75rem;
 }
 
-/* Proportional column widths so all six fit without scrolling. */
-.song-table thead th:nth-child(1) { width: 27%; }   /* Song */
-.song-table thead th:nth-child(2) { width: 18%; }   /* Artist */
-.song-table thead th:nth-child(3) { width: 17%; }   /* Genre */
-.song-table thead th:nth-child(4) { width: 13%; }   /* Sung */
-.song-table thead th:nth-child(5) { width: 18%; }   /* How it went */
-.song-table thead th:nth-child(6) { width: 7%; }    /* actions */
+/* Song/Artist takes all remaining width; favorite + rating shrink to their content. */
+.song-table thead th:nth-child(1) { width: 2.1rem; }   /* favorite star */
+.song-table thead th:nth-child(2) { width: auto; }     /* Song / Artist / Genre stacked — absorbs the rest */
+.song-table thead th:nth-child(3) { width: 5.75rem; }  /* How it went — just the 5 stars */
+.song-table th:nth-child(1),
+.song-table th:nth-child(3),
+.song-table td:nth-child(1),
+.song-table td:nth-child(3) { white-space: nowrap; }
+
+/* Swipe-to-remove: rows slide horizontally; vertical scroll stays native via pan-y. */
+.song-table tbody tr {
+    touch-action: pan-y;
+    background: var(--kh-surface);   /* opaque so a sliding row doesn't show rows beneath it */
+}
+.song-row--swiping { cursor: grabbing; }
+
+/* The revealed action strip that grows in the space a swiped row uncovers. */
+#kh-swipe-label {
+    position: fixed;
+    z-index: 50;
+    display: none;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    padding-right: 0.7rem;
+    overflow: hidden;
+    white-space: nowrap;
+    box-sizing: border-box;
+    background: var(--kh-danger);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    pointer-events: none;
+}
+#kh-swipe-label.is-armed { filter: brightness(1.12); }
+
+.table-hint {
+    font-size: 0.72rem;
+    color: var(--kh-text-muted);
+    margin: 0 0.25rem 0.4rem;
+}
 
 .song-table th,
 .song-table td {
-    padding: 0.4rem 0.35rem;
+    padding: 0.6rem 0.2rem;   /* roomier rows; tighter left/right to conserve width */
     text-align: left;
     vertical-align: middle;
     border-bottom: 1px solid var(--kh-border);
@@ -241,9 +293,33 @@ html, body {
 .song-table__arrow { color: var(--kh-primary); }
 .song-table__center { text-align: center; }
 .song-table__title { font-weight: 600; color: var(--kh-text); }
-.song-table__notes { color: var(--kh-text-muted); font-size: 0.68rem; font-style: italic; margin-top: 0.1rem; }
+.song-table__artist { font-size: 0.9em; opacity: 0.65; margin-top: 0.05rem; }   /* singer: smaller + dimmer than the song title */
+.song-table__sep { color: var(--kh-border); margin: 0 0.2rem; }
+.song-table__genre {   /* genre as a small tag under the artist, not its own column */
+    display: inline-block;
+    margin-top: 0.3rem;
+    padding: 0.04rem 0.45rem;
+    font-size: 0.8em;
+    line-height: 1.4;
+    border-radius: 999px;
+    background-color: var(--kh-surface-2);
+    color: var(--kh-text-muted);
+}
 .song-table__muted { color: var(--kh-text-muted); }
 .song-table .stars__star { font-size: 0.85rem; padding: 0.01rem; }   /* compact stars so the rating column fits */
+
+.fav-btn {
+    background: none;
+    border: none;
+    padding: 0.1rem;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--kh-border);          /* not-favorited: same faint grey as an empty star */
+    transition: color 0.1s ease, transform 0.1s ease;
+}
+.fav-btn.is-fav { color: #f5b301; }   /* favorited = gold */
+.fav-btn:active { transform: scale(0.85); }
 
 .sung-box { width: 1rem; height: 1rem; accent-color: var(--kh-primary); cursor: pointer; }
 
@@ -251,6 +327,7 @@ html, body {
 
 .field { margin-bottom: 0.75rem; }
 .field__label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--kh-text-muted); margin-bottom: 0.3rem; }
+.field__hint { font-weight: 400; opacity: 0.8; }
 
 .input {
     width: 100%;
@@ -263,6 +340,61 @@ html, body {
     outline: none;
 }
 .input:focus { border-color: var(--kh-primary); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18); }
+.input--sm { padding: 0.5rem 0.6rem; font-size: 0.9rem; }
+
+/* ---- Filter bar --------------------------------------------------------- */
+
+.filters-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--kh-text-muted);
+}
+.filters-toggle__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.filters-toggle__chevron { font-size: 0.9rem; transition: transform 0.15s ease; }
+.filters-toggle__chevron.is-open { transform: rotate(180deg); }
+.filters-badge {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--kh-primary-contrast);
+    background: var(--kh-primary);
+    border-radius: 999px;
+    padding: 0.05rem 0.45rem;
+}
+
+.filters__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;   /* two compact columns: Name/Artist, Genre/How-it-went */
+    gap: 0.6rem 0.75rem;
+}
+.filters__field { margin-bottom: 0; }
+.filters__clear { margin-top: 0.85rem; }
+
+.btn-link {
+    background: none;
+    border: none;
+    padding: 0.25rem 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--kh-primary);
+    cursor: pointer;
+}
+.btn-link:hover { text-decoration: underline; }
 
 .btn {
     display: inline-flex;

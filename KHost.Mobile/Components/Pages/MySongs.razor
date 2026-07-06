@@ -1,5 +1,6 @@
 @page "/"
 @inject ISongListStore Store
+@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="card">
@@ -27,28 +28,71 @@
         </datalist>
     </div>
     <div class="field">
-        <label class="field__label" for="notes">Notes (optional)</label>
-        <input id="notes" class="input" placeholder="key, dedication, reminder…"
-               @bind="_notes" @bind:event="oninput" />
+        <label class="field__label">How did it go? <span class="field__hint">— leave unsung if you haven't yet</span></label>
+        <StarRating @bind-Value="_confidence" />
     </div>
-    <div class="field">
-        <label class="sung-check">
-            <input type="checkbox" @bind="_hasSung" />
-            <span>I've already sung this</span>
-        </label>
-    </div>
-    @if (_hasSung)
-    {
-        <div class="field">
-            <label class="field__label">How did it go?</label>
-            <StarRating @bind-Value="_confidence" />
-        </div>
-    }
 
     <button class="btn btn-primary" @onclick="AddAsync" disabled="@(!CanAdd)">Add to my list</button>
 </div>
 
-<div class="section-title">My songs (@_items.Count)</div>
+@if (_items.Count > 0)
+{
+    <div class="card">
+        <button type="button" class="filters-toggle" @onclick="() => _filtersOpen = !_filtersOpen" aria-expanded="@_filtersOpen">
+            <span class="filters-toggle__label">
+                Filter
+                @if (AnyFilterActive)
+                {
+                    <span class="filters-badge">active</span>
+                }
+            </span>
+            <span class="filters-toggle__chevron @(_filtersOpen ? "is-open" : "")">▾</span>
+        </button>
+        @if (_filtersOpen)
+        {
+        <div class="filters__grid" style="margin-top:0.85rem">
+            <div class="field filters__field">
+                <label class="field__label" for="f-name">Name</label>
+                <input id="f-name" class="input input--sm" placeholder="Any title"
+                       @bind="_filterName" @bind:event="oninput" />
+            </div>
+            <div class="field filters__field">
+                <label class="field__label" for="f-artist">Artist</label>
+                <input id="f-artist" class="input input--sm" placeholder="Any artist"
+                       @bind="_filterArtist" @bind:event="oninput" />
+            </div>
+            <div class="field filters__field">
+                <label class="field__label" for="f-genre">Genre</label>
+                <input id="f-genre" class="input input--sm" list="kh-genres" placeholder="Any genre"
+                       autocomplete="off" @bind="_filterGenre" @bind:event="oninput" />
+            </div>
+            <div class="field filters__field">
+                <label class="field__label" for="f-rating">How it went</label>
+                <select id="f-rating" class="input input--sm" @bind="_filterRating">
+                    <option value="-1">Any</option>
+                    <option value="0">Unsung</option>
+                    <option value="1">★</option>
+                    <option value="2">★★</option>
+                    <option value="3">★★★</option>
+                    <option value="4">★★★★</option>
+                    <option value="5">★★★★★</option>
+                </select>
+            </div>
+        </div>
+        @if (AnyFilterActive)
+        {
+            <button class="btn-link filters__clear" @onclick="ClearFilters">Clear filters</button>
+        }
+        }
+    </div>
+}
+
+@{
+    var visible = Sorted().ToList();
+    _tableRendered = visible.Count > 0;
+}
+
+<div class="section-title">My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))</div>
 
 @if (_items.Count == 0)
 {
@@ -58,70 +102,56 @@
         <div>Add songs you'd love to sing and they'll wait here for you.</div>
     </div>
 }
+else if (visible.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-state__icon">🔍</div>
+        <div class="empty-state__title">No matches</div>
+        <div>No songs match your filters.</div>
+        <button class="btn-link" style="margin-top:0.6rem" @onclick="ClearFilters">Clear filters</button>
+    </div>
+}
 else
 {
+    <div class="table-hint">Swipe a row left to remove it ←</div>
     <div class="table-scroll">
         <table class="song-table">
             <thead>
                 <tr>
-                    <th class="song-table__sortable" @onclick="() => SortBy(SortColumn.Title)">
-                        Song <span class="song-table__arrow">@Arrow(SortColumn.Title)</span>
-                    </th>
-                    <th class="song-table__sortable" @onclick="() => SortBy(SortColumn.Artist)">
-                        Artist <span class="song-table__arrow">@Arrow(SortColumn.Artist)</span>
-                    </th>
-                    <th class="song-table__sortable" @onclick="() => SortBy(SortColumn.Genre)">
-                        Genre <span class="song-table__arrow">@Arrow(SortColumn.Genre)</span>
-                    </th>
-                    <th class="song-table__sortable song-table__center" @onclick="() => SortBy(SortColumn.Sung)">
-                        Sung <span class="song-table__arrow">@Arrow(SortColumn.Sung)</span>
+                    <th aria-label="Favorite"></th>
+                    <th>
+                        <span class="song-table__sortable" @onclick="() => SortBy(SortColumn.Title)">Song <span class="song-table__arrow">@Arrow(SortColumn.Title)</span></span>
+                        <span class="song-table__sep">/</span>
+                        <span class="song-table__sortable" @onclick="() => SortBy(SortColumn.Artist)">Artist <span class="song-table__arrow">@Arrow(SortColumn.Artist)</span></span>
                     </th>
                     <th class="song-table__sortable" @onclick="() => SortBy(SortColumn.Confidence)">
                         How it went <span class="song-table__arrow">@Arrow(SortColumn.Confidence)</span>
                     </th>
-                    <th aria-label="Actions"></th>
                 </tr>
             </thead>
-            <tbody>
-                @foreach (var item in Sorted())
+            <tbody @ref="_swipeRoot">
+                @foreach (var item in visible)
                 {
-                    <tr @key="item.Id">
+                    <tr @key="item.Id" data-song-id="@item.Id">
+                        <td class="song-table__center">
+                            <button type="button" class="fav-btn @(item.IsFavorite ? "is-fav" : "")"
+                                    title="@(item.IsFavorite ? "Remove from favorites" : "Add to favorites")"
+                                    aria-pressed="@item.IsFavorite"
+                                    @onclick="() => ToggleFavoriteAsync(item)">★</button>
+                        </td>
                         <td>
                             <div class="song-table__title">@item.Title</div>
-                            @if (!string.IsNullOrWhiteSpace(item.Notes))
+                            @if (!string.IsNullOrWhiteSpace(item.Artist))
                             {
-                                <div class="song-table__notes">@item.Notes</div>
+                                <div class="song-table__artist">@item.Artist</div>
                             }
-                        </td>
-                        <td>@item.Artist</td>
-                        <td>
-                            @if (string.IsNullOrWhiteSpace(item.Genre))
+                            @if (!string.IsNullOrWhiteSpace(item.Genre))
                             {
-                                <span class="song-table__muted">—</span>
+                                <span class="song-table__genre">@item.Genre</span>
                             }
-                            else
-                            {
-                                @item.Genre
-                            }
-                        </td>
-                        <td class="song-table__center">
-                            <input type="checkbox" class="sung-box"
-                                   checked="@(item.Status == SongListItemStatus.Sang)"
-                                   @onchange="e => ToggleSungAsync(item, (bool)(e.Value ?? false))" />
                         </td>
                         <td>
-                            @if (item.Status == SongListItemStatus.Sang)
-                            {
-                                <StarRating Value="item.Confidence" ValueChanged="v => UpdateConfidenceAsync(item, v)" />
-                            }
-                            else
-                            {
-                                <span class="song-table__muted">—</span>
-                            }
-                        </td>
-                        <td class="song-table__center">
-                            <button class="btn btn-icon btn-icon--danger" title="Remove"
-                                    @onclick="() => RemoveAsync(item.Id)">🗑</button>
+                            <StarRating Value="DisplayConfidence(item)" ValueChanged="v => UpdateRatingAsync(item, v)" />
                         </td>
                     </tr>
                 }
@@ -136,12 +166,24 @@ else
     private string _artist = string.Empty;
     private string _notes = string.Empty;
     private string _genre = string.Empty;
-    private bool _hasSung;
-    private int _confidence = 3;
+    private int _confidence;   // 0 = unsung
 
-    private enum SortColumn { Added, Title, Artist, Genre, Sung, Confidence }
+    // Filters (empty text / -1 rating = no filter). Rating: -1 Any, 0 Unsung, 1-5 stars.
+    private string _filterName = string.Empty;
+    private string _filterArtist = string.Empty;
+    private string _filterGenre = string.Empty;
+    private int _filterRating = -1;
+    private bool _filtersOpen;   // collapsed by default so the filter bar stays compact
+
+    private enum SortColumn { Added, Title, Artist, Confidence }
     private SortColumn _sort = SortColumn.Added;
     private bool _sortDescending = true;   // default: newest added first
+
+    // Swipe-to-remove wiring: the JS module is delegated on the stable <tbody> element.
+    private ElementReference _swipeRoot;
+    private DotNetObjectReference<MySongs>? _swipeRef;
+    private bool _tableRendered;
+    private bool _swipeBound;
 
     private bool CanAdd => !string.IsNullOrWhiteSpace(_title);
 
@@ -154,25 +196,55 @@ else
         else
         {
             _sort = column;
-            // Sensible default direction: dates/rating/sung high-first, text A-Z.
-            _sortDescending = column is SortColumn.Added or SortColumn.Confidence or SortColumn.Sung;
+            // Sensible default direction: dates/rating high-first, text A-Z.
+            _sortDescending = column is SortColumn.Added or SortColumn.Confidence;
         }
     }
 
     private string Arrow(SortColumn column) => _sort == column ? (_sortDescending ? "▼" : "▲") : "";
 
+    private bool AnyFilterActive =>
+        !string.IsNullOrWhiteSpace(_filterName) ||
+        !string.IsNullOrWhiteSpace(_filterArtist) ||
+        !string.IsNullOrWhiteSpace(_filterGenre) ||
+        _filterRating >= 0;
+
+    private void ClearFilters()
+    {
+        _filterName = _filterArtist = _filterGenre = string.Empty;
+        _filterRating = -1;
+    }
+
+    private IEnumerable<SongListItem> Filtered()
+    {
+        IEnumerable<SongListItem> q = _items;
+
+        if (!string.IsNullOrWhiteSpace(_filterName))
+            q = q.Where(i => i.Title.Contains(_filterName.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(_filterArtist))
+            q = q.Where(i => i.Artist.Contains(_filterArtist.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(_filterGenre))
+            q = q.Where(i => (i.Genre ?? string.Empty).Contains(_filterGenre.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (_filterRating >= 0)
+            q = q.Where(i => DisplayConfidence(i) == _filterRating);
+
+        return q;
+    }
+
     private IEnumerable<SongListItem> Sorted()
     {
+        var filtered = Filtered();
         IEnumerable<SongListItem> ascending = _sort switch
         {
-            SortColumn.Title => _items.OrderBy(i => i.Title, StringComparer.OrdinalIgnoreCase),
-            SortColumn.Artist => _items.OrderBy(i => i.Artist, StringComparer.OrdinalIgnoreCase),
-            SortColumn.Genre => _items.OrderBy(i => i.Genre ?? string.Empty, StringComparer.OrdinalIgnoreCase),
-            SortColumn.Sung => _items.OrderBy(i => i.Status == SongListItemStatus.Sang),
-            SortColumn.Confidence => _items.OrderBy(i => i.Status == SongListItemStatus.Sang ? i.Confidence : 0),
-            _ => _items.OrderBy(i => i.AddedAt),
+            SortColumn.Title => filtered.OrderBy(i => i.Title, StringComparer.OrdinalIgnoreCase),
+            SortColumn.Artist => filtered.OrderBy(i => i.Artist, StringComparer.OrdinalIgnoreCase),
+            SortColumn.Confidence => filtered.OrderBy(DisplayConfidence),
+            _ => filtered.OrderBy(i => i.AddedAt),
         };
-        return _sortDescending ? ascending.Reverse() : ascending;
+        var ordered = _sortDescending ? ascending.Reverse() : ascending;
+        // Favorites always float to the top, whatever the active sort/direction is.
+        // OrderBy is a stable sort, so the chosen order is preserved within each group.
+        return ordered.OrderBy(i => i.IsFavorite ? 0 : 1);
     }
 
     protected override async Task OnInitializedAsync()
@@ -181,29 +253,64 @@ else
         await RefreshAsync();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_tableRendered && !_swipeBound)
+        {
+            _swipeRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSwipe.register", _swipeRoot, _swipeRef);
+            _swipeBound = true;
+        }
+        else if (!_tableRendered)
+        {
+            // Table unmounted (list emptied) — the next mount is a fresh <tbody> that needs rebinding.
+            _swipeBound = false;
+        }
+    }
+
+    [JSInvokable]
+    public async Task RemoveById(string id)
+    {
+        if (Guid.TryParse(id, out var guid))
+            await Store.RemoveAsync(guid);
+    }
+
     private async Task AddAsync()
     {
         if (!CanAdd)
             return;
 
-        await Store.AddAsync(_title, _artist, _notes, _genre, _hasSung, _confidence);
+        await Store.AddAsync(_title, _artist, _notes, _genre, _confidence);
         _title = _artist = _notes = _genre = string.Empty;    // Store.Changed triggers the list refresh.
-        _hasSung = false;
-        _confidence = 3;
+        _confidence = 0;
     }
 
-    private Task RemoveAsync(Guid id) => Store.RemoveAsync(id);
-
-    private async Task ToggleSungAsync(SongListItem item, bool sung)
+    private async Task ToggleFavoriteAsync(SongListItem item)
     {
-        item.Status = sung ? SongListItemStatus.Sang : SongListItemStatus.WantToSing;
-        item.SungAt = sung ? DateTimeOffset.Now : null;
+        item.IsFavorite = !item.IsFavorite;
         await Store.UpdateAsync(item);
     }
 
-    private async Task UpdateConfidenceAsync(SongListItem item, int confidence)
+    // The rating IS the sung-state now: 0 = unsung, 1-5 = sung. Read through Status so legacy
+    // wishlist entries (which carried a default Confidence) still show as unsung.
+    private static int DisplayConfidence(SongListItem item) =>
+        item.Status == SongListItemStatus.Sang ? item.Confidence : 0;
+
+    private async Task UpdateRatingAsync(SongListItem item, int rating)
     {
-        item.Confidence = confidence;
+        if (rating >= 1)
+        {
+            item.Status = SongListItemStatus.Sang;
+            item.Confidence = rating;
+            item.SungAt ??= DateTimeOffset.Now;
+        }
+        else
+        {
+            item.Status = SongListItemStatus.WantToSing;
+            item.Confidence = 0;
+            item.SungAt = null;
+        }
+
         await Store.UpdateAsync(item);
     }
 
@@ -215,5 +322,9 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    public void Dispose() => Store.Changed -= OnStoreChanged;
+    public void Dispose()
+    {
+        Store.Changed -= OnStoreChanged;
+        _swipeRef?.Dispose();
+    }
 }

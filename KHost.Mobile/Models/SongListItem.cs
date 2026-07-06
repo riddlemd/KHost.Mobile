@@ -29,8 +29,12 @@ public sealed class SongListItem
     /// <summary>Music genre (from <see cref="Genres.All"/> or free text). Null when unset.</summary>
     public string? Genre { get; set; }
 
-    /// <summary>How the singer feels about this song, 1 (shaky) to 5 (nailed it). Defaults to 3 (okay).</summary>
-    public int Confidence { get; set; } = 3;
+    /// <summary>Star rating 1 (shaky) to 5 (nailed it); 0 means unsung / unrated. Defaults to 0. This drives the
+    /// sung-state — <see cref="Status"/> is <see cref="SongListItemStatus.Sang"/> exactly when this is 1 or more.</summary>
+    public int Confidence { get; set; }
+
+    /// <summary>Starred by the patron. Favorites always float to the top of the list.</summary>
+    public bool IsFavorite { get; set; }
 
     public SongListItemStatus Status { get; set; } = SongListItemStatus.WantToSing;
 

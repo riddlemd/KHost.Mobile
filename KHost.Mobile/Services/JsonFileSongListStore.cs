@@ -35,17 +35,19 @@ public sealed class JsonFileSongListStore : ISongListStore
         }
     }
 
-    public async Task<SongListItem> AddAsync(string title, string artist, string? notes = null, string? genre = null, bool hasSung = false, int confidence = 3)
+    public async Task<SongListItem> AddAsync(string title, string artist, string? notes = null, string? genre = null, int confidence = 0)
     {
+        var rating = Math.Clamp(confidence, 0, 5);
+        var sung = rating >= 1;
         var item = new SongListItem
         {
             Title = title.Trim(),
             Artist = artist.Trim(),
             Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
             Genre = string.IsNullOrWhiteSpace(genre) ? null : genre.Trim(),
-            Status = hasSung ? SongListItemStatus.Sang : SongListItemStatus.WantToSing,
-            SungAt = hasSung ? DateTimeOffset.Now : null,
-            Confidence = Math.Clamp(confidence, 1, 5),
+            Status = sung ? SongListItemStatus.Sang : SongListItemStatus.WantToSing,
+            SungAt = sung ? DateTimeOffset.Now : null,
+            Confidence = rating,
         };
 
         await _gate.WaitAsync();

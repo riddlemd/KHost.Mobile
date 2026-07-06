@@ -1,5 +1,5 @@
-@* 1-5 confidence selector. Two-way bindable via @bind-Value; set ReadOnly for a static display. *@
-<div class="stars @(ReadOnly ? "stars--readonly" : "")" role="radiogroup" aria-label="Confidence">
+@* 0-5 rating. 0 = unsung (shows an "unsung" overlay). Tap the current top star again to clear back to 0. *@
+<div class="stars @(ReadOnly ? "stars--readonly" : "") @(Value <= 0 ? "stars--unrated" : "")" role="radiogroup" aria-label="Rating">
     @for (var i = 1; i <= 5; i++)
     {
         var star = i;
@@ -10,6 +10,10 @@
                 aria-label="@($"{star} of 5 — {Label(star)}")"
                 title="@Label(star)">★</button>
     }
+    @if (Value <= 0)
+    {
+        <span class="stars__unsung" aria-hidden="true">unsung</span>
+    }
 </div>
 
 @code {
@@ -17,13 +21,15 @@
     [Parameter] public EventCallback<int> ValueChanged { get; set; }
     [Parameter] public bool ReadOnly { get; set; }
 
+    // Tapping the already-selected rank clears the rating back to 0 (unsung).
     private async Task SetAsync(int value)
     {
         if (ReadOnly)
             return;
 
-        Value = value;
-        await ValueChanged.InvokeAsync(value);
+        var next = value == Value ? 0 : value;
+        Value = next;
+        await ValueChanged.InvokeAsync(next);
     }
 
     private static string Label(int value) => value switch
@@ -33,6 +39,6 @@
         3 => "Okay",
         4 => "Confident",
         5 => "Nailed it",
-        _ => "",
+        _ => "Unsung",
     };
 }
