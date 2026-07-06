@@ -1,0 +1,95 @@
+@page "/"
+@inject ISongListStore Store
+@implements IDisposable
+
+<div class="card">
+    <div class="section-title" style="margin-top:0">Add a song you'd like to sing</div>
+
+    <div class="field">
+        <label class="field__label" for="title">Song title</label>
+        <input id="title" class="input" placeholder="e.g. Bohemian Rhapsody"
+               @bind="_title" @bind:event="oninput" />
+    </div>
+    <div class="field">
+        <label class="field__label" for="artist">Artist</label>
+        <input id="artist" class="input" placeholder="e.g. Queen"
+               @bind="_artist" @bind:event="oninput" />
+    </div>
+    <div class="field">
+        <label class="field__label" for="notes">Notes (optional)</label>
+        <input id="notes" class="input" placeholder="key, dedication, reminder…"
+               @bind="_notes" @bind:event="oninput" />
+    </div>
+
+    <button class="btn btn-primary" @onclick="AddAsync" disabled="@(!CanAdd)">Add to my list</button>
+</div>
+
+<div class="section-title">My songs (@_items.Count)</div>
+
+@if (_items.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-state__icon">🎤</div>
+        <div class="empty-state__title">No songs yet</div>
+        <div>Add songs you'd love to sing and they'll wait here for you.</div>
+    </div>
+}
+else
+{
+    <ul class="song-list">
+        @foreach (var item in _items)
+        {
+            <li class="song-item" @key="item.Id">
+                <div class="song-item__body">
+                    <div class="song-item__title">@item.Title</div>
+                    @if (!string.IsNullOrWhiteSpace(item.Artist))
+                    {
+                        <div class="song-item__artist">@item.Artist</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(item.Notes))
+                    {
+                        <div class="song-item__notes">@item.Notes</div>
+                    }
+                </div>
+                <button class="btn btn-icon btn-icon--danger" title="Remove"
+                        @onclick="() => RemoveAsync(item.Id)">🗑</button>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private IReadOnlyList<SongListItem> _items = [];
+    private string _title = string.Empty;
+    private string _artist = string.Empty;
+    private string _notes = string.Empty;
+
+    private bool CanAdd => !string.IsNullOrWhiteSpace(_title);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Store.Changed += OnStoreChanged;
+        await RefreshAsync();
+    }
+
+    private async Task AddAsync()
+    {
+        if (!CanAdd)
+            return;
+
+        await Store.AddAsync(_title, _artist, _notes);
+        _title = _artist = _notes = string.Empty;   // Store.Changed triggers the list refresh.
+    }
+
+    private Task RemoveAsync(Guid id) => Store.RemoveAsync(id);
+
+    private async void OnStoreChanged(object? sender, EventArgs e) => await RefreshAsync();
+
+    private async Task RefreshAsync()
+    {
+        _items = await Store.GetAllAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Store.Changed -= OnStoreChanged;
+}
