@@ -26,6 +26,12 @@ public sealed class SongListItem
 
     public string? Notes { get; set; }
 
+    /// <summary>Music genre (from <see cref="Genres.All"/> or free text). Null when unset.</summary>
+    public string? Genre { get; set; }
+
+    /// <summary>How the singer feels about this song, 1 (shaky) to 5 (nailed it). Defaults to 3 (okay).</summary>
+    public int Confidence { get; set; } = 3;
+
     public SongListItemStatus Status { get; set; } = SongListItemStatus.WantToSing;
 
     public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.Now;

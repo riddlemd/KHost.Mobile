@@ -14,8 +14,12 @@ public interface ISongListStore
     /// <summary>All saved songs, newest first.</summary>
     Task<IReadOnlyList<SongListItem>> GetAllAsync();
 
-    /// <summary>Add a new wishlist entry. Title is required; artist/notes optional.</summary>
-    Task<SongListItem> AddAsync(string title, string artist, string? notes = null);
+    /// <summary>
+    /// Add a new entry. Title is required; artist/notes optional. When <paramref name="hasSung"/> is true the item
+    /// starts as <see cref="SongListItemStatus.Sang"/> with a timestamp and the (1-5, clamped) confidence applies;
+    /// otherwise it's a not-yet-sung wishlist entry and confidence is irrelevant until it's marked sung.
+    /// </summary>
+    Task<SongListItem> AddAsync(string title, string artist, string? notes = null, string? genre = null, bool hasSung = false, int confidence = 3);
 
     /// <summary>Persist edits to an existing item (matched by <see cref="SongListItem.Id"/>).</summary>
     Task UpdateAsync(SongListItem item);

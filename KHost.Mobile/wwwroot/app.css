@@ -151,6 +151,45 @@ html, body {
 .song-item__title { font-weight: 600; font-size: 1rem; }
 .song-item__artist { color: var(--kh-text-muted); font-size: 0.85rem; }
 .song-item__notes { color: var(--kh-text-muted); font-size: 0.8rem; margin-top: 0.15rem; font-style: italic; }
+.song-item__confidence { margin-top: 0.5rem; }
+.song-item__confidence-label { display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--kh-text-muted); margin-bottom: 0.1rem; }
+
+/* ---- "Sung it" checkbox ------------------------------------------------- */
+
+.sung-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--kh-text);
+    cursor: pointer;
+    user-select: none;
+}
+.sung-check input {
+    width: 1.15rem;
+    height: 1.15rem;
+    accent-color: var(--kh-primary);
+    cursor: pointer;
+}
+
+/* ---- Star / confidence rating ------------------------------------------- */
+
+.stars { display: inline-flex; gap: 0.15rem; }
+
+.stars__star {
+    background: none;
+    border: none;
+    padding: 0.1rem;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--kh-border);          /* empty star */
+    transition: color 0.1s ease;
+}
+.stars__star.is-filled { color: #f5b301; }   /* filled = gold, brand-neutral and readable in both themes */
+.stars__star:disabled { cursor: default; }
+.stars--readonly .stars__star { cursor: default; }
 
 .empty-state {
     text-align: center;
@@ -159,6 +198,54 @@ html, body {
 }
 .empty-state__icon { font-size: 2.5rem; }
 .empty-state__title { font-weight: 700; color: var(--kh-text); margin-top: 0.5rem; }
+
+/* ---- Sortable song table ------------------------------------------------ */
+
+.table-scroll { overflow-x: hidden; }   /* no horizontal scroll — columns share the width instead */
+
+.song-table {
+    width: 100%;
+    table-layout: fixed;    /* columns obey the widths below and text wraps rather than overflowing */
+    border-collapse: collapse;
+    font-size: 0.75rem;
+}
+
+/* Proportional column widths so all six fit without scrolling. */
+.song-table thead th:nth-child(1) { width: 27%; }   /* Song */
+.song-table thead th:nth-child(2) { width: 18%; }   /* Artist */
+.song-table thead th:nth-child(3) { width: 17%; }   /* Genre */
+.song-table thead th:nth-child(4) { width: 13%; }   /* Sung */
+.song-table thead th:nth-child(5) { width: 18%; }   /* How it went */
+.song-table thead th:nth-child(6) { width: 7%; }    /* actions */
+
+.song-table th,
+.song-table td {
+    padding: 0.4rem 0.35rem;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--kh-border);
+    overflow-wrap: anywhere;   /* wrap long titles/artists instead of forcing the table wider */
+}
+
+.song-table thead th {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--kh-text-muted);
+    overflow-wrap: normal;   /* wrap between words only — don't split "SUNG" */
+}
+
+.song-table__sortable { cursor: pointer; user-select: none; }
+.song-table__sortable:hover { color: var(--kh-text); }
+.song-table__arrow { color: var(--kh-primary); }
+.song-table__center { text-align: center; }
+.song-table__title { font-weight: 600; color: var(--kh-text); }
+.song-table__notes { color: var(--kh-text-muted); font-size: 0.68rem; font-style: italic; margin-top: 0.1rem; }
+.song-table__muted { color: var(--kh-text-muted); }
+.song-table .stars__star { font-size: 0.85rem; padding: 0.01rem; }   /* compact stars so the rating column fits */
+
+.sung-box { width: 1rem; height: 1rem; accent-color: var(--kh-primary); cursor: pointer; }
 
 /* ---- Forms / buttons ---------------------------------------------------- */
 

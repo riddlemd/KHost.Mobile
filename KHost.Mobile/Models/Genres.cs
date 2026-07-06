@@ -1,0 +1,50 @@
+namespace KHost.Mobile.Models;
+
+/// <summary>Common music genres offered in the (searchable) genre picker. Free text is still allowed on top of these.</summary>
+public static class Genres
+{
+    public static readonly IReadOnlyList<string> All =
+    [
+        "Pop",
+        "Rock",
+        "Classic Rock",
+        "Alternative",
+        "Indie",
+        "Punk",
+        "Metal",
+        "Grunge",
+        "Hip Hop",
+        "Rap",
+        "R&B",
+        "Soul",
+        "Funk",
+        "Disco",
+        "Dance",
+        "Electronic",
+        "EDM",
+        "House",
+        "Techno",
+        "Country",
+        "Folk",
+        "Bluegrass",
+        "Blues",
+        "Jazz",
+        "Swing",
+        "Big Band",
+        "Classical",
+        "Opera",
+        "Musical Theatre",
+        "Show Tunes",
+        "Soundtrack",
+        "Reggae",
+        "Ska",
+        "Gospel",
+        "Christian",
+        "Latin",
+        "K-Pop",
+        "World",
+        "Motown",
+        "Singer-Songwriter",
+        "Christmas / Holiday",
+    ];
+}

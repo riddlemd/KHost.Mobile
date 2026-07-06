@@ -16,10 +16,34 @@
                @bind="_artist" @bind:event="oninput" />
     </div>
     <div class="field">
+        <label class="field__label" for="genre">Genre</label>
+        <input id="genre" class="input" list="kh-genres" placeholder="Search genres…"
+               autocomplete="off" @bind="_genre" @bind:event="oninput" />
+        <datalist id="kh-genres">
+            @foreach (var g in Genres.All)
+            {
+                <option value="@g" />
+            }
+        </datalist>
+    </div>
+    <div class="field">
         <label class="field__label" for="notes">Notes (optional)</label>
         <input id="notes" class="input" placeholder="key, dedication, reminder…"
                @bind="_notes" @bind:event="oninput" />
     </div>
+    <div class="field">
+        <label class="sung-check">
+            <input type="checkbox" @bind="_hasSung" />
+            <span>I've already sung this</span>
+        </label>
+    </div>
+    @if (_hasSung)
+    {
+        <div class="field">
+            <label class="field__label">How did it go?</label>
+            <StarRating @bind-Value="_confidence" />
+        </div>
+    }
 
     <button class="btn btn-primary" @onclick="AddAsync" disabled="@(!CanAdd)">Add to my list</button>
 </div>
@@ -36,26 +60,74 @@
 }
 else
 {
-    <ul class="song-list">
-        @foreach (var item in _items)
-        {
-            <li class="song-item" @key="item.Id">
-                <div class="song-item__body">
-                    <div class="song-item__title">@item.Title</div>
-                    @if (!string.IsNullOrWhiteSpace(item.Artist))
-                    {
-                        <div class="song-item__artist">@item.Artist</div>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(item.Notes))
-                    {
-                        <div class="song-item__notes">@item.Notes</div>
-                    }
-                </div>
-                <button class="btn btn-icon btn-icon--danger" title="Remove"
-                        @onclick="() => RemoveAsync(item.Id)">🗑</button>
-            </li>
-        }
-    </ul>
+    <div class="table-scroll">
+        <table class="song-table">
+            <thead>
+                <tr>
+                    <th class="song-table__sortable" @onclick="() => SortBy(SortColumn.Title)">
+                        Song <span class="song-table__arrow">@Arrow(SortColumn.Title)</span>
+                    </th>
+                    <th class="song-table__sortable" @onclick="() => SortBy(SortColumn.Artist)">
+                        Artist <span class="song-table__arrow">@Arrow(SortColumn.Artist)</span>
+                    </th>
+                    <th class="song-table__sortable" @onclick="() => SortBy(SortColumn.Genre)">
+                        Genre <span class="song-table__arrow">@Arrow(SortColumn.Genre)</span>
+                    </th>
+                    <th class="song-table__sortable song-table__center" @onclick="() => SortBy(SortColumn.Sung)">
+                        Sung <span class="song-table__arrow">@Arrow(SortColumn.Sung)</span>
+                    </th>
+                    <th class="song-table__sortable" @onclick="() => SortBy(SortColumn.Confidence)">
+                        How it went <span class="song-table__arrow">@Arrow(SortColumn.Confidence)</span>
+                    </th>
+                    <th aria-label="Actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Sorted())
+                {
+                    <tr @key="item.Id">
+                        <td>
+                            <div class="song-table__title">@item.Title</div>
+                            @if (!string.IsNullOrWhiteSpace(item.Notes))
+                            {
+                                <div class="song-table__notes">@item.Notes</div>
+                            }
+                        </td>
+                        <td>@item.Artist</td>
+                        <td>
+                            @if (string.IsNullOrWhiteSpace(item.Genre))
+                            {
+                                <span class="song-table__muted">—</span>
+                            }
+                            else
+                            {
+                                @item.Genre
+                            }
+                        </td>
+                        <td class="song-table__center">
+                            <input type="checkbox" class="sung-box"
+                                   checked="@(item.Status == SongListItemStatus.Sang)"
+                                   @onchange="e => ToggleSungAsync(item, (bool)(e.Value ?? false))" />
+                        </td>
+                        <td>
+                            @if (item.Status == SongListItemStatus.Sang)
+                            {
+                                <StarRating Value="item.Confidence" ValueChanged="v => UpdateConfidenceAsync(item, v)" />
+                            }
+                            else
+                            {
+                                <span class="song-table__muted">—</span>
+                            }
+                        </td>
+                        <td class="song-table__center">
+                            <button class="btn btn-icon btn-icon--danger" title="Remove"
+                                    @onclick="() => RemoveAsync(item.Id)">🗑</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {
@@ -63,8 +135,45 @@ else
     private string _title = string.Empty;
     private string _artist = string.Empty;
     private string _notes = string.Empty;
+    private string _genre = string.Empty;
+    private bool _hasSung;
+    private int _confidence = 3;
+
+    private enum SortColumn { Added, Title, Artist, Genre, Sung, Confidence }
+    private SortColumn _sort = SortColumn.Added;
+    private bool _sortDescending = true;   // default: newest added first
 
     private bool CanAdd => !string.IsNullOrWhiteSpace(_title);
+
+    private void SortBy(SortColumn column)
+    {
+        if (_sort == column)
+        {
+            _sortDescending = !_sortDescending;
+        }
+        else
+        {
+            _sort = column;
+            // Sensible default direction: dates/rating/sung high-first, text A-Z.
+            _sortDescending = column is SortColumn.Added or SortColumn.Confidence or SortColumn.Sung;
+        }
+    }
+
+    private string Arrow(SortColumn column) => _sort == column ? (_sortDescending ? "▼" : "▲") : "";
+
+    private IEnumerable<SongListItem> Sorted()
+    {
+        IEnumerable<SongListItem> ascending = _sort switch
+        {
+            SortColumn.Title => _items.OrderBy(i => i.Title, StringComparer.OrdinalIgnoreCase),
+            SortColumn.Artist => _items.OrderBy(i => i.Artist, StringComparer.OrdinalIgnoreCase),
+            SortColumn.Genre => _items.OrderBy(i => i.Genre ?? string.Empty, StringComparer.OrdinalIgnoreCase),
+            SortColumn.Sung => _items.OrderBy(i => i.Status == SongListItemStatus.Sang),
+            SortColumn.Confidence => _items.OrderBy(i => i.Status == SongListItemStatus.Sang ? i.Confidence : 0),
+            _ => _items.OrderBy(i => i.AddedAt),
+        };
+        return _sortDescending ? ascending.Reverse() : ascending;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,11 +186,26 @@ else
         if (!CanAdd)
             return;
 
-        await Store.AddAsync(_title, _artist, _notes);
-        _title = _artist = _notes = string.Empty;   // Store.Changed triggers the list refresh.
+        await Store.AddAsync(_title, _artist, _notes, _genre, _hasSung, _confidence);
+        _title = _artist = _notes = _genre = string.Empty;    // Store.Changed triggers the list refresh.
+        _hasSung = false;
+        _confidence = 3;
     }
 
     private Task RemoveAsync(Guid id) => Store.RemoveAsync(id);
+
+    private async Task ToggleSungAsync(SongListItem item, bool sung)
+    {
+        item.Status = sung ? SongListItemStatus.Sang : SongListItemStatus.WantToSing;
+        item.SungAt = sung ? DateTimeOffset.Now : null;
+        await Store.UpdateAsync(item);
+    }
+
+    private async Task UpdateConfidenceAsync(SongListItem item, int confidence)
+    {
+        item.Confidence = confidence;
+        await Store.UpdateAsync(item);
+    }
 
     private async void OnStoreChanged(object? sender, EventArgs e) => await RefreshAsync();
 

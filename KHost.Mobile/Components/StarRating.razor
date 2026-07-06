@@ -1,0 +1,38 @@
+@* 1-5 confidence selector. Two-way bindable via @bind-Value; set ReadOnly for a static display. *@
+<div class="stars @(ReadOnly ? "stars--readonly" : "")" role="radiogroup" aria-label="Confidence">
+    @for (var i = 1; i <= 5; i++)
+    {
+        var star = i;
+        <button type="button"
+                class="stars__star @(star <= Value ? "is-filled" : "")"
+                @onclick="() => SetAsync(star)"
+                disabled="@ReadOnly"
+                aria-label="@($"{star} of 5 — {Label(star)}")"
+                title="@Label(star)">★</button>
+    }
+</div>
+
+@code {
+    [Parameter] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+    [Parameter] public bool ReadOnly { get; set; }
+
+    private async Task SetAsync(int value)
+    {
+        if (ReadOnly)
+            return;
+
+        Value = value;
+        await ValueChanged.InvokeAsync(value);
+    }
+
+    private static string Label(int value) => value switch
+    {
+        1 => "Not confident",
+        2 => "Shaky",
+        3 => "Okay",
+        4 => "Confident",
+        5 => "Nailed it",
+        _ => "",
+    };
+}
