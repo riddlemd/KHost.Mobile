@@ -92,7 +92,13 @@
     _tableRendered = visible.Count > 0;
 }
 
-<div class="section-title">My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))</div>
+<div class="section-title section-title--row">
+    <span>My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))</span>
+    @if (visible.Count > 0)
+    {
+        <span class="table-hint">Swipe a row left to remove it ←</span>
+    }
+</div>
 
 @if (_items.Count == 0)
 {
@@ -113,7 +119,6 @@ else if (visible.Count == 0)
 }
 else
 {
-    <div class="table-hint">Swipe a row left to remove it ←</div>
     <div class="table-scroll">
         <table class="song-table">
             <thead>
