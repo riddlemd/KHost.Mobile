@@ -83,7 +83,7 @@
                 <label class="field__label" for="f-rating">How it went</label>
                 <select id="f-rating" class="input input--sm" @bind="_filterRating">
                     <option value="-1">Any</option>
-                    <option value="0">Unsung</option>
+                    <option value="0">Not rated</option>
                     <option value="1">★</option>
                     <option value="2">★★</option>
                     <option value="3">★★★</option>
@@ -129,7 +129,7 @@
     <span>My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))</span>
     @if (visible.Count > 0)
     {
-        <span class="table-hint">Swipe a row left to remove it ←</span>
+        <span class="table-hint">Tap a row to open · swipe left to remove</span>
     }
 </div>
 
@@ -193,12 +193,119 @@ else
                             }
                         </td>
                         <td>
-                            <StarRating Value="DisplayConfidence(item)" ValueChanged="v => UpdateRatingAsync(item, v)" />
+                            <StarRating Value="DisplayConfidence(item)" ValueChanged="v => UpdateRatingAsync(item, v)" Sung="@item.SungAt.HasValue" />
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
+    </div>
+}
+
+@if (_detailItem is not null)
+{
+    <div class="sheet-backdrop" @onclick="CloseDetail"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+        <button type="button" class="sheet__close" @onclick="CloseDetail" aria-label="Close">✕</button>
+
+        @if (!_editing)
+        {
+            <div class="sheet__title">@_detailItem.Title</div>
+            @if (!string.IsNullOrWhiteSpace(_detailItem.Artist))
+            {
+                <div class="sheet__subtitle">@_detailItem.Artist</div>
+            }
+            <div class="sheet__rows">
+                <div class="sheet__row">
+                    <span class="sheet__key">Genre</span>
+                    <span class="sheet__val">@(string.IsNullOrWhiteSpace(_detailItem.Genre) ? "—" : _detailItem.Genre)</span>
+                </div>
+                <div class="sheet__row">
+                    <span class="sheet__key">Year</span>
+                    <span class="sheet__val">@(_detailItem.Year?.ToString() ?? "—")</span>
+                </div>
+                <div class="sheet__row">
+                    <span class="sheet__key">Rating</span>
+                    <span class="sheet__val">
+                        @if (_detailItem.Confidence > 0)
+                        {
+                            <StarRating Value="_detailItem.Confidence" ReadOnly="true" Sung="true" />
+                        }
+                        else
+                        {
+                            <span class="sheet__muted">Not rated</span>
+                        }
+                    </span>
+                </div>
+                <div class="sheet__row">
+                    <span class="sheet__key">Notes</span>
+                    <span class="sheet__val">@(string.IsNullOrWhiteSpace(_detailItem.Notes) ? "—" : _detailItem.Notes)</span>
+                </div>
+                <div class="sheet__row">
+                    <span class="sheet__key">Last sung</span>
+                    <span class="sheet__val">@(_detailItem.SungAt.HasValue ? _detailItem.SungAt.Value.ToString("MMM d, yyyy") : "never")</span>
+                </div>
+                <div class="sheet__row">
+                    <span class="sheet__key">Added</span>
+                    <span class="sheet__val">@_detailItem.AddedAt.ToString("MMM d, yyyy")</span>
+                </div>
+            </div>
+            <div class="sheet__actions">
+                <button class="btn btn-primary" @onclick="StartEdit">Edit</button>
+                @if (_detailItem.SungAt.HasValue)
+                {
+                    <button class="btn btn-secondary" @onclick="MarkSungTodayAsync">Sang it again today</button>
+                }
+                else
+                {
+                    <button class="btn btn-secondary" @onclick="MarkSungTodayAsync">Mark sung today</button>
+                }
+            </div>
+            @if (_detailItem.SungAt.HasValue)
+            {
+                <button class="btn-link sheet__unsing" @onclick="MarkUnsungAsync">Mark as unsung</button>
+            }
+        }
+        else
+        {
+            <div class="sheet__title">Edit song</div>
+            <div class="field">
+                <label class="field__label" for="e-title">Song title</label>
+                <input id="e-title" class="input" @bind="_editTitle" @bind:event="oninput" />
+            </div>
+            <div class="field">
+                <label class="field__label" for="e-artist">Artist</label>
+                <input id="e-artist" class="input" @bind="_editArtist" @bind:event="oninput" />
+            </div>
+            <div class="field">
+                <label class="field__label" for="e-genre">Genre</label>
+                <select id="e-genre" class="input" @bind="_editGenre">
+                    <option value="">Pick a genre (optional)</option>
+                    @foreach (var g in Genres.All)
+                    {
+                        <option value="@g">@g</option>
+                    }
+                </select>
+            </div>
+            <div class="field">
+                <label class="field__label" for="e-year">Release year <span class="field__hint">— optional</span></label>
+                <input id="e-year" class="input num-year" type="text" inputmode="numeric" maxlength="4"
+                       @bind="_editYear" @bind:event="oninput" />
+                @if (_editYear.HasValue && !EditYearValid)
+                {
+                    <div class="field__error">Enter a year between 1 and @CurrentYear.</div>
+                }
+            </div>
+            <div class="field">
+                <label class="field__label" for="e-notes">Notes</label>
+                <textarea id="e-notes" class="input sheet__notes" rows="3"
+                          placeholder="e.g. start slow, key of G" @bind="_editNotes" @bind:event="oninput"></textarea>
+            </div>
+            <div class="sheet__actions">
+                <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveEditAsync" disabled="@(!CanSaveEdit)">Save</button>
+            </div>
+        }
     </div>
 }
 
@@ -237,11 +344,25 @@ else
     private bool _swipeBound;
     private bool _rangeBound;   // anti-cross clamp bound to the current year-slider inputs
 
+    // Song detail / edit sheet (opened by tapping a row).
+    private SongListItem? _detailItem;
+    private bool _editing;
+    private bool _editFieldsBound;   // khNumeric bound to the edit-form year input
+    private string _editTitle = string.Empty;
+    private string _editArtist = string.Empty;
+    private string _editGenre = string.Empty;
+    private string _editNotes = string.Empty;
+    private int? _editYear;
+
     // A release year is optional, but when supplied it must be a real year: 1..this year.
     private static int CurrentYear => DateTime.Now.Year;
     private bool YearValid => !_year.HasValue || (_year.Value >= 1 && _year.Value <= CurrentYear);
 
     private bool CanAdd => !string.IsNullOrWhiteSpace(_title) && YearValid;
+
+    // Same year rule for the edit sheet; Save needs a title and a valid year.
+    private bool EditYearValid => !_editYear.HasValue || (_editYear.Value >= 1 && _editYear.Value <= CurrentYear);
+    private bool CanSaveEdit => !string.IsNullOrWhiteSpace(_editTitle) && EditYearValid;
 
     private void SortBy(SortColumn column)
     {
@@ -384,6 +505,17 @@ else
         {
             _rangeBound = false;
         }
+
+        // The edit sheet's year input needs the digit-only guard once it's rendered.
+        if (_editing && !_editFieldsBound)
+        {
+            await JS.InvokeVoidAsync("khNumeric.register");
+            _editFieldsBound = true;
+        }
+        else if (!_editing)
+        {
+            _editFieldsBound = false;
+        }
     }
 
     [JSInvokable]
@@ -391,6 +523,72 @@ else
     {
         if (Guid.TryParse(id, out var guid))
             await Store.RemoveAsync(guid);
+    }
+
+    // A tap on a row (routed from swipe.js) opens that song's detail sheet.
+    [JSInvokable]
+    public Task OpenDetail(string id)
+    {
+        if (Guid.TryParse(id, out var guid))
+        {
+            _detailItem = _items.FirstOrDefault(i => i.Id == guid);
+            _editing = false;
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+
+    private void CloseDetail()
+    {
+        _detailItem = null;
+        _editing = false;
+    }
+
+    private void StartEdit()
+    {
+        if (_detailItem is null)
+            return;
+        _editTitle = _detailItem.Title;
+        _editArtist = _detailItem.Artist;
+        _editGenre = _detailItem.Genre ?? string.Empty;
+        _editNotes = _detailItem.Notes ?? string.Empty;
+        _editYear = _detailItem.Year;
+        _editing = true;
+    }
+
+    private void CancelEdit() => _editing = false;   // discard the edit buffers, back to view mode
+
+    private async Task SaveEditAsync()
+    {
+        if (_detailItem is null || !CanSaveEdit)
+            return;
+
+        _detailItem.Title = _editTitle.Trim();
+        _detailItem.Artist = _editArtist.Trim();
+        _detailItem.Genre = string.IsNullOrWhiteSpace(_editGenre) ? null : _editGenre.Trim();
+        _detailItem.Notes = string.IsNullOrWhiteSpace(_editNotes) ? null : _editNotes.Trim();
+        _detailItem.Year = _editYear;
+        await Store.UpdateAsync(_detailItem);
+        _editing = false;
+    }
+
+    private async Task MarkSungTodayAsync()
+    {
+        if (_detailItem is null)
+            return;
+        _detailItem.SungAt = DateTimeOffset.Now;
+        _detailItem.Status = SongListItemStatus.Sang;
+        await Store.UpdateAsync(_detailItem);
+    }
+
+    private async Task MarkUnsungAsync()
+    {
+        if (_detailItem is null)
+            return;
+        _detailItem.SungAt = null;
+        _detailItem.Status = SongListItemStatus.WantToSing;
+        _detailItem.Confidence = 0;   // back on the wishlist — a rating no longer applies
+        await Store.UpdateAsync(_detailItem);
     }
 
     private async Task AddAsync()
@@ -410,25 +608,19 @@ else
         await Store.UpdateAsync(item);
     }
 
-    // The rating IS the sung-state now: 0 = unsung, 1-5 = sung. Read through Status so legacy
-    // wishlist entries (which carried a default Confidence) still show as unsung.
-    private static int DisplayConfidence(SongListItem item) =>
-        item.Status == SongListItemStatus.Sang ? item.Confidence : 0;
+    // Rating is now independent of sung-state (sung ⟺ SungAt is set). This is just the star value.
+    private static int DisplayConfidence(SongListItem item) => item.Confidence;
 
     private async Task UpdateRatingAsync(SongListItem item, int rating)
     {
+        item.Confidence = rating;
         if (rating >= 1)
         {
+            // Rating a song also marks it sung, if it wasn't already.
             item.Status = SongListItemStatus.Sang;
-            item.Confidence = rating;
             item.SungAt ??= DateTimeOffset.Now;
         }
-        else
-        {
-            item.Status = SongListItemStatus.WantToSing;
-            item.Confidence = 0;
-            item.SungAt = null;
-        }
+        // rating == 0 clears only the rating — sung-state (SungAt/Status) is left untouched.
 
         await Store.UpdateAsync(item);
     }
