@@ -11,6 +11,15 @@
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="KHost.Mobile.styles.css" />
     <link rel="icon" href="data:,">
+    <script>
+        // Apply a saved theme before first paint so there's no light/dark flash on launch.
+        (function () {
+            try {
+                var t = localStorage.getItem('kh-theme');
+                if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+            } catch (e) { /* localStorage unavailable — fall back to OS preference */ }
+        })();
+    </script>
 </head>
 
 <body>
@@ -29,6 +38,7 @@
     <script src="js/swipe.js"></script>
     <script src="js/range.js"></script>
     <script src="js/numeric-input.js"></script>
+    <script src="js/theme.js"></script>
 
 </body>
 
