@@ -202,6 +202,14 @@ else
     </div>
 }
 
+@if (_undoItem is not null)
+{
+    <div class="snackbar" role="status">
+        <span class="snackbar__text">Removed &ldquo;@_undoItem.Title&rdquo;</span>
+        <button class="snackbar__action" @onclick="UndoRemoveAsync">Undo</button>
+    </div>
+}
+
 @code {
     private IReadOnlyList<SongListItem> _items = [];
     private string _title = string.Empty;
@@ -235,6 +243,11 @@ else
     private DotNetObjectReference<MySongs>? _swipeRef;
     private bool _tableRendered;
     private bool _swipeBound;
+
+    // Undo-after-swipe-remove: the last removed item + a timer to expire the offer.
+    private const int UndoWindowMs = 5000;
+    private SongListItem? _undoItem;
+    private CancellationTokenSource? _undoCts;
     private bool _rangeBound;   // anti-cross clamp bound to the current year-slider inputs
 
     // A release year is optional, but when supplied it must be a real year: 1..this year.
@@ -389,8 +402,41 @@ else
     [JSInvokable]
     public async Task RemoveById(string id)
     {
-        if (Guid.TryParse(id, out var guid))
-            await Store.RemoveAsync(guid);
+        if (!Guid.TryParse(id, out var guid))
+            return;
+
+        var removed = _items.FirstOrDefault(i => i.Id == guid);
+        await Store.RemoveAsync(guid);
+        if (removed is not null)
+            ShowUndo(removed);
+    }
+
+    // Undo: keep the just-removed item around for a few seconds so a swipe can be taken back.
+    private void ShowUndo(SongListItem item)
+    {
+        _undoCts?.Cancel();
+        _undoCts = new CancellationTokenSource();
+        _undoItem = item;
+        _ = DismissUndoAfterDelay(_undoCts.Token);
+        StateHasChanged();
+    }
+
+    private async Task DismissUndoAfterDelay(CancellationToken token)
+    {
+        try { await Task.Delay(UndoWindowMs, token); }
+        catch (TaskCanceledException) { return; }   // superseded by a newer removal or an Undo
+
+        _undoItem = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UndoRemoveAsync()
+    {
+        _undoCts?.Cancel();
+        var item = _undoItem;
+        _undoItem = null;
+        if (item is not null)
+            await Store.RestoreAsync(item);   // Store.Changed → refresh puts the row back
     }
 
     private async Task AddAsync()
@@ -446,5 +492,7 @@ else
     {
         Store.Changed -= OnStoreChanged;
         _swipeRef?.Dispose();
+        _undoCts?.Cancel();
+        _undoCts?.Dispose();
     }
 }

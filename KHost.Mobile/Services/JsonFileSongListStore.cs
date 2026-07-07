@@ -107,6 +107,26 @@ public sealed class JsonFileSongListStore : ISongListStore
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    public async Task RestoreAsync(SongListItem item)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            var items = await LoadAsync();
+            if (items.Any(i => i.Id == item.Id))
+                return;   // already back — e.g. a double Undo
+
+            items.Add(item);
+            await SaveAsync(items);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     // Callers must hold _gate.
     private async Task<List<SongListItem>> LoadAsync()
     {
