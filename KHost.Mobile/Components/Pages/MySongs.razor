@@ -18,14 +18,13 @@
     </div>
     <div class="field">
         <label class="field__label" for="genre">Genre</label>
-        <input id="genre" class="input" list="kh-genres" placeholder="Search genres…"
-               autocomplete="off" @bind="_genre" @bind:event="oninput" />
-        <datalist id="kh-genres">
+        <select id="genre" class="input" @bind="_genre">
+            <option value="">Pick a genre (optional)</option>
             @foreach (var g in Genres.All)
             {
-                <option value="@g" />
+                <option value="@g">@g</option>
             }
-        </datalist>
+        </select>
     </div>
     <div class="field">
         <label class="field__label">How did it go? <span class="field__hint">— leave unsung if you haven't yet</span></label>
@@ -63,8 +62,13 @@
             </div>
             <div class="field filters__field">
                 <label class="field__label" for="f-genre">Genre</label>
-                <input id="f-genre" class="input input--sm" list="kh-genres" placeholder="Any genre"
-                       autocomplete="off" @bind="_filterGenre" @bind:event="oninput" />
+                <select id="f-genre" class="input input--sm" @bind="_filterGenre">
+                    <option value="">Any genre</option>
+                    @foreach (var g in Genres.All)
+                    {
+                        <option value="@g">@g</option>
+                    }
+                </select>
             </div>
             <div class="field filters__field">
                 <label class="field__label" for="f-rating">How it went</label>
