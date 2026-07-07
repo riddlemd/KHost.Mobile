@@ -35,7 +35,7 @@ public sealed class JsonFileSongListStore : ISongListStore
         }
     }
 
-    public async Task<SongListItem> AddAsync(string title, string artist, string? notes = null, string? genre = null, int confidence = 0)
+    public async Task<SongListItem> AddAsync(string title, string artist, string? notes = null, string? genre = null, int confidence = 0, int? year = null)
     {
         var rating = Math.Clamp(confidence, 0, 5);
         var sung = rating >= 1;
@@ -45,6 +45,7 @@ public sealed class JsonFileSongListStore : ISongListStore
             Artist = artist.Trim(),
             Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
             Genre = string.IsNullOrWhiteSpace(genre) ? null : genre.Trim(),
+            Year = year,
             Status = sung ? SongListItemStatus.Sang : SongListItemStatus.WantToSing,
             SungAt = sung ? DateTimeOffset.Now : null,
             Confidence = rating,

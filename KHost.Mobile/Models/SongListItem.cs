@@ -29,6 +29,9 @@ public sealed class SongListItem
     /// <summary>Music genre (from <see cref="Genres.All"/> or free text). Null when unset.</summary>
     public string? Genre { get; set; }
 
+    /// <summary>Release year of the song. Null when unset.</summary>
+    public int? Year { get; set; }
+
     /// <summary>Star rating 1 (shaky) to 5 (nailed it); 0 means unsung / unrated. Defaults to 0. This drives the
     /// sung-state — <see cref="Status"/> is <see cref="SongListItemStatus.Sang"/> exactly when this is 1 or more.</summary>
     public int Confidence { get; set; }

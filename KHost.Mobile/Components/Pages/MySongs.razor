@@ -27,6 +27,11 @@
         </select>
     </div>
     <div class="field">
+        <label class="field__label" for="year">Release year <span class="field__hint">— optional</span></label>
+        <input id="year" class="input" type="number" inputmode="numeric" placeholder="e.g. 1975"
+               min="1900" max="2100" @bind="_year" />
+    </div>
+    <div class="field">
         <label class="field__label">How did it go? <span class="field__hint">— leave unsung if you haven't yet</span></label>
         <StarRating @bind-Value="_confidence" />
     </div>
@@ -82,6 +87,28 @@
                     <option value="5">★★★★★</option>
                 </select>
             </div>
+            @if (ShowYearFilter)
+            {
+                <div class="field filters__field filters__field--wide">
+                    <label class="field__label">Release year</label>
+                    <div class="range-row">
+                        <input type="number" inputmode="numeric" class="input input--sm range-num"
+                               min="@_yearMin" max="@_yearMax" value="@YearLo" @onchange="OnYearLoInput"
+                               aria-label="Earliest year" />
+                        <span class="range-row__dash">–</span>
+                        <input type="number" inputmode="numeric" class="input input--sm range-num"
+                               min="@_yearMin" max="@_yearMax" value="@YearHi" @onchange="OnYearHiInput"
+                               aria-label="Latest year" />
+                    </div>
+                    <div class="range">
+                        <div class="range__fill" style="left:@Pct(YearLo)%;right:@PctFromRight(YearHi)%"></div>
+                        <input type="range" id="f-year-lo" class="range__input" min="@_yearMin" max="@_yearMax" step="1"
+                               value="@YearLo" @oninput="OnYearLoInput" aria-label="Earliest year slider" />
+                        <input type="range" id="f-year-hi" class="range__input" min="@_yearMin" max="@_yearMax" step="1"
+                               value="@YearHi" @oninput="OnYearHiInput" aria-label="Latest year slider" />
+                    </div>
+                </div>
+            }
         </div>
         @if (AnyFilterActive)
         {
@@ -158,6 +185,10 @@ else
                             {
                                 <span class="song-table__genre">@item.Genre</span>
                             }
+                            @if (item.Year.HasValue)
+                            {
+                                <span class="song-table__year">@item.Year</span>
+                            }
                         </td>
                         <td>
                             <StarRating Value="DisplayConfidence(item)" ValueChanged="v => UpdateRatingAsync(item, v)" />
@@ -175,6 +206,7 @@ else
     private string _artist = string.Empty;
     private string _notes = string.Empty;
     private string _genre = string.Empty;
+    private int? _year;        // release year; null = unset
     private int _confidence;   // 0 = unsung
 
     // Filters (empty text / -1 rating = no filter). Rating: -1 Any, 0 Unsung, 1-5 stars.
@@ -183,6 +215,14 @@ else
     private string _filterGenre = string.Empty;
     private int _filterRating = -1;
     private bool _filtersOpen;   // collapsed by default so the filter bar stays compact
+
+    // Year range slider. Handles are null until the user drags them, then they follow the selection;
+    // the effective bounds are the min/max release year present across dated songs (recomputed on refresh).
+    private int? _filterYearLo;
+    private int? _filterYearHi;
+    private int _yearMin;
+    private int _yearMax;
+    private int _yearDistinctCount;
 
     private enum SortColumn { Added, Title, Artist, Confidence }
     private SortColumn _sort = SortColumn.Added;
@@ -193,6 +233,7 @@ else
     private DotNetObjectReference<MySongs>? _swipeRef;
     private bool _tableRendered;
     private bool _swipeBound;
+    private bool _rangeBound;   // anti-cross clamp bound to the current year-slider inputs
 
     private bool CanAdd => !string.IsNullOrWhiteSpace(_title);
 
@@ -212,16 +253,59 @@ else
 
     private string Arrow(SortColumn column) => _sort == column ? (_sortDescending ? "▼" : "▲") : "";
 
+    // Year filter: only offered when there are 2+ distinct release years to span. The effective handle
+    // positions clamp to [min, max]; a null handle sits at the corresponding bound (i.e. not narrowed).
+    private bool ShowYearFilter => _yearDistinctCount >= 2;
+    private int YearLo => Math.Clamp(_filterYearLo ?? _yearMin, _yearMin, _yearMax);
+    private int YearHi => Math.Clamp(_filterYearHi ?? _yearMax, _yearMin, _yearMax);
+    private bool YearFilterActive => ShowYearFilter && (YearLo > _yearMin || YearHi < _yearMax);
+
+    private void OnYearLoInput(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var v))
+            _filterYearLo = Math.Min(Math.Clamp(v, _yearMin, _yearMax), YearHi);   // never cross the high handle
+    }
+
+    private void OnYearHiInput(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var v))
+            _filterYearHi = Math.Max(Math.Clamp(v, _yearMin, _yearMax), YearLo);   // never cross the low handle
+    }
+
+    // Handle position as a % of the track, for the selected-range fill. Invariant culture so CSS never gets a comma.
+    private string Pct(int value) =>
+        (_yearMax > _yearMin ? (value - _yearMin) * 100.0 / (_yearMax - _yearMin) : 0)
+            .ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    private string PctFromRight(int value) =>
+        (_yearMax > _yearMin ? (_yearMax - value) * 100.0 / (_yearMax - _yearMin) : 0)
+            .ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
+    // Recompute the year bounds from the current list; keep any active selection inside the new range.
+    private void RecomputeYearBounds()
+    {
+        var years = _items.Where(i => i.Year.HasValue).Select(i => i.Year!.Value).ToList();
+        _yearDistinctCount = years.Distinct().Count();
+        if (years.Count > 0)
+        {
+            _yearMin = years.Min();
+            _yearMax = years.Max();
+            if (_filterYearLo.HasValue) _filterYearLo = Math.Clamp(_filterYearLo.Value, _yearMin, _yearMax);
+            if (_filterYearHi.HasValue) _filterYearHi = Math.Clamp(_filterYearHi.Value, _yearMin, _yearMax);
+        }
+    }
+
     private bool AnyFilterActive =>
         !string.IsNullOrWhiteSpace(_filterName) ||
         !string.IsNullOrWhiteSpace(_filterArtist) ||
         !string.IsNullOrWhiteSpace(_filterGenre) ||
-        _filterRating >= 0;
+        _filterRating >= 0 ||
+        YearFilterActive;
 
     private void ClearFilters()
     {
         _filterName = _filterArtist = _filterGenre = string.Empty;
         _filterRating = -1;
+        _filterYearLo = _filterYearHi = null;
     }
 
     private IEnumerable<SongListItem> Filtered()
@@ -236,6 +320,8 @@ else
             q = q.Where(i => (i.Genre ?? string.Empty).Contains(_filterGenre.Trim(), StringComparison.OrdinalIgnoreCase));
         if (_filterRating >= 0)
             q = q.Where(i => DisplayConfidence(i) == _filterRating);
+        if (YearFilterActive)
+            q = q.Where(i => i.Year.HasValue && i.Year.Value >= YearLo && i.Year.Value <= YearHi);
 
         return q;
     }
@@ -275,6 +361,19 @@ else
             // Table unmounted (list emptied) — the next mount is a fresh <tbody> that needs rebinding.
             _swipeBound = false;
         }
+
+        // Bind the anti-cross clamp whenever the year slider is on screen. It unmounts when the
+        // filter is collapsed or drops below 2 distinct years, so re-bind the fresh inputs on return.
+        var sliderPresent = _items.Count > 0 && _filtersOpen && ShowYearFilter;
+        if (sliderPresent && !_rangeBound)
+        {
+            await JS.InvokeVoidAsync("khRange.register");
+            _rangeBound = true;
+        }
+        else if (!sliderPresent)
+        {
+            _rangeBound = false;
+        }
     }
 
     [JSInvokable]
@@ -289,9 +388,10 @@ else
         if (!CanAdd)
             return;
 
-        await Store.AddAsync(_title, _artist, _notes, _genre, _confidence);
+        await Store.AddAsync(_title, _artist, _notes, _genre, _confidence, _year);
         _title = _artist = _notes = _genre = string.Empty;    // Store.Changed triggers the list refresh.
         _confidence = 0;
+        _year = null;
     }
 
     private async Task ToggleFavoriteAsync(SongListItem item)
@@ -328,6 +428,7 @@ else
     private async Task RefreshAsync()
     {
         _items = await Store.GetAllAsync();
+        RecomputeYearBounds();
         await InvokeAsync(StateHasChanged);
     }
 

@@ -19,7 +19,7 @@ public interface ISongListStore
     /// 0 (the default) means unsung — a wishlist entry; 1-5 (clamped) marks it <see cref="SongListItemStatus.Sang"/>
     /// with a timestamp and that star rating.
     /// </summary>
-    Task<SongListItem> AddAsync(string title, string artist, string? notes = null, string? genre = null, int confidence = 0);
+    Task<SongListItem> AddAsync(string title, string artist, string? notes = null, string? genre = null, int confidence = 0, int? year = null);
 
     /// <summary>Persist edits to an existing item (matched by <see cref="SongListItem.Id"/>).</summary>
     Task UpdateAsync(SongListItem item);
