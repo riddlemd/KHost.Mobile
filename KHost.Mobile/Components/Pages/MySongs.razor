@@ -28,8 +28,12 @@
     </div>
     <div class="field">
         <label class="field__label" for="year">Release year <span class="field__hint">— optional</span></label>
-        <input id="year" class="input" type="number" inputmode="numeric" placeholder="e.g. 1975"
-               min="1900" max="2100" @bind="_year" />
+        <input id="year" class="input num-year" type="text" inputmode="numeric" maxlength="4"
+               placeholder="e.g. 1975" @bind="_year" @bind:event="oninput" />
+        @if (_year.HasValue && !YearValid)
+        {
+            <div class="field__error">Enter a year between 1 and @CurrentYear.</div>
+        }
     </div>
     <div class="field">
         <label class="field__label">How did it go? <span class="field__hint">— leave unsung if you haven't yet</span></label>
@@ -92,13 +96,11 @@
                 <div class="field filters__field filters__field--wide">
                     <label class="field__label">Release year</label>
                     <div class="range-row">
-                        <input type="number" inputmode="numeric" class="input input--sm range-num"
-                               min="@_yearMin" max="@_yearMax" value="@YearLo" @onchange="OnYearLoInput"
-                               aria-label="Earliest year" />
+                        <input type="text" inputmode="numeric" maxlength="4" class="input input--sm range-num num-year"
+                               value="@YearLo" @onchange="OnYearLoInput" aria-label="Earliest year" />
                         <span class="range-row__dash">–</span>
-                        <input type="number" inputmode="numeric" class="input input--sm range-num"
-                               min="@_yearMin" max="@_yearMax" value="@YearHi" @onchange="OnYearHiInput"
-                               aria-label="Latest year" />
+                        <input type="text" inputmode="numeric" maxlength="4" class="input input--sm range-num num-year"
+                               value="@YearHi" @onchange="OnYearHiInput" aria-label="Latest year" />
                     </div>
                     <div class="range">
                         <div class="range__fill" style="left:@Pct(YearLo)%;right:@PctFromRight(YearHi)%"></div>
@@ -235,7 +237,11 @@ else
     private bool _swipeBound;
     private bool _rangeBound;   // anti-cross clamp bound to the current year-slider inputs
 
-    private bool CanAdd => !string.IsNullOrWhiteSpace(_title);
+    // A release year is optional, but when supplied it must be a real year: 1..this year.
+    private static int CurrentYear => DateTime.Now.Year;
+    private bool YearValid => !_year.HasValue || (_year.Value >= 1 && _year.Value <= CurrentYear);
+
+    private bool CanAdd => !string.IsNullOrWhiteSpace(_title) && YearValid;
 
     private void SortBy(SortColumn column)
     {
@@ -350,6 +356,9 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+            await JS.InvokeVoidAsync("khNumeric.register");   // add-form year input
+
         if (_tableRendered && !_swipeBound)
         {
             _swipeRef ??= DotNetObjectReference.Create(this);
@@ -368,6 +377,7 @@ else
         if (sliderPresent && !_rangeBound)
         {
             await JS.InvokeVoidAsync("khRange.register");
+            await JS.InvokeVoidAsync("khNumeric.register");   // filter From/To year inputs
             _rangeBound = true;
         }
         else if (!sliderPresent)
