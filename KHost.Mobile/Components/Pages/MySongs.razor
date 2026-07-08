@@ -1,11 +1,23 @@
 @page "/"
+@using KHost.Mobile.Client.YouTubeMusic
 @inject ISongListStore Store
 @inject ILinkLauncher Links
+@inject IYouTubeMusicImportService YtMusic
 @inject IJSRuntime JS
 @implements IDisposable
 
 <div class="card">
-    <div class="section-title" style="margin-top:0">Add a song you'd like to sing</div>
+    <div class="add-head">
+        <div class="section-title" style="margin:0">Add a song you'd like to sing</div>
+        <button type="button" class="ytm-import-btn" @onclick="OpenImport"
+                title="Import from YouTube Music" aria-label="Import from YouTube Music">
+            <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+                <circle cx="12" cy="12" r="11" fill="#ff0000" />
+                <circle cx="12" cy="12" r="7.4" fill="none" stroke="#fff" stroke-width="1.6" />
+                <path d="M10 8.4l5.2 3.6L10 15.6z" fill="#fff" />
+            </svg>
+        </button>
+    </div>
 
     <div class="field">
         <label class="field__label" for="title">Song title</label>
@@ -218,6 +230,81 @@ else
     </div>
 }
 
+@if (_flash is not null)
+{
+    <div class="snackbar" role="status">
+        <span class="snackbar__text">@_flash</span>
+    </div>
+}
+
+@if (_importOpen)
+{
+    <div class="sheet-backdrop" @onclick="CloseImport"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+        <button type="button" class="sheet__close" @onclick="CloseImport" aria-label="Close">✕</button>
+        <div class="sheet__title">Import from YouTube Music</div>
+        <div class="sheet__subtitle">Paste a public playlist link — we'll pull in the song titles &amp; artists.</div>
+
+        <div class="field" style="margin-top:0.85rem">
+            <label class="field__label" for="imp-url">Playlist link</label>
+            <input id="imp-url" class="input" placeholder="https://music.youtube.com/playlist?list=…"
+                   @bind="_importUrl" @bind:event="oninput" />
+        </div>
+
+        @if (_importError is not null)
+        {
+            <div class="field__error">@_importError</div>
+        }
+
+        @if (_importRows is null)
+        {
+            <button class="btn btn-primary" @onclick="FetchImportAsync"
+                    disabled="@(_importBusy || string.IsNullOrWhiteSpace(_importUrl))">
+                @(_importBusy ? "Fetching…" : "Fetch playlist")
+            </button>
+        }
+        else
+        {
+            <div class="import-head">
+                <span class="import-head__name">@_importName</span>
+                <span class="import-head__actions">
+                    <button class="btn-link" @onclick="SelectAllImport">All</button>
+                    <button class="btn-link" @onclick="SelectNoneImport">None</button>
+                </span>
+            </div>
+            @if (_importTruncated)
+            {
+                <div class="field__hint">Showing the first 100 tracks — longer playlists are trimmed.</div>
+            }
+            <ul class="import-list">
+                @foreach (var row in _importRows)
+                {
+                    <li class="import-row @(row.AlreadyInList ? "is-dupe" : "")">
+                        <label class="import-row__label">
+                            <input type="checkbox" @bind="row.Selected" />
+                            <span class="import-row__text">
+                                <span class="import-row__title">@row.Track.Title</span>
+                                <span class="import-row__artist">@row.Track.Artist</span>
+                            </span>
+                            @if (row.AlreadyInList)
+                            {
+                                <span class="import-row__badge">already added</span>
+                            }
+                        </label>
+                    </li>
+                }
+            </ul>
+            <div class="sheet__actions">
+                <button class="btn btn-secondary" @onclick="CloseImport">Cancel</button>
+                <button class="btn btn-primary" @onclick="ImportSelectedAsync"
+                        disabled="@(_importBusy || _selectedImportCount == 0)">
+                    @(_importBusy ? "Importing…" : $"Import {_selectedImportCount} song{(_selectedImportCount == 1 ? "" : "s")}")
+                </button>
+            </div>
+        }
+    </div>
+}
+
 @if (_detailItem is not null)
 {
     <div class="sheet-backdrop" @onclick="CloseDetail"></div>
@@ -375,6 +462,27 @@ else
     private string _editGenre = string.Empty;
     private string _editNotes = string.Empty;
     private int? _editYear;
+
+    // YouTube Music import sheet. _importRows is null until a fetch succeeds; each row tracks its checkbox.
+    private bool _importOpen;
+    private string _importUrl = string.Empty;
+    private bool _importBusy;
+    private string? _importError;
+    private string? _importName;
+    private bool _importTruncated;
+    private List<ImportRow>? _importRows;
+    private int _selectedImportCount => _importRows?.Count(r => r.Selected) ?? 0;
+
+    // Transient toast (import result), shown in the snackbar slot; auto-dismisses.
+    private string? _flash;
+    private CancellationTokenSource? _flashCts;
+
+    private sealed class ImportRow
+    {
+        public required YouTubeMusicTrack Track { get; init; }
+        public bool Selected { get; set; }
+        public bool AlreadyInList { get; init; }
+    }
 
     // A release year is optional, but when supplied it must be a real year: 1..this year.
     private static int CurrentYear => DateTime.Now.Year;
@@ -669,6 +777,116 @@ else
             ? Task.CompletedTask
             : Links.OpenAsync(YouTubeSearch.UrlFor(_detailItem.Title, _detailItem.Artist));
 
+    // ---- YouTube Music playlist import --------------------------------------------------------
+
+    private void OpenImport()
+    {
+        _importOpen = true;
+        _importUrl = string.Empty;
+        _importRows = null;
+        _importError = null;
+        _importName = null;
+        _importTruncated = false;
+    }
+
+    private void CloseImport()
+    {
+        _importOpen = false;
+        _importBusy = false;
+    }
+
+    private async Task FetchImportAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_importUrl) || _importBusy)
+            return;
+
+        _importBusy = true;
+        _importError = null;
+        try
+        {
+            var result = await YtMusic.FetchPlaylistAsync(_importUrl.Trim());
+            _importName = string.IsNullOrWhiteSpace(result.Name) ? "Playlist" : result.Name;
+            _importTruncated = result.LikelyTruncated;
+            _importRows = result.Tracks.Select(t => new ImportRow
+            {
+                Track = t,
+                AlreadyInList = _items.Any(i =>
+                    string.Equals(i.Title.Trim(), t.Title, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(i.Artist.Trim(), t.Artist, StringComparison.OrdinalIgnoreCase)),
+            }).ToList();
+
+            // Pre-select everything not already in the list; leave duplicates unticked.
+            foreach (var row in _importRows)
+                row.Selected = !row.AlreadyInList;
+
+            if (_importRows.Count == 0)
+                _importError = "That playlist has no importable tracks.";
+        }
+        catch (YouTubeMusicImportException ex)
+        {
+            _importError = ex.Message;
+            _importRows = null;
+        }
+        finally
+        {
+            _importBusy = false;
+        }
+    }
+
+    private void SelectAllImport()
+    {
+        if (_importRows is null) return;
+        foreach (var row in _importRows) row.Selected = true;
+    }
+
+    private void SelectNoneImport()
+    {
+        if (_importRows is null) return;
+        foreach (var row in _importRows) row.Selected = false;
+    }
+
+    private async Task ImportSelectedAsync()
+    {
+        if (_importRows is null || _importBusy)
+            return;
+
+        var chosen = _importRows.Where(r => r.Selected).ToList();
+        if (chosen.Count == 0)
+            return;
+
+        _importBusy = true;
+        try
+        {
+            // Imported as unsung wishlist entries: title + artist only (no year/genre from YT Music).
+            var toImport = chosen.Select(r => new SongListItem { Title = r.Track.Title, Artist = r.Track.Artist }).ToList();
+
+            // Selection already excludes duplicates; a force-ticked duplicate is honored (skipDuplicates: false).
+            var added = await Store.ImportAsync(toImport, skipDuplicates: false);   // Store.Changed → RefreshAsync
+            _importOpen = false;
+            await FlashAsync($"Imported {added} song{(added == 1 ? "" : "s")} from YouTube Music");
+        }
+        finally
+        {
+            _importBusy = false;
+        }
+    }
+
+    private async Task FlashAsync(string message)
+    {
+        _flashCts?.Cancel();
+        _flashCts = new CancellationTokenSource();
+        var token = _flashCts.Token;
+
+        _flash = message;
+        await InvokeAsync(StateHasChanged);
+
+        try { await Task.Delay(3500, token); }
+        catch (TaskCanceledException) { return; }   // superseded by a newer flash
+
+        _flash = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task AddAsync()
     {
         if (!CanAdd)
@@ -725,5 +943,7 @@ else
         _swipeRef?.Dispose();
         _undoCts?.Cancel();
         _undoCts?.Dispose();
+        _flashCts?.Cancel();
+        _flashCts?.Dispose();
     }
 }

@@ -127,6 +127,55 @@ public sealed class JsonFileSongListStore : ISongListStore
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    public async Task<int> ImportAsync(IEnumerable<SongListItem> incoming, bool skipDuplicates = true)
+    {
+        ArgumentNullException.ThrowIfNull(incoming);
+
+        var added = 0;
+        await _gate.WaitAsync();
+        try
+        {
+            var items = await LoadAsync();
+
+            // Seed the dedupe set with what's already stored; Add() also catches repeats within the batch.
+            var seen = skipDuplicates
+                ? new HashSet<string>(items.Select(DedupeKey), StringComparer.OrdinalIgnoreCase)
+                : null;
+
+            foreach (var item in incoming)
+            {
+                if (item is null || string.IsNullOrWhiteSpace(item.Title))
+                    continue;
+
+                item.Title = item.Title.Trim();
+                item.Artist = item.Artist.Trim();
+
+                if (seen is not null && !seen.Add(DedupeKey(item)))
+                    continue;   // already in the list, or a duplicate earlier in this batch
+
+                items.Add(item);
+                added++;
+            }
+
+            if (added > 0)
+                await SaveAsync(items);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (added > 0)
+            Changed?.Invoke(this, EventArgs.Empty);
+
+        return added;
+    }
+
+    // Title+artist identity used for de-duplication (trimmed, case-insensitive). The  unit
+    // separator keeps "AB"+"C" distinct from "A"+"BC". Mirrors the add-form duplicate guard in MySongs.
+    private static string DedupeKey(SongListItem item)
+        => $"{item.Title.Trim()}{item.Artist.Trim()}";
+
     // Callers must hold _gate.
     private async Task<List<SongListItem>> LoadAsync()
     {

@@ -384,6 +384,79 @@ html, body {
 /* Row is tappable (opens the detail sheet). */
 .song-table tbody td:nth-child(2) { cursor: pointer; }
 
+/* ---- YouTube Music import ----------------------------------------------- */
+/* Header row of the add card: title on the left, import icon pinned top-right. */
+.add-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+.ytm-import-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    margin: -0.15rem -0.15rem 0 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+.ytm-import-btn:hover { background: var(--kh-surface-2); }
+.ytm-import-btn:active { transform: scale(0.92); }
+.ytm-import-btn svg { display: block; }
+
+.import-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 1rem 0 0.25rem;
+}
+.import-head__name { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.import-head__actions { flex-shrink: 0; display: flex; gap: 0.5rem; }
+
+.import-list {
+    list-style: none;
+    margin: 0.25rem 0 0;
+    padding: 0;
+    max-height: 45vh;
+    overflow-y: auto;
+    border-top: 1px solid var(--kh-border);
+}
+.import-row { border-bottom: 1px solid var(--kh-border); }
+.import-row__label {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.55rem 0.15rem;
+    cursor: pointer;
+}
+.import-row__label input { width: 1.15rem; height: 1.15rem; accent-color: var(--kh-primary); flex-shrink: 0; }
+.import-row__text { flex: 1; min-width: 0; }
+.import-row__title { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.import-row__artist { display: block; font-size: 0.8rem; color: var(--kh-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.import-row__badge {
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--kh-text-muted);
+    background: var(--kh-surface-2);
+    border-radius: 999px;
+    padding: 0.15rem 0.5rem;
+}
+.import-row.is-dupe .import-row__title,
+.import-row.is-dupe .import-row__artist { opacity: 0.55; }
+
 /* ---- Sortable song table ------------------------------------------------ */
 
 /* Full-bleed: pull the table out past the page's 1rem side padding so rows span edge-to-edge. */
