@@ -9,12 +9,12 @@
     <div class="field">
         <label class="field__label" for="title">Song title</label>
         <input id="title" class="input" placeholder="e.g. Bohemian Rhapsody"
-               @bind="_title" @bind:event="oninput" />
+               @bind="_title" @bind:event="oninput" @bind:after="OnAddFieldChanged" />
     </div>
     <div class="field">
         <label class="field__label" for="artist">Artist</label>
         <input id="artist" class="input" placeholder="e.g. Queen"
-               @bind="_artist" @bind:event="oninput" />
+               @bind="_artist" @bind:event="oninput" @bind:after="OnAddFieldChanged" />
     </div>
     <div class="field">
         <label class="field__label" for="genre">Genre</label>
@@ -40,7 +40,14 @@
         <StarRating @bind-Value="_confidence" />
     </div>
 
-    <button class="btn btn-primary" @onclick="AddAsync" disabled="@(!CanAdd)">Add to my list</button>
+    @if (IsDuplicate)
+    {
+        <div class="field__warn">⚠ @DuplicateMessage</div>
+    }
+
+    <button class="btn btn-primary" @onclick="AddAsync" disabled="@(!CanAdd)">
+        @(IsDuplicate && _confirmedDuplicate ? "Add anyway" : "Add to my list")
+    </button>
 </div>
 
 @if (_items.Count > 0)
@@ -243,6 +250,23 @@ else
 
     private bool CanAdd => !string.IsNullOrWhiteSpace(_title) && YearValid;
 
+    // Duplicate guard: an existing song with the same title + artist (trimmed, case-insensitive).
+    // Non-blocking — the first Add on a match arms an "Add anyway" confirm; editing a field disarms it.
+    private bool _confirmedDuplicate;
+
+    private bool IsDuplicate =>
+        !string.IsNullOrWhiteSpace(_title) &&
+        _items.Any(i =>
+            string.Equals(i.Title.Trim(), _title.Trim(), StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(i.Artist.Trim(), _artist.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    private string DuplicateMessage =>
+        string.IsNullOrWhiteSpace(_artist)
+            ? $"You already have \"{_title.Trim()}\" in your list."
+            : $"You already have \"{_title.Trim()}\" by {_artist.Trim()} in your list.";
+
+    private void OnAddFieldChanged() => _confirmedDuplicate = false;
+
     private void SortBy(SortColumn column)
     {
         if (_sort == column)
@@ -398,10 +422,17 @@ else
         if (!CanAdd)
             return;
 
+        if (IsDuplicate && !_confirmedDuplicate)
+        {
+            _confirmedDuplicate = true;   // arm: the next click adds it anyway
+            return;
+        }
+
         await Store.AddAsync(_title, _artist, _notes, _genre, _confidence, _year);
         _title = _artist = _notes = _genre = string.Empty;    // Store.Changed triggers the list refresh.
         _confidence = 0;
         _year = null;
+        _confirmedDuplicate = false;
     }
 
     private async Task ToggleFavoriteAsync(SongListItem item)
