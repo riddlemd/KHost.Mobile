@@ -384,8 +384,8 @@ html, body {
 /* Row is tappable (opens the detail sheet). */
 .song-table tbody td:nth-child(2) { cursor: pointer; }
 
-/* ---- YouTube Music import ----------------------------------------------- */
-/* Header row of the add card: title on the left, import icon pinned top-right. */
+/* ---- Playlist import (Spotify / YouTube Music) -------------------------- */
+/* Header row of the add card: title on the left, import icons pinned top-right. */
 .add-head {
     display: flex;
     align-items: flex-start;
@@ -393,14 +393,19 @@ html, body {
     gap: 0.5rem;
     margin-bottom: 0.25rem;
 }
-.ytm-import-btn {
+.import-icons {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    margin: -0.15rem -0.15rem 0 0;
+}
+.import-icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 2.4rem;
     height: 2.4rem;
-    margin: -0.15rem -0.15rem 0 0;
     padding: 0;
     border: none;
     border-radius: 50%;
@@ -409,9 +414,9 @@ html, body {
     -webkit-tap-highlight-color: transparent;
     transition: background 0.15s ease, transform 0.1s ease;
 }
-.ytm-import-btn:hover { background: var(--kh-surface-2); }
-.ytm-import-btn:active { transform: scale(0.92); }
-.ytm-import-btn svg { display: block; }
+.import-icon-btn:hover { background: var(--kh-surface-2); }
+.import-icon-btn:active { transform: scale(0.92); }
+.import-icon-btn svg { display: block; }
 
 .import-head {
     display: flex;

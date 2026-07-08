@@ -1,4 +1,5 @@
-﻿using KHost.Mobile.Client.YouTubeMusic;
+﻿using KHost.Mobile.Client.Spotify;
+using KHost.Mobile.Client.YouTubeMusic;
 using KHost.Mobile.Services;
 using Microsoft.Extensions.Logging;
 
@@ -26,6 +27,9 @@ public static class MauiProgram
 
 		// Token-free import of public YouTube Music playlists (title + artist) via the playlist page.
 		builder.Services.AddSingleton<IYouTubeMusicImportService>(_ => new YouTubeMusicImportService(new HttpClient()));
+
+		// Token-free import of public Spotify playlists (title + artist) via the embed endpoint.
+		builder.Services.AddSingleton<ISpotifyImportService>(_ => new SpotifyImportService(new HttpClient()));
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
