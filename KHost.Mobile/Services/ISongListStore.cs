@@ -30,4 +30,12 @@ public interface ISongListStore
     /// <summary>Re-insert a previously removed item verbatim (same Id, timestamps, rating). No-op if it's
     /// already present. Backs swipe-to-remove Undo so a restored song returns to its exact place.</summary>
     Task RestoreAsync(SongListItem item);
+
+    /// <summary>
+    /// Bulk-add many songs in one shot (e.g. a playlist import): loads once, appends, saves once, and
+    /// fires <see cref="Changed"/> a single time — not per song. When <paramref name="skipDuplicates"/>
+    /// is true, incoming songs whose title+artist already exist (or repeat within the batch) are skipped.
+    /// Entries with a blank title are ignored. Returns the number actually added.
+    /// </summary>
+    Task<int> ImportAsync(IEnumerable<SongListItem> items, bool skipDuplicates = true);
 }

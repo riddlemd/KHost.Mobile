@@ -1,4 +1,5 @@
-﻿using KHost.Mobile.Services;
+﻿using KHost.Mobile.Client.YouTubeMusic;
+using KHost.Mobile.Services;
 using Microsoft.Extensions.Logging;
 
 namespace KHost.Mobile;
@@ -22,6 +23,9 @@ public static class MauiProgram
 
 		// Opens external links (e.g. a YouTube search) in the OS browser / matching app.
 		builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
+
+		// Token-free import of public YouTube Music playlists (title + artist) via the playlist page.
+		builder.Services.AddSingleton<IYouTubeMusicImportService>(_ => new YouTubeMusicImportService(new HttpClient()));
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
