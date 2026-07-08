@@ -23,8 +23,11 @@
     --kh-radius: 0.85rem;
 }
 
+/* Dark palette. Applied automatically when the OS asks for dark AND the user hasn't
+   picked a theme (`:not([data-theme])`), or explicitly when they choose dark via the
+   header toggle. An explicit `data-theme` on <html> always wins over the OS preference. */
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme]) {
         --kh-primary: #a78bfa;
         --kh-primary-strong: #8b5cf6;
         --kh-primary-contrast: #1a1024;
@@ -38,6 +41,22 @@
         --kh-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
 }
+
+:root[data-theme="dark"] {
+    --kh-primary: #a78bfa;
+    --kh-primary-strong: #8b5cf6;
+    --kh-primary-contrast: #1a1024;
+    --kh-bg: #0f0f14;
+    --kh-surface: #1a1a22;
+    --kh-surface-2: #24242e;
+    --kh-text: #f2f2f6;
+    --kh-text-muted: #9a9aa6;
+    --kh-border: #2e2e3a;
+    --kh-danger: #f87171;
+    --kh-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+/* `data-theme="light"` needs no block: the base :root is already light, and the OS-dark
+   rule above is scoped to :not([data-theme]), so an explicit light choice simply wins. */
 
 * { box-sizing: border-box; }
 
@@ -73,6 +92,28 @@ html, body {
     align-items: center;
     gap: 0.4rem;
 }
+
+/* Absolutely positioned so the title stays centred in the header. */
+.theme-toggle {
+    position: absolute;
+    right: 0.75rem;
+    top: calc(env(safe-area-inset-top) + (var(--kh-header-h) - 2.1rem) / 2);
+    width: 2.1rem;
+    height: 2.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    line-height: 1;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+.theme-toggle:hover { background: rgba(255, 255, 255, 0.28); }
+.theme-toggle:active { transform: scale(0.9); }
 
 .app-content {
     padding: 1rem 1rem calc(var(--kh-nav-h) + env(safe-area-inset-bottom) + 1rem);

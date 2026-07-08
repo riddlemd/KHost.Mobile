@@ -1,7 +1,13 @@
 @inherits LayoutComponentBase
+@inject IJSRuntime JS
 
 <header class="app-header">
     <div class="app-header__title"><span>🎤</span> KHost</div>
+    <button type="button" class="theme-toggle" @onclick="ToggleThemeAsync"
+            title="@(_theme == "dark" ? "Switch to light mode" : "Switch to dark mode")"
+            aria-label="Toggle light or dark theme">
+        @(_theme == "dark" ? "☀️" : "🌙")
+    </button>
 </header>
 
 <main class="app-content">
@@ -9,3 +15,22 @@
 </main>
 
 <NavMenu />
+
+@code {
+    private string _theme = "light";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Read whatever the head script / OS preference resolved to, so the icon matches.
+            _theme = await JS.InvokeAsync<string>("khTheme.current");
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleThemeAsync()
+    {
+        _theme = await JS.InvokeAsync<string>("khTheme.toggle");
+    }
+}
