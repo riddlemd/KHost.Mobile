@@ -1,4 +1,5 @@
-﻿using KHost.Mobile.Client.Spotify;
+﻿using KHost.Mobile.Client.Enrichment;
+using KHost.Mobile.Client.Spotify;
 using KHost.Mobile.Client.YouTubeMusic;
 using KHost.Mobile.Services;
 using Microsoft.Extensions.Logging;
@@ -30,6 +31,9 @@ public static class MauiProgram
 
 		// Token-free import of public Spotify playlists (title + artist) via the embed endpoint.
 		builder.Services.AddSingleton<ISpotifyImportService>(_ => new SpotifyImportService(new HttpClient()));
+
+		// Keyless release-year + genre lookup (iTunes Search API) for "Try Autofill details".
+		builder.Services.AddSingleton<ITrackMetadataLookup>(_ => new ITunesTrackMetadataLookup(new HttpClient()));
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
