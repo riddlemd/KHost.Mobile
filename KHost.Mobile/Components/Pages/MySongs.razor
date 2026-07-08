@@ -1,10 +1,12 @@
 @page "/"
+@using KHost.Mobile.Client.Enrichment
 @using KHost.Mobile.Client.Spotify
 @using KHost.Mobile.Client.YouTubeMusic
 @inject ISongListStore Store
 @inject ILinkLauncher Links
 @inject ISpotifyImportService Spotify
 @inject IYouTubeMusicImportService YtMusic
+@inject ITrackMetadataLookup Metadata
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -415,6 +417,14 @@ else
                 <textarea id="e-notes" class="input sheet__notes" rows="3"
                           placeholder="e.g. start slow, key of G" @bind="_editNotes" @bind:event="oninput"></textarea>
             </div>
+            <button type="button" class="btn btn-secondary autofill-btn" @onclick="AutofillDetailsAsync"
+                    disabled="@(_autofillBusy || string.IsNullOrWhiteSpace(_editTitle))">
+                @(_autofillBusy ? "Searching…" : "✨ Try Autofill details")
+            </button>
+            @if (_autofillStatus is not null)
+            {
+                <div class="field__hint autofill-status">@_autofillStatus</div>
+            }
             <div class="sheet__actions">
                 <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
                 <button class="btn btn-primary" @onclick="SaveEditAsync" disabled="@(!CanSaveEdit)">Save</button>
@@ -472,6 +482,10 @@ else
     private string _editGenre = string.Empty;
     private string _editNotes = string.Empty;
     private int? _editYear;
+
+    // "Try Autofill details" — keyless year/genre lookup for the edit form.
+    private bool _autofillBusy;
+    private string? _autofillStatus;
 
     // Playlist import sheet (Spotify or YouTube Music). _importRows is null until a fetch succeeds.
     private enum ImportSource { Spotify, YouTubeMusic }
@@ -752,10 +766,86 @@ else
         _editGenre = _detailItem.Genre ?? string.Empty;
         _editNotes = _detailItem.Notes ?? string.Empty;
         _editYear = _detailItem.Year;
+        _autofillStatus = null;
+        _autofillBusy = false;
         _editing = true;
     }
 
     private void CancelEdit() => _editing = false;   // discard the edit buffers, back to view mode
+
+    // "Try Autofill details": look up release year + genre for the current title/artist and fill the
+    // edit fields for the user to review before saving. Fuzzy lookup — never auto-saves.
+    private async Task AutofillDetailsAsync()
+    {
+        if (_autofillBusy || string.IsNullOrWhiteSpace(_editTitle))
+            return;
+
+        _autofillBusy = true;
+        _autofillStatus = null;
+        try
+        {
+            var meta = await Metadata.LookupAsync(_editTitle.Trim(), _editArtist.Trim());
+            if (meta is null)
+            {
+                _autofillStatus = "No match found — try tidying the title or artist.";
+                return;
+            }
+
+            var filled = new List<string>();
+            if (meta.Year is int year)
+            {
+                _editYear = year;
+                filled.Add(year.ToString());
+            }
+
+            var genre = MapGenre(meta.Genre);
+            if (genre is not null)
+            {
+                _editGenre = genre;
+                filled.Add(genre);
+            }
+
+            _autofillStatus = filled.Count > 0
+                ? $"Filled {string.Join(" · ", filled)} (matched “{meta.MatchedTitle} — {meta.MatchedArtist}”). Review, then Save."
+                : "Found a match, but no year or genre to fill.";
+        }
+        catch (MetadataLookupException ex)
+        {
+            _autofillStatus = ex.Message;
+        }
+        finally
+        {
+            _autofillBusy = false;
+        }
+    }
+
+    // Map an iTunes genre onto the app's fixed genre list (the edit field is a <select> of Genres.All,
+    // so an unmapped value couldn't stick). Exact match, then a few aliases, then a contains fallback.
+    private static readonly Dictionary<string, string> GenreAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Hip-Hop/Rap"] = "Hip Hop",
+        ["Singer/Songwriter"] = "Singer-Songwriter",
+        ["Holiday"] = "Christmas / Holiday",
+        ["Worldwide"] = "World",
+    };
+
+    private static string? MapGenre(string? itunesGenre)
+    {
+        if (string.IsNullOrWhiteSpace(itunesGenre))
+            return null;
+
+        var genre = itunesGenre.Trim();
+
+        var exact = Genres.All.FirstOrDefault(g => string.Equals(g, genre, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null)
+            return exact;
+
+        if (GenreAliases.TryGetValue(genre, out var alias))
+            return alias;
+
+        // e.g. "R&B/Soul" contains "R&B"; "Hip-Hop/Rap" contains "Rap".
+        return Genres.All.FirstOrDefault(g => genre.Contains(g, StringComparison.OrdinalIgnoreCase));
+    }
 
     private async Task SaveEditAsync()
     {

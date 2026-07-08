@@ -462,6 +462,10 @@ html, body {
 .import-row.is-dupe .import-row__title,
 .import-row.is-dupe .import-row__artist { opacity: 0.55; }
 
+/* "Try Autofill details" (edit sheet). */
+.autofill-btn { width: 100%; margin-top: 0.15rem; }
+.autofill-status { margin-top: 0.4rem; }
+
 /* ---- Sortable song table ------------------------------------------------ */
 
 /* Full-bleed: pull the table out past the page's 1rem side padding so rows span edge-to-edge. */
