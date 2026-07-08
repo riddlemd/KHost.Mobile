@@ -413,14 +413,7 @@ else
                 <div class="sheet__row">
                     <span class="sheet__key">Rating</span>
                     <span class="sheet__val">
-                        @if (_detailItem.Confidence > 0)
-                        {
-                            <StarRating Value="_detailItem.Confidence" ReadOnly="true" Sung="true" />
-                        }
-                        else
-                        {
-                            <span class="sheet__muted">Not rated</span>
-                        }
+                        <StarRating Value="DisplayConfidence(_detailItem)" ValueChanged="v => UpdateRatingAsync(_detailItem, v)" Sung="@_detailItem.SungAt.HasValue" />
                     </span>
                 </div>
                 <div class="sheet__row">
