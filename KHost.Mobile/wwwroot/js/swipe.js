@@ -84,6 +84,12 @@ window.khSwipe = {
             active = null;
             a.row.classList.remove('song-row--swiping');
 
+            if (!a.dragging) {
+                // A clean tap (no horizontal drag) on a non-interactive part of the row opens its detail sheet.
+                dotNetRef.invokeMethodAsync('OpenDetail', a.id);
+                return;
+            }
+
             if (a.dragging && Math.abs(a.dx) > a.rect.width * COMMIT_FRACTION) {
                 // Commit: slide the row off over the fully-revealed strip, then tell .NET to remove.
                 showLabel(a.rect, -a.rect.width, true);

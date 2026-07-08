@@ -1,5 +1,5 @@
 @* 0-5 rating. 0 = unsung (shows an "unsung" overlay). Tap the current top star again to clear back to 0. *@
-<div class="stars @(ReadOnly ? "stars--readonly" : "") @(Value <= 0 ? "stars--unrated" : "")" role="radiogroup" aria-label="Rating">
+<div class="stars @(ReadOnly ? "stars--readonly" : "") @(Value <= 0 && !Sung ? "stars--unrated" : "")" role="radiogroup" aria-label="Rating">
     @for (var i = 1; i <= 5; i++)
     {
         var star = i;
@@ -10,7 +10,7 @@
                 aria-label="@($"{star} of 5 — {Label(star)}")"
                 title="@Label(star)">★</button>
     }
-    @if (Value <= 0)
+    @if (Value <= 0 && !Sung)
     {
         <span class="stars__unsung" aria-hidden="true">unsung</span>
     }
@@ -20,6 +20,9 @@
     [Parameter] public int Value { get; set; }
     [Parameter] public EventCallback<int> ValueChanged { get; set; }
     [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>When true, a 0 rating is "sung but unrated" — suppresses the "unsung" overlay.</summary>
+    [Parameter] public bool Sung { get; set; }
 
     // Tapping the already-selected rank clears the rating back to 0 (unsung).
     private async Task SetAsync(int value)
