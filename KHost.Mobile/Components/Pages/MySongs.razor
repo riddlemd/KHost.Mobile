@@ -1,7 +1,9 @@
 @page "/"
+@using KHost.Mobile.Client.Spotify
 @using KHost.Mobile.Client.YouTubeMusic
 @inject ISongListStore Store
 @inject ILinkLauncher Links
+@inject ISpotifyImportService Spotify
 @inject IYouTubeMusicImportService YtMusic
 @inject IJSRuntime JS
 @implements IDisposable
@@ -9,14 +11,22 @@
 <div class="card">
     <div class="add-head">
         <div class="section-title" style="margin:0">Add a song you'd like to sing</div>
-        <button type="button" class="ytm-import-btn" @onclick="OpenImport"
-                title="Import from YouTube Music" aria-label="Import from YouTube Music">
-            <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-                <circle cx="12" cy="12" r="11" fill="#ff0000" />
-                <circle cx="12" cy="12" r="7.4" fill="none" stroke="#fff" stroke-width="1.6" />
-                <path d="M10 8.4l5.2 3.6L10 15.6z" fill="#fff" />
-            </svg>
-        </button>
+        <div class="import-icons">
+            <button type="button" class="import-icon-btn" @onclick="() => OpenImport(ImportSource.Spotify)"
+                    title="Import from Spotify" aria-label="Import from Spotify">
+                <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+                    <path fill="#1ed760" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.84-.18-.96-.6-.122-.42.18-.84.6-.96 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.302 1.141zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.481.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z" />
+                </svg>
+            </button>
+            <button type="button" class="import-icon-btn" @onclick="() => OpenImport(ImportSource.YouTubeMusic)"
+                    title="Import from YouTube Music" aria-label="Import from YouTube Music">
+                <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+                    <circle cx="12" cy="12" r="11" fill="#ff0000" />
+                    <circle cx="12" cy="12" r="6.1" fill="#fff" />
+                    <path d="M10.4 9.1 15.2 12 10.4 14.9z" fill="#ff0000" />
+                </svg>
+            </button>
+        </div>
     </div>
 
     <div class="field">
@@ -242,12 +252,12 @@ else
     <div class="sheet-backdrop" @onclick="CloseImport"></div>
     <div class="sheet" role="dialog" aria-modal="true">
         <button type="button" class="sheet__close" @onclick="CloseImport" aria-label="Close">✕</button>
-        <div class="sheet__title">Import from YouTube Music</div>
+        <div class="sheet__title">Import from @SourceName</div>
         <div class="sheet__subtitle">Paste a public playlist link — we'll pull in the song titles &amp; artists.</div>
 
         <div class="field" style="margin-top:0.85rem">
             <label class="field__label" for="imp-url">Playlist link</label>
-            <input id="imp-url" class="input" placeholder="https://music.youtube.com/playlist?list=…"
+            <input id="imp-url" class="input" placeholder="@SourcePlaceholder"
                    @bind="_importUrl" @bind:event="oninput" />
         </div>
 
@@ -283,8 +293,8 @@ else
                         <label class="import-row__label">
                             <input type="checkbox" @bind="row.Selected" />
                             <span class="import-row__text">
-                                <span class="import-row__title">@row.Track.Title</span>
-                                <span class="import-row__artist">@row.Track.Artist</span>
+                                <span class="import-row__title">@row.Title</span>
+                                <span class="import-row__artist">@row.Artist</span>
                             </span>
                             @if (row.AlreadyInList)
                             {
@@ -463,7 +473,9 @@ else
     private string _editNotes = string.Empty;
     private int? _editYear;
 
-    // YouTube Music import sheet. _importRows is null until a fetch succeeds; each row tracks its checkbox.
+    // Playlist import sheet (Spotify or YouTube Music). _importRows is null until a fetch succeeds.
+    private enum ImportSource { Spotify, YouTubeMusic }
+    private ImportSource _importSource;
     private bool _importOpen;
     private string _importUrl = string.Empty;
     private bool _importBusy;
@@ -473,13 +485,20 @@ else
     private List<ImportRow>? _importRows;
     private int _selectedImportCount => _importRows?.Count(r => r.Selected) ?? 0;
 
+    private string SourceName => _importSource == ImportSource.Spotify ? "Spotify" : "YouTube Music";
+    private string SourcePlaceholder => _importSource == ImportSource.Spotify
+        ? "https://open.spotify.com/playlist/…"
+        : "https://music.youtube.com/playlist?list=…";
+
     // Transient toast (import result), shown in the snackbar slot; auto-dismisses.
     private string? _flash;
     private CancellationTokenSource? _flashCts;
 
+    // Source-agnostic preview row: both Spotify and YT Music fetches are projected to title + artist.
     private sealed class ImportRow
     {
-        public required YouTubeMusicTrack Track { get; init; }
+        public required string Title { get; init; }
+        public required string Artist { get; init; }
         public bool Selected { get; set; }
         public bool AlreadyInList { get; init; }
     }
@@ -777,10 +796,11 @@ else
             ? Task.CompletedTask
             : Links.OpenAsync(YouTubeSearch.UrlFor(_detailItem.Title, _detailItem.Artist));
 
-    // ---- YouTube Music playlist import --------------------------------------------------------
+    // ---- Playlist import (Spotify / YouTube Music) --------------------------------------------
 
-    private void OpenImport()
+    private void OpenImport(ImportSource source)
     {
+        _importSource = source;
         _importOpen = true;
         _importUrl = string.Empty;
         _importRows = null;
@@ -804,12 +824,32 @@ else
         _importError = null;
         try
         {
-            var result = await YtMusic.FetchPlaylistAsync(_importUrl.Trim());
-            _importName = string.IsNullOrWhiteSpace(result.Name) ? "Playlist" : result.Name;
-            _importTruncated = result.LikelyTruncated;
-            _importRows = result.Tracks.Select(t => new ImportRow
+            // Each source's fetch is projected to a common (name, tracks, truncated) shape.
+            string? name;
+            bool truncated;
+            List<(string Title, string Artist)> tracks;
+
+            if (_importSource == ImportSource.Spotify)
             {
-                Track = t,
+                var result = await Spotify.FetchPlaylistAsync(_importUrl.Trim());
+                name = result.Name;
+                truncated = result.LikelyTruncated;
+                tracks = result.Tracks.Select(t => (t.Title, t.Artist)).ToList();
+            }
+            else
+            {
+                var result = await YtMusic.FetchPlaylistAsync(_importUrl.Trim());
+                name = result.Name;
+                truncated = result.LikelyTruncated;
+                tracks = result.Tracks.Select(t => (t.Title, t.Artist)).ToList();
+            }
+
+            _importName = string.IsNullOrWhiteSpace(name) ? "Playlist" : name;
+            _importTruncated = truncated;
+            _importRows = tracks.Select(t => new ImportRow
+            {
+                Title = t.Title,
+                Artist = t.Artist,
                 AlreadyInList = _items.Any(i =>
                     string.Equals(i.Title.Trim(), t.Title, StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(i.Artist.Trim(), t.Artist, StringComparison.OrdinalIgnoreCase)),
@@ -822,7 +862,7 @@ else
             if (_importRows.Count == 0)
                 _importError = "That playlist has no importable tracks.";
         }
-        catch (YouTubeMusicImportException ex)
+        catch (Exception ex) when (ex is SpotifyImportException or YouTubeMusicImportException)
         {
             _importError = ex.Message;
             _importRows = null;
@@ -857,13 +897,13 @@ else
         _importBusy = true;
         try
         {
-            // Imported as unsung wishlist entries: title + artist only (no year/genre from YT Music).
-            var toImport = chosen.Select(r => new SongListItem { Title = r.Track.Title, Artist = r.Track.Artist }).ToList();
+            // Imported as unsung wishlist entries: title + artist only (no year/genre from either source).
+            var toImport = chosen.Select(r => new SongListItem { Title = r.Title, Artist = r.Artist }).ToList();
 
             // Selection already excludes duplicates; a force-ticked duplicate is honored (skipDuplicates: false).
             var added = await Store.ImportAsync(toImport, skipDuplicates: false);   // Store.Changed → RefreshAsync
             _importOpen = false;
-            await FlashAsync($"Imported {added} song{(added == 1 ? "" : "s")} from YouTube Music");
+            await FlashAsync($"Imported {added} song{(added == 1 ? "" : "s")} from {SourceName}");
         }
         finally
         {
