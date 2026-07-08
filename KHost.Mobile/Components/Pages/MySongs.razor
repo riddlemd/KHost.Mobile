@@ -1,5 +1,6 @@
 @page "/"
 @inject ISongListStore Store
+@inject ILinkLauncher Links
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -265,6 +266,7 @@ else
                     <span class="sheet__val">@_detailItem.AddedAt.ToString("MMM d, yyyy")</span>
                 </div>
             </div>
+            <button class="btn sheet__youtube" @onclick="OpenYouTubeAsync">▶ Find on YouTube</button>
             <div class="sheet__actions">
                 <button class="btn btn-primary" @onclick="StartEdit">Edit</button>
                 @if (_detailItem.SungAt.HasValue)
@@ -660,6 +662,12 @@ else
         _detailItem.Confidence = 0;   // back on the wishlist — a rating no longer applies
         await Store.UpdateAsync(_detailItem);
     }
+
+    // Opens a YouTube search for the song in the OS browser / YouTube app (not the in-app WebView).
+    private Task OpenYouTubeAsync() =>
+        _detailItem is null
+            ? Task.CompletedTask
+            : Links.OpenAsync(YouTubeSearch.UrlFor(_detailItem.Title, _detailItem.Artist));
 
     private async Task AddAsync()
     {
