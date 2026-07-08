@@ -6,7 +6,7 @@
 @inject ILinkLauncher Links
 @inject ISpotifyImportService Spotify
 @inject IYouTubeMusicImportService YtMusic
-@inject ITrackMetadataLookup Metadata
+@inject IMetadataSuggester Suggester
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -254,6 +254,58 @@ else
     <div class="sheet-backdrop" @onclick="CloseImport"></div>
     <div class="sheet" role="dialog" aria-modal="true">
         <button type="button" class="sheet__close" @onclick="CloseImport" aria-label="Close">✕</button>
+        @if (_reviewRows is not null)
+        {
+            <div class="sheet__title">Fill in details</div>
+            <div class="sheet__subtitle">
+                @(_reviewEnriching
+                    ? $"Looking up {_reviewDoneCount} of {_reviewRows.Count}…"
+                    : $"Found details for {_reviewRows.Count(HasApplyable)} of {_reviewRows.Count}. Review, then apply.")
+            </div>
+            <ul class="import-list review-list">
+                @foreach (var row in _reviewRows)
+                {
+                    <li class="import-row">
+                        <label class="import-row__label">
+                            @if (row.Done && HasApplyable(row))
+                            {
+                                <input type="checkbox" @bind="row.Selected" />
+                            }
+                            else
+                            {
+                                <span class="review-spacer"></span>
+                            }
+                            <span class="import-row__text">
+                                <span class="import-row__title">@row.Item.Title</span>
+                                <span class="import-row__artist">@row.Item.Artist</span>
+                            </span>
+                            <span class="review-result">
+                                @if (!row.Done)
+                                {
+                                    <span class="sheet__muted">…</span>
+                                }
+                                else if (HasApplyable(row))
+                                {
+                                    @ReviewSummary(row)
+                                }
+                                else
+                                {
+                                    <span class="sheet__muted">no match</span>
+                                }
+                            </span>
+                        </label>
+                    </li>
+                }
+            </ul>
+            <div class="sheet__actions">
+                <button class="btn btn-secondary" @onclick="SkipReview">Skip</button>
+                <button class="btn btn-primary" @onclick="ApplyReviewAsync" disabled="@(_reviewSelectedCount == 0)">
+                    Apply @_reviewSelectedCount
+                </button>
+            </div>
+        }
+        else
+        {
         <div class="sheet__title">Import from @SourceName</div>
         <div class="sheet__subtitle">Paste a public playlist link — we'll pull in the song titles &amp; artists.</div>
 
@@ -314,6 +366,7 @@ else
                 </button>
             </div>
         }
+        }
     </div>
 }
 
@@ -333,23 +386,34 @@ else
             <div class="sheet__rows">
                 <div class="sheet__row">
                     <span class="sheet__key">Genre</span>
-                    <span class="sheet__val">@(string.IsNullOrWhiteSpace(_detailItem.Genre) ? "—" : _detailItem.Genre)</span>
+                    <span class="sheet__val">
+                        @if (!string.IsNullOrWhiteSpace(_detailItem.Genre))
+                        {
+                            @_detailItem.Genre
+                        }
+                        else
+                        {
+                            <span class="sheet__muted">@(_suggestionLoading ? "…" : "—")</span>
+                        }
+                    </span>
                 </div>
                 <div class="sheet__row">
                     <span class="sheet__key">Year</span>
-                    <span class="sheet__val">@(_detailItem.Year?.ToString() ?? "—")</span>
+                    <span class="sheet__val">
+                        @if (_detailItem.Year.HasValue)
+                        {
+                            @_detailItem.Year
+                        }
+                        else
+                        {
+                            <span class="sheet__muted">@(_suggestionLoading ? "…" : "—")</span>
+                        }
+                    </span>
                 </div>
                 <div class="sheet__row">
                     <span class="sheet__key">Rating</span>
                     <span class="sheet__val">
-                        @if (_detailItem.Confidence > 0)
-                        {
-                            <StarRating Value="_detailItem.Confidence" ReadOnly="true" Sung="true" />
-                        }
-                        else
-                        {
-                            <span class="sheet__muted">Not rated</span>
-                        }
+                        <StarRating Value="DisplayConfidence(_detailItem)" ValueChanged="v => UpdateRatingAsync(_detailItem, v)" Sung="@_detailItem.SungAt.HasValue" />
                     </span>
                 </div>
                 <div class="sheet__row">
@@ -365,6 +429,10 @@ else
                     <span class="sheet__val">@_detailItem.AddedAt.ToString("MMM d, yyyy")</span>
                 </div>
             </div>
+            @if (_autoFilledNote is not null)
+            {
+                <div class="suggest-match">@_autoFilledNote</div>
+            }
             <button class="btn sheet__youtube" @onclick="OpenYouTubeAsync">▶ Find on YouTube</button>
             <div class="sheet__actions">
                 <button class="btn btn-primary" @onclick="StartEdit">Edit</button>
@@ -417,14 +485,6 @@ else
                 <textarea id="e-notes" class="input sheet__notes" rows="3"
                           placeholder="e.g. start slow, key of G" @bind="_editNotes" @bind:event="oninput"></textarea>
             </div>
-            <button type="button" class="btn btn-secondary autofill-btn" @onclick="AutofillDetailsAsync"
-                    disabled="@(_autofillBusy || string.IsNullOrWhiteSpace(_editTitle))">
-                @(_autofillBusy ? "Searching…" : "✨ Try Autofill details")
-            </button>
-            @if (_autofillStatus is not null)
-            {
-                <div class="field__hint autofill-status">@_autofillStatus</div>
-            }
             <div class="sheet__actions">
                 <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
                 <button class="btn btn-primary" @onclick="SaveEditAsync" disabled="@(!CanSaveEdit)">Save</button>
@@ -483,9 +543,12 @@ else
     private string _editNotes = string.Empty;
     private int? _editYear;
 
-    // "Try Autofill details" — keyless year/genre lookup for the edit form.
-    private bool _autofillBusy;
-    private string? _autofillStatus;
+    // Detail-view metadata suggestion: a cached year/genre lookup for the open song. When the sheet opens
+    // and a field is blank, we fill it straight from the match (no confirmation) and note what we filled.
+    private TrackMetadata? _detailSuggestion;
+    private bool _suggestionLoading;
+    private string? _autoFilledNote;
+    private CancellationTokenSource? _suggestCts;
 
     // Playlist import sheet (Spotify or YouTube Music). _importRows is null until a fetch succeeds.
     private enum ImportSource { Spotify, YouTubeMusic }
@@ -498,6 +561,36 @@ else
     private bool _importTruncated;
     private List<ImportRow>? _importRows;
     private int _selectedImportCount => _importRows?.Count(r => r.Selected) ?? 0;
+
+    // Post-import review: after songs are added, enrich them in the background (throttled to respect the
+    // lookup rate limit) and let the user apply the found year/genre in bulk. Null = no review in progress.
+    private List<ReviewRow>? _reviewRows;
+    private bool _reviewEnriching;
+    private int _reviewDoneCount;
+    private CancellationTokenSource? _reviewCts;
+    private int _reviewSelectedCount => _reviewRows?.Count(r => r.Done && HasApplyable(r) && r.Selected) ?? 0;
+
+    // One reviewed song: the persisted item + its suggestion once looked up.
+    private sealed class ReviewRow
+    {
+        public required SongListItem Item { get; init; }
+        public TrackMetadata? Suggestion { get; set; }
+        public bool Done { get; set; }        // lookup finished (hit or miss)
+        public bool Selected { get; set; } = true;
+    }
+
+    // A review row is applyable when its lookup produced a year or a mappable genre to fill.
+    private bool HasApplyable(ReviewRow row) =>
+        row.Suggestion is not null &&
+        (row.Suggestion.Year.HasValue || MapGenre(row.Suggestion.Genre) is not null);
+
+    private string ReviewSummary(ReviewRow row)
+    {
+        var parts = new List<string>();
+        if (row.Suggestion?.Year is int y) parts.Add(y.ToString());
+        if (MapGenre(row.Suggestion?.Genre) is string g) parts.Add(g);
+        return string.Join(" · ", parts);
+    }
 
     private string SourceName => _importSource == ImportSource.Spotify ? "Spotify" : "YouTube Music";
     private string SourcePlaceholder => _importSource == ImportSource.Spotify
@@ -746,13 +839,72 @@ else
         {
             _detailItem = _items.FirstOrDefault(i => i.Id == guid);
             _editing = false;
+            _ = LoadDetailSuggestionAsync(_detailItem);
             StateHasChanged();
         }
         return Task.CompletedTask;
     }
 
+    // Fetch (or read from cache) a year/genre suggestion for the open song, but only when it has a blank
+    // year or genre to fill. Any match is applied straight to the blank field(s) and persisted — no chip,
+    // no confirmation — since the data's already in hand.
+    private async Task LoadDetailSuggestionAsync(SongListItem? item)
+    {
+        _suggestCts?.Cancel();
+        _detailSuggestion = null;
+        _autoFilledNote = null;
+        _suggestionLoading = false;
+
+        if (item is null ||
+            (!string.IsNullOrWhiteSpace(item.Genre) && item.Year.HasValue) ||
+            string.IsNullOrWhiteSpace(item.Title))
+            return;
+
+        _suggestCts = new CancellationTokenSource();
+        var token = _suggestCts.Token;
+        _suggestionLoading = true;
+        try
+        {
+            var meta = await Suggester.SuggestAsync(item.Title, item.Artist, token);
+            if (token.IsCancellationRequested || _detailItem?.Id != item.Id)
+                return;
+            _detailSuggestion = meta;
+
+            var filled = new List<string>();
+            if (string.IsNullOrWhiteSpace(item.Genre) && MapGenre(meta?.Genre) is string g)
+            {
+                item.Genre = g;
+                filled.Add("Genre");
+            }
+            if (!item.Year.HasValue && meta?.Year is int y)
+            {
+                item.Year = y;
+                filled.Add("Year");
+            }
+
+            if (filled.Count > 0)
+            {
+                _autoFilledNote = $"✨ Auto-filled {JoinFields(filled)} from “{meta!.MatchedTitle} — {meta.MatchedArtist}”.";
+                await Store.UpdateAsync(item);   // persist; Store.Changed → RefreshAsync
+            }
+        }
+        catch (OperationCanceledException) { return; }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _suggestionLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
     private void CloseDetail()
     {
+        _suggestCts?.Cancel();
+        _detailSuggestion = null;
+        _autoFilledNote = null;
+        _suggestionLoading = false;
         _detailItem = null;
         _editing = false;
     }
@@ -766,58 +918,19 @@ else
         _editGenre = _detailItem.Genre ?? string.Empty;
         _editNotes = _detailItem.Notes ?? string.Empty;
         _editYear = _detailItem.Year;
-        _autofillStatus = null;
-        _autofillBusy = false;
         _editing = true;
     }
 
     private void CancelEdit() => _editing = false;   // discard the edit buffers, back to view mode
 
-    // "Try Autofill details": look up release year + genre for the current title/artist and fill the
-    // edit fields for the user to review before saving. Fuzzy lookup — never auto-saves.
-    private async Task AutofillDetailsAsync()
+    // Human list: "Genre", "Genre & Year", or (3+) "A, B, & C" — Oxford comma, ampersand before the last.
+    private static string JoinFields(IReadOnlyList<string> parts) => parts.Count switch
     {
-        if (_autofillBusy || string.IsNullOrWhiteSpace(_editTitle))
-            return;
-
-        _autofillBusy = true;
-        _autofillStatus = null;
-        try
-        {
-            var meta = await Metadata.LookupAsync(_editTitle.Trim(), _editArtist.Trim());
-            if (meta is null)
-            {
-                _autofillStatus = "No match found — try tidying the title or artist.";
-                return;
-            }
-
-            var filled = new List<string>();
-            if (meta.Year is int year)
-            {
-                _editYear = year;
-                filled.Add(year.ToString());
-            }
-
-            var genre = MapGenre(meta.Genre);
-            if (genre is not null)
-            {
-                _editGenre = genre;
-                filled.Add(genre);
-            }
-
-            _autofillStatus = filled.Count > 0
-                ? $"Filled {string.Join(" · ", filled)} (matched “{meta.MatchedTitle} — {meta.MatchedArtist}”). Review, then Save."
-                : "Found a match, but no year or genre to fill.";
-        }
-        catch (MetadataLookupException ex)
-        {
-            _autofillStatus = ex.Message;
-        }
-        finally
-        {
-            _autofillBusy = false;
-        }
-    }
+        0 => string.Empty,
+        1 => parts[0],
+        2 => $"{parts[0]} & {parts[1]}",
+        _ => $"{string.Join(", ", parts.Take(parts.Count - 1))}, & {parts[^1]}",
+    };
 
     // Map an iTunes genre onto the app's fixed genre list (the edit field is a <select> of Genres.All,
     // so an unmapped value couldn't stick). Exact match, then a few aliases, then a contains fallback.
@@ -897,12 +1010,18 @@ else
         _importError = null;
         _importName = null;
         _importTruncated = false;
+        _reviewCts?.Cancel();
+        _reviewRows = null;
+        _reviewEnriching = false;
     }
 
     private void CloseImport()
     {
         _importOpen = false;
         _importBusy = false;
+        _reviewCts?.Cancel();
+        _reviewRows = null;
+        _reviewEnriching = false;
     }
 
     private async Task FetchImportAsync()
@@ -992,13 +1111,112 @@ else
 
             // Selection already excludes duplicates; a force-ticked duplicate is honored (skipDuplicates: false).
             var added = await Store.ImportAsync(toImport, skipDuplicates: false);   // Store.Changed → RefreshAsync
-            _importOpen = false;
             await FlashAsync($"Imported {added} song{(added == 1 ? "" : "s")} from {SourceName}");
+
+            // Hand off to the review phase: enrich the freshly-added songs in the background, throttled,
+            // and let the user apply the found year/genre in bulk. The sheet stays open showing progress.
+            _importRows = null;
+            _reviewRows = toImport.Select(i => new ReviewRow { Item = i }).ToList();
+            _ = StartReviewEnrichmentAsync();
         }
         finally
         {
             _importBusy = false;
         }
+    }
+
+    // Look up each freshly-imported song one at a time, spaced out to stay under the lookup rate limit.
+    // Fire-and-forget from ImportSelectedAsync; cancelled if the sheet closes or a new import starts.
+    private const int ReviewThrottleMs = 3000;   // ~20/min
+
+    private async Task StartReviewEnrichmentAsync()
+    {
+        _reviewCts?.Cancel();
+        _reviewCts = new CancellationTokenSource();
+        var token = _reviewCts.Token;
+
+        var rows = _reviewRows;
+        if (rows is null)
+            return;
+
+        _reviewEnriching = true;
+        _reviewDoneCount = 0;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            for (var i = 0; i < rows.Count; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                var row = rows[i];
+
+                // Only a live fetch costs a rate-limit slot; a cache hit returns near-instantly. Time the
+                // call and skip the throttle after a fast (cached) response, so re-importing a mostly-known
+                // playlist stays snappy while genuinely new lookups stay spaced out.
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                row.Suggestion = await Suggester.SuggestAsync(row.Item.Title, row.Item.Artist, token);
+                sw.Stop();
+                row.Done = true;
+                row.Selected = HasApplyable(row);
+                _reviewDoneCount = i + 1;
+                await InvokeAsync(StateHasChanged);
+
+                var hitNetwork = sw.ElapsedMilliseconds > 400;
+                if (hitNetwork && i < rows.Count - 1)
+                    await Task.Delay(ReviewThrottleMs, token);
+            }
+        }
+        catch (OperationCanceledException) { return; }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _reviewEnriching = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    // Apply the checked suggestions (blank fields only) in one pass, then close the sheet.
+    private async Task ApplyReviewAsync()
+    {
+        if (_reviewRows is null)
+            return;
+
+        _reviewCts?.Cancel();
+        var applied = 0;
+        foreach (var row in _reviewRows.Where(r => r.Selected && r.Done && HasApplyable(r)))
+        {
+            var changed = false;
+            if (string.IsNullOrWhiteSpace(row.Item.Genre) && MapGenre(row.Suggestion?.Genre) is string g)
+            {
+                row.Item.Genre = g;
+                changed = true;
+            }
+            if (!row.Item.Year.HasValue && row.Suggestion?.Year is int y)
+            {
+                row.Item.Year = y;
+                changed = true;
+            }
+            if (changed)
+            {
+                await Store.UpdateAsync(row.Item);   // Store.Changed → RefreshAsync
+                applied++;
+            }
+        }
+
+        _reviewRows = null;
+        _reviewEnriching = false;
+        _importOpen = false;
+        await FlashAsync($"Filled details for {applied} song{(applied == 1 ? "" : "s")}");
+    }
+
+    private void SkipReview()
+    {
+        _reviewCts?.Cancel();
+        _reviewRows = null;
+        _reviewEnriching = false;
+        _importOpen = false;
     }
 
     private async Task FlashAsync(string message)
@@ -1075,5 +1293,9 @@ else
         _undoCts?.Dispose();
         _flashCts?.Cancel();
         _flashCts?.Dispose();
+        _suggestCts?.Cancel();
+        _suggestCts?.Dispose();
+        _reviewCts?.Cancel();
+        _reviewCts?.Dispose();
     }
 }

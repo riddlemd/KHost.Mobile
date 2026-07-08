@@ -32,8 +32,9 @@ public static class MauiProgram
 		// Token-free import of public Spotify playlists (title + artist) via the embed endpoint.
 		builder.Services.AddSingleton<ISpotifyImportService>(_ => new SpotifyImportService(new HttpClient()));
 
-		// Keyless release-year + genre lookup (iTunes Search API) for "Try Autofill details".
+		// Keyless release-year + genre lookup (iTunes Search API), plus a caching suggester over it.
 		builder.Services.AddSingleton<ITrackMetadataLookup>(_ => new ITunesTrackMetadataLookup(new HttpClient()));
+		builder.Services.AddSingleton<IMetadataSuggester, JsonFileMetadataSuggester>();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();

@@ -462,9 +462,28 @@ html, body {
 .import-row.is-dupe .import-row__title,
 .import-row.is-dupe .import-row__artist { opacity: 0.55; }
 
-/* "Try Autofill details" (edit sheet). */
-.autofill-btn { width: 100%; margin-top: 0.15rem; }
-.autofill-status { margin-top: 0.4rem; }
+/* "Auto-filled from …" note shown in the detail sheet after a blank year/genre is filled from a match. */
+.suggest-match {
+    margin-top: 0.65rem;
+    margin-bottom: 0.9rem;
+    font-size: 0.78rem;
+    color: var(--kh-text-muted);
+}
+
+/* Post-import review list (found year/genre for the freshly-imported songs). */
+.review-list { margin-top: 0.6rem; }
+.review-spacer { width: 1.15rem; flex-shrink: 0; }
+.review-result {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--kh-primary);
+    text-align: right;
+    max-width: 45%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 /* ---- Sortable song table ------------------------------------------------ */
 
