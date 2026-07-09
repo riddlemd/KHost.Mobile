@@ -61,4 +61,18 @@ public sealed class SongListItem
     /// re-spend a rate-limited call on it. Replaces the old title+artist metadata cache. Defaults to false;
     /// entries persisted before this field existed deserialize to false and get looked up on next open.</summary>
     public bool MetadataLookedUp { get; set; }
+
+    // ---- Cloud-sync metadata (SKETCH — see ISyncBackend) ------------------------------------------
+    // Not yet maintained by the store; the sync engine (SyncingSongListStore, phase 3) will bump
+    // UpdatedAt on every mutation and set DeletedAt instead of hard-removing. Fields are inert until then.
+
+    /// <summary>Wall-clock of the last edit to this item. The merge key for last-write-wins cloud sync:
+    /// on conflict, the copy with the newer <see cref="UpdatedAt"/> wins per <see cref="Id"/>. Defaults to
+    /// creation time; the real impl backfills legacy rows from <see cref="AddedAt"/> on first load.</summary>
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.Now;
+
+    /// <summary>Soft-delete tombstone. Non-null once the user removes the item, so the deletion propagates
+    /// to the user's other same-ecosystem devices instead of the row silently reappearing on the next pull.
+    /// The UI treats a non-null value as gone; a later compaction can purge stale tombstones. Null = live.</summary>
+    public DateTimeOffset? DeletedAt { get; set; }
 }

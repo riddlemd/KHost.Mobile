@@ -126,7 +126,7 @@ html, body {
     top: calc(100% + 0.4rem);
     right: 0;
     z-index: 2;
-    min-width: 11rem;
+    min-width: 13rem;
     padding: 0.35rem;
     background: var(--kh-surface);
     border: 1px solid var(--kh-border);
@@ -152,6 +152,39 @@ html, body {
 }
 .header-menu__item:hover { background: var(--kh-surface-2); }
 .header-menu__icon { font-size: 1.05rem; line-height: 1; width: 1.3rem; text-align: center; }
+
+/* ---- Cloud-sync block in the header menu ------------------------------- */
+.header-menu__sync { padding: 0.5rem 0.7rem 0.6rem; }
+.header-menu__sync-head { display: flex; align-items: flex-start; gap: 0.6rem; }
+.header-menu__sync-text { display: flex; flex-direction: column; min-width: 0; }
+.header-menu__sync-title { font-size: 0.95rem; font-weight: 700; color: var(--kh-text); }
+.header-menu__sync-status {
+    font-size: 0.78rem;
+    color: var(--kh-text-muted);
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+}
+.header-menu__sync-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.55rem; }
+.btn.header-menu__sync-btn {
+    flex: 1;
+    white-space: nowrap;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 0.45rem;
+    background: var(--kh-primary);
+    color: #fff;
+    border: none;
+}
+.btn.header-menu__sync-btn:disabled { opacity: 0.6; }
+.btn.header-menu__sync-link {
+    padding: 0.4rem 0.3rem;
+    font-size: 0.82rem;
+    color: var(--kh-text-muted);
+    background: none;
+    border: none;
+}
+.header-menu__divider { height: 1px; background: var(--kh-border); margin: 0.35rem 0.2rem; }
 
 /* ---- About page -------------------------------------------------------- */
 .about { text-align: center; padding: 1.5rem 1rem; max-width: 30rem; margin: 0 auto; }

@@ -20,8 +20,25 @@ public static class MauiProgram
 
 		builder.Services.AddMauiBlazorWebView();
 
-		// On-device song list. Singleton so its in-memory cache and Changed event are shared app-wide.
-		builder.Services.AddSingleton<ISongListStore, JsonFileSongListStore>();
+		// On-device song list. Singleton so its in-memory cache and Changed event are shared app-wide. Registered
+		// under both interfaces (same instance): the UI binds to ISongListStore; the sync coordinator needs the
+		// raw-snapshot access on ILocalSongStore.
+		builder.Services.AddSingleton<JsonFileSongListStore>();
+		builder.Services.AddSingleton<ILocalSongStore>(sp => sp.GetRequiredService<JsonFileSongListStore>());
+		builder.Services.AddSingleton<ISongListStore>(sp => sp.GetRequiredService<JsonFileSongListStore>());
+
+		// Per-ecosystem cloud sync backend (iCloud on iOS, Google Drive on Android). No cross-ecosystem sync by design.
+		// Windows is the dev iteration head, so it gets the file-backed fake cloud to exercise the full sync path;
+		// real ship heads that lack a backend get the inert NullSyncBackend and run purely local.
+#if ANDROID
+		builder.Services.AddSingleton<GoogleOAuthClient>(_ => new GoogleOAuthClient(new HttpClient()));
+		builder.Services.AddSingleton<ISyncBackend>(sp => new GoogleDriveBackend(new HttpClient(), sp.GetRequiredService<GoogleOAuthClient>()));
+#elif WINDOWS
+		builder.Services.AddSingleton<ISyncBackend, FakeSyncBackend>();
+#else
+		builder.Services.AddSingleton<ISyncBackend, NullSyncBackend>();
+#endif
+		builder.Services.AddSingleton<SyncCoordinator>();
 
 		// Opens external links (e.g. a YouTube search) in the OS browser / matching app.
 		builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
