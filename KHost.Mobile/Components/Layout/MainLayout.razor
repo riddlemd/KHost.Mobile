@@ -2,22 +2,40 @@
 @inject IJSRuntime JS
 
 <header class="app-header">
-    <div class="app-header__title"><span>🎤</span> KHost</div>
-    <button type="button" class="theme-toggle" @onclick="ToggleThemeAsync"
-            title="@(_theme == "dark" ? "Switch to light mode" : "Switch to dark mode")"
-            aria-label="Toggle light or dark theme">
-        @(_theme == "dark" ? "☀️" : "🌙")
-    </button>
+    <div class="app-header__title"><span>🎤</span> KHost Cue</div>
+    <div class="header-menu">
+        <button type="button" class="header-menu__btn" @onclick="ToggleMenu"
+                aria-haspopup="true" aria-expanded="@_menuOpen" aria-label="Menu">
+            ⋮
+        </button>
+        @if (_menuOpen)
+        {
+            <div class="header-menu__scrim" @onclick="CloseMenu"></div>
+            <div class="header-menu__panel" role="menu">
+                <button type="button" class="header-menu__item" role="menuitem" @onclick="ToggleThemeAsync">
+                    <span class="header-menu__icon">@(_theme == "dark" ? "☀️" : "🌙")</span>
+                    @(_theme == "dark" ? "Light mode" : "Dark mode")
+                </button>
+                <NavLink class="header-menu__item" role="menuitem" href="about" @onclick="CloseMenu">
+                    <span class="header-menu__icon">ℹ️</span>
+                    About
+                </NavLink>
+            </div>
+        }
+    </div>
 </header>
 
-<main class="app-content">
+<main class="app-content app-content--no-nav">
     @Body
 </main>
 
-<NavMenu />
+@* Bottom tab bar hidden until the online features (Browse / History) land; navigation is via the
+   header menu for now. Restore <NavMenu /> and drop the app-content--no-nav modifier to bring it back. *@
+@*<NavMenu />*@
 
 @code {
     private string _theme = "light";
+    private bool _menuOpen;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -29,6 +47,11 @@
         }
     }
 
+    private void ToggleMenu() => _menuOpen = !_menuOpen;
+
+    private void CloseMenu() => _menuOpen = false;
+
+    // Toggles the theme in place; the menu stays open so the label flips and the change is visible.
     private async Task ToggleThemeAsync()
     {
         _theme = await JS.InvokeAsync<string>("khTheme.toggle");
