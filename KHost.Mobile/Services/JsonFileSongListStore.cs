@@ -47,7 +47,7 @@ public sealed class JsonFileSongListStore : ISongListStore
             Genre = string.IsNullOrWhiteSpace(genre) ? null : genre.Trim(),
             Year = year,
             Status = sung ? SongListItemStatus.Sang : SongListItemStatus.WantToSing,
-            SungAt = sung ? DateTimeOffset.Now : null,
+            SungDates = sung ? [DateTimeOffset.Now] : [],
             Confidence = rating,
         };
 

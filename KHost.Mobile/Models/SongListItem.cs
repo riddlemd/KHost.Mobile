@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace KHost.Mobile.Models;
 
 /// <summary>Where a saved song sits in the singer's journey. Starts as a wishlist entry; extends to history later.</summary>
@@ -43,8 +45,14 @@ public sealed class SongListItem
 
     public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.Now;
 
-    /// <summary>Set when the song moves to <see cref="SongListItemStatus.Sang"/>. Null while still a wishlist entry.</summary>
-    public DateTimeOffset? SungAt { get; set; }
+    /// <summary>Running history of every time the song was sung, one timestamp per performance. This is the sung-state
+    /// source of truth: <see cref="Status"/> is <see cref="SongListItemStatus.Sang"/> exactly when this list is
+    /// non-empty. Empty by default; entries persisted before this field existed deserialize to an empty list.</summary>
+    public List<DateTimeOffset> SungDates { get; set; } = [];
+
+    /// <summary>The most recent sung timestamp, or null if never sung. Derived from <see cref="SungDates"/>; not persisted.</summary>
+    [JsonIgnore]
+    public DateTimeOffset? LastSungAt => SungDates is { Count: > 0 } ? SungDates.Max() : null;
 
     /// <summary>Future link to a KHost.Online library song once online sync exists. Null for offline-only entries.</summary>
     public Guid? LibrarySongId { get; set; }

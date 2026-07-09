@@ -64,10 +64,6 @@
         }
     </div>
     <p class="autofill-note">✨ Leave Genre or Release year blank and we'll auto-fill them when you open the song.</p>
-    <div class="field">
-        <label class="field__label">How did it go? <span class="field__hint">— leave unsung if you haven't yet</span></label>
-        <StarRating @bind-Value="_confidence" />
-    </div>
 
     @if (IsDuplicate)
     {
@@ -229,7 +225,7 @@ else
                             }
                         </td>
                         <td>
-                            <StarRating Value="DisplayConfidence(item)" ValueChanged="v => UpdateRatingAsync(item, v)" Sung="@item.SungAt.HasValue" />
+                            <StarRating Value="DisplayConfidence(item)" ValueChanged="v => UpdateRatingAsync(item, v)" Sung="@item.LastSungAt.HasValue" />
                         </td>
                     </tr>
                 }
@@ -417,7 +413,7 @@ else
                 <div class="sheet__row">
                     <span class="sheet__key">Rating</span>
                     <span class="sheet__val">
-                        <StarRating Value="DisplayConfidence(_detailItem)" ValueChanged="v => UpdateRatingAsync(_detailItem, v)" Sung="@_detailItem.SungAt.HasValue" />
+                        <StarRating Value="DisplayConfidence(_detailItem)" ValueChanged="v => UpdateRatingAsync(_detailItem, v)" Sung="@_detailItem.LastSungAt.HasValue" />
                     </span>
                 </div>
                 <div class="sheet__row">
@@ -426,7 +422,22 @@ else
                 </div>
                 <div class="sheet__row">
                     <span class="sheet__key">Last sung</span>
-                    <span class="sheet__val">@(_detailItem.SungAt.HasValue ? _detailItem.SungAt.Value.ToString("MMM d, yyyy") : "never")</span>
+                    <span class="sheet__val">
+                        @if (_detailItem.LastSungAt.HasValue)
+                        {
+                            <button class="btn-link sheet__history-link" @onclick="OpenHistory">
+                                @_detailItem.LastSungAt.Value.ToString("MMM d, yyyy · h:mm tt")
+                                <span class="sheet__history-count">(@_detailItem.SungDates.Count)</span>
+                            </button>
+                        }
+                        else
+                        {
+                            <span class="sheet__muted">never</span>
+                        }
+                    </span>
+                    <button class="btn btn-secondary sheet__sang-btn" @onclick="MarkSungTodayAsync">
+                        @(_detailItem.LastSungAt.HasValue ? "Sang today" : "Mark sung")
+                    </button>
                 </div>
                 <div class="sheet__row">
                     <span class="sheet__key">Added</span>
@@ -440,19 +451,7 @@ else
             <button class="btn sheet__youtube" @onclick="OpenYouTubeAsync">▶ Find on YouTube</button>
             <div class="sheet__actions">
                 <button class="btn btn-primary" @onclick="StartEdit">Edit</button>
-                @if (_detailItem.SungAt.HasValue)
-                {
-                    <button class="btn btn-secondary" @onclick="MarkSungTodayAsync">Sang it again today</button>
-                }
-                else
-                {
-                    <button class="btn btn-secondary" @onclick="MarkSungTodayAsync">Mark sung today</button>
-                }
             </div>
-            @if (_detailItem.SungAt.HasValue)
-            {
-                <button class="btn-link sheet__unsing" @onclick="MarkUnsungAsync">Mark as unsung</button>
-            }
         }
         else
         {
@@ -497,6 +496,47 @@ else
     </div>
 }
 
+@if (_historyItem is not null)
+{
+    <div class="sheet-backdrop sheet-backdrop--history" @onclick="CloseHistory"></div>
+    <div class="sheet sheet--history" role="dialog" aria-modal="true">
+        <button type="button" class="sheet__close" @onclick="CloseHistory" aria-label="Close">✕</button>
+        <div class="sheet__title">Sung history</div>
+        <div class="sheet__subtitle">@_historyItem.Title</div>
+
+        <div class="history">
+            <table class="history__table">
+                <tbody>
+                    @foreach (var (date, index) in _historyItem.SungDates
+                        .Select((d, i) => (d, i))
+                        .OrderByDescending(x => x.d))
+                    {
+                        <tr class="history__row">
+                            <td class="history__date">@date.ToString("MMM d, yyyy · h:mm tt")</td>
+                            <td class="history__action">
+                                <button class="history__remove" @onclick="() => ArmRemoveSungDate(index)" aria-label="Remove this date">✕</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (_historyItem is not null && _historyConfirmIndex is { } confirmIndex && confirmIndex < _historyItem.SungDates.Count)
+{
+    <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelRemoveSungDate"></div>
+    <div class="confirm-pop" role="alertdialog" aria-modal="true">
+        <div class="confirm-pop__title">Remove this date?</div>
+        <div class="confirm-pop__date">@_historyItem.SungDates[confirmIndex].ToString("MMM d, yyyy · h:mm tt")</div>
+        <div class="confirm-pop__actions">
+            <button class="btn btn-secondary" @onclick="CancelRemoveSungDate">Cancel</button>
+            <button class="btn confirm-pop__delete" @onclick="() => RemoveSungDateAsync(confirmIndex)">Remove</button>
+        </div>
+    </div>
+}
+
 @code {
     private IReadOnlyList<SongListItem> _items = [];
     private string _title = string.Empty;
@@ -504,7 +544,6 @@ else
     private string _notes = string.Empty;
     private string _genre = string.Empty;
     private int? _year;        // release year; null = unset
-    private int _confidence;   // 0 = unsung
 
     // Filters (empty text / -1 rating = no filter). Rating: -1 Any, 0 Unsung, 1-5 stars.
     private string _filterName = string.Empty;
@@ -988,19 +1027,51 @@ else
     {
         if (_detailItem is null)
             return;
-        _detailItem.SungAt = DateTimeOffset.Now;
+        _detailItem.SungDates.Add(DateTimeOffset.Now);
         _detailItem.Status = SongListItemStatus.Sang;
         await Store.UpdateAsync(_detailItem);
     }
 
-    private async Task MarkUnsungAsync()
+    // ---- Sung history sheet ------------------------------------------------------------------
+
+    private SongListItem? _historyItem;
+    private int? _historyConfirmIndex;   // index (into SungDates) whose X is armed for confirm; null = none
+
+    private void OpenHistory()
     {
-        if (_detailItem is null)
+        _historyItem = _detailItem;
+        _historyConfirmIndex = null;
+    }
+
+    private void CloseHistory()
+    {
+        _historyItem = null;
+        _historyConfirmIndex = null;
+    }
+
+    private void ArmRemoveSungDate(int index) => _historyConfirmIndex = index;
+
+    private void CancelRemoveSungDate() => _historyConfirmIndex = null;
+
+    private async Task RemoveSungDateAsync(int index)
+    {
+        if (_historyItem is null || index < 0 || index >= _historyItem.SungDates.Count)
             return;
-        _detailItem.SungAt = null;
-        _detailItem.Status = SongListItemStatus.WantToSing;
-        _detailItem.Confidence = 0;   // back on the wishlist — a rating no longer applies
-        await Store.UpdateAsync(_detailItem);
+
+        _historyItem.SungDates.RemoveAt(index);
+        _historyConfirmIndex = null;
+
+        if (_historyItem.SungDates.Count == 0)
+        {
+            // Last date gone — the song reverts to unsung: back on the wishlist, rating no longer applies.
+            _historyItem.Status = SongListItemStatus.WantToSing;
+            _historyItem.Confidence = 0;
+            await Store.UpdateAsync(_historyItem);
+            CloseHistory();
+            return;
+        }
+
+        await Store.UpdateAsync(_historyItem);
     }
 
     // Opens a YouTube search for the song in the OS browser / YouTube app (not the in-app WebView).
@@ -1266,9 +1337,9 @@ else
             return;
         }
 
-        await Store.AddAsync(_title, _artist, _notes, _genre, _confidence, _year);
+        // New songs start on the wishlist (unsung). Sung-state + rating are set later from the detail sheet.
+        await Store.AddAsync(_title, _artist, _notes, _genre, 0, _year);
         _title = _artist = _notes = _genre = string.Empty;    // Store.Changed triggers the list refresh.
-        _confidence = 0;
         _year = null;
         _confirmedDuplicate = false;
     }
@@ -1279,7 +1350,7 @@ else
         await Store.UpdateAsync(item);
     }
 
-    // Rating is now independent of sung-state (sung ⟺ SungAt is set). This is just the star value.
+    // Rating is now independent of sung-state (sung ⟺ SungDates is non-empty). This is just the star value.
     private static int DisplayConfidence(SongListItem item) => item.Confidence;
 
     private async Task UpdateRatingAsync(SongListItem item, int rating)
@@ -1289,9 +1360,10 @@ else
         {
             // Rating a song also marks it sung, if it wasn't already.
             item.Status = SongListItemStatus.Sang;
-            item.SungAt ??= DateTimeOffset.Now;
+            if (item.SungDates.Count == 0)
+                item.SungDates.Add(DateTimeOffset.Now);
         }
-        // rating == 0 clears only the rating — sung-state (SungAt/Status) is left untouched.
+        // rating == 0 clears only the rating — sung-state (SungDates/Status) is left untouched.
 
         await Store.UpdateAsync(item);
     }

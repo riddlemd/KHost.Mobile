@@ -372,8 +372,89 @@ html, body {
     background: #990000;
     transform: scale(0.99);
 }
-.sheet__unsing { display: block; margin: 0.75rem auto 0; }
 .sheet__notes { resize: vertical; min-height: 3.5rem; font-family: inherit; line-height: 1.4; }
+
+/* "Last sung" row keeps its label + date on the left; the flex:1 value cell pushes this
+   compact "sang today" button to the right edge of the row. Compound selector so it beats
+   the later `.btn` base (which resets background:none + transparent border). */
+.btn.sheet__sang-btn {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--kh-surface-2);
+    color: var(--kh-text);
+    border: 1px solid var(--kh-border);
+    border-radius: 0.5rem;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+.btn.sheet__sang-btn:hover {
+    background: var(--kh-primary);
+    border-color: var(--kh-primary);
+    color: #fff;
+}
+.btn.sheet__sang-btn:active { transform: scale(0.98); }
+
+/* "Last sung" link → opens the sung-history sheet. Inline so it sits on the value row. */
+.sheet__history-link { display: inline-flex; align-items: baseline; gap: 0.35rem; text-align: left; }
+.sheet__history-count { color: var(--kh-text-muted); font-weight: 500; font-size: 0.8rem; }
+
+/* ---- Sung history sheet ------------------------------------------------- */
+/* Sits above the detail sheet (its own backdrop). Scrolls the list when it's long. */
+.sheet--history { z-index: 43; }
+.sheet-backdrop--history { z-index: 42; }
+.history { margin-top: 1rem; max-height: 55vh; overflow-y: auto; }
+.history__table { width: 100%; border-collapse: collapse; }
+.history__row { border-bottom: 1px solid var(--kh-border); }
+.history__row:first-child { border-top: 1px solid var(--kh-border); }
+.history__date { padding: 0.7rem 0.25rem; font-size: 0.9rem; }
+.history__action { width: 6.5rem; text-align: right; padding: 0.4rem 0.25rem; white-space: nowrap; }
+/* Reads as a delete control at rest — danger-tinted glyph, field and outline — so it's
+   clearly distinct from the neutral gray sheet-close (✕) button above it. */
+.history__remove {
+    width: 1.9rem;
+    height: 1.9rem;
+    border: 1px solid color-mix(in srgb, var(--kh-danger) 45%, transparent);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--kh-danger) 14%, transparent);
+    color: var(--kh-danger);
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.history__remove:hover {
+    background: var(--kh-danger, #dc2626);
+    border-color: var(--kh-danger, #dc2626);
+    color: #fff;
+}
+
+/* Delete-confirm popup — a centered modal above the history sheet. In-app dialog
+   (not native confirm(), which doesn't fire reliably in the WebView). */
+.sheet-backdrop--confirm { z-index: 44; }
+.confirm-pop {
+    position: fixed;
+    z-index: 45;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 3rem);
+    max-width: 20rem;
+    background: var(--kh-surface);
+    border: 1px solid var(--kh-border);
+    border-radius: var(--kh-radius);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    padding: 1.25rem;
+    animation: sheet-fade 0.15s ease;
+}
+.confirm-pop__title { font-size: 1.05rem; font-weight: 700; }
+.confirm-pop__date { margin-top: 0.4rem; color: var(--kh-text-muted); font-size: 0.9rem; }
+.confirm-pop__actions { display: flex; gap: 0.6rem; margin-top: 1.15rem; }
+.confirm-pop__actions .btn { flex: 1 1 0; }
+.btn.confirm-pop__delete { background: var(--kh-danger); color: #fff; border: none; }
 
 .btn-secondary {
     background: var(--kh-surface-2);
@@ -438,6 +519,7 @@ html, body {
     font-size: 0.75rem;
     line-height: 1.35;
     color: var(--kh-text-muted);
+    text-align: center;
 }
 
 .import-head {
