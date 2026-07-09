@@ -90,7 +90,7 @@ Eventual slice: **join venue → search library → request song → live queue*
 
 ## Gotchas
 
-- **`FileSystem.AppDataDirectory` is the `Data` SUBFOLDER**, i.e. `%LOCALAPPDATA%\User Name\com.companyname.khost.mobile\Data\` on unpackaged Windows — NOT the parent `com.companyname.khost.mobile\`. Seeding/inspecting persisted state must target `Data\`.
+- **`FileSystem.AppDataDirectory` is the `Data` SUBFOLDER**, i.e. `%LOCALAPPDATA%\User Name\khost.mobile\Data\` on unpackaged Windows (the folder is named after `ApplicationId`, currently `khost.mobile`) — NOT the parent `khost.mobile\`. Seeding/inspecting persisted state must target `Data\`.
 - The template's `Components/Routes.razor` has `FocusOnNavigate Selector="h1"`; pages here have no `<h1>`, so nothing auto-focuses. Harmless, but don't rely on autofocus.
 - **UI test automation on the Windows head is flaky** — WebView2 swallows the *first* SendKeys burst after launch, and page scroll position varies between launches (fixed click coords drift). For persistence checks, prefer seeding/reading `Data\song-list.json` directly over driving the form.
 - Do NOT commit or push unless explicitly asked. Secrets via user-secrets/config — never hard-coded or committed.

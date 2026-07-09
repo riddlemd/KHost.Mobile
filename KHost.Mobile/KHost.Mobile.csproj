@@ -29,10 +29,10 @@
         <MauiXamlInflator>SourceGen</MauiXamlInflator>
 
         <!-- Display name -->
-        <ApplicationTitle>KHost</ApplicationTitle>
+        <ApplicationTitle>KHost Cue</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>com.companyname.khost.mobile</ApplicationId>
+        <ApplicationId>khost.mobile</ApplicationId>
 
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
