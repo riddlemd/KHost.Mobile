@@ -6,7 +6,7 @@ namespace KHost.Mobile.Client.Tests;
 public class ITunesResponseParserTests
 {
     [Fact]
-    public void ParseFirst_reads_year_genre_and_matched_names()
+    public void Reads_year_genre_and_matched_names_on_a_clean_match()
     {
         const string json = """
         {
@@ -23,7 +23,7 @@ public class ITunesResponseParserTests
         }
         """;
 
-        var meta = ITunesResponseParser.ParseFirst(json);
+        var meta = ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance");
 
         Assert.NotNull(meta);
         Assert.Equal("Helena", meta!.MatchedTitle);
@@ -33,9 +33,91 @@ public class ITunesResponseParserTests
     }
 
     [Fact]
-    public void ParseFirst_returns_null_on_zero_results()
+    public void Rejects_a_right_title_wrong_artist_cover()
     {
-        Assert.Null(ITunesResponseParser.ParseFirst("""{ "resultCount": 0, "results": [] }"""));
+        // The real "Wow, I Can Get Sexual Too" by Say Anything isn't in the catalog; iTunes returns covers
+        // and unrelated songs. None share the artist, so nothing should be populated.
+        const string json = """
+        {
+          "resultCount": 3,
+          "results": [
+            { "trackName": "Wow I Can Get Sexual Too", "artistName": "Sparrow Sleeps", "releaseDate": "2015-01-01T12:00:00Z", "primaryGenreName": "Children's Music" },
+            { "trackName": "Wow, I Can Get Sexual Too", "artistName": "Michael Henry & Justin Robinett", "releaseDate": "2010-01-01T12:00:00Z", "primaryGenreName": "Singer/Songwriter" },
+            { "trackName": "Wow, I Can Get Sexual Too", "artistName": "Hot Fuss", "releaseDate": "2025-04-10T12:00:00Z", "primaryGenreName": "EMO" }
+          ]
+        }
+        """;
+
+        Assert.Null(ITunesResponseParser.ParseBestMatch(json, "Wow, I Can Get Sexual Too", "Say Anything"));
+    }
+
+    [Fact]
+    public void Matches_past_a_non_matching_top_result()
+    {
+        // The correct artist sits below a higher-ranked mismatch — we should still find it.
+        const string json = """
+        {
+          "resultCount": 2,
+          "results": [
+            { "trackName": "Africa", "artistName": "Weezer", "releaseDate": "2019-01-24T12:00:00Z", "primaryGenreName": "Rock" },
+            { "trackName": "Africa", "artistName": "TOTO", "releaseDate": "1982-04-08T12:00:00Z", "primaryGenreName": "Rock" }
+          ]
+        }
+        """;
+
+        var meta = ITunesResponseParser.ParseBestMatch(json, "Africa", "Toto");
+
+        Assert.NotNull(meta);
+        Assert.Equal("TOTO", meta!.MatchedArtist);
+        Assert.Equal(1982, meta.Year);
+    }
+
+    [Theory]
+    // Punctuation, case, and accents don't block a match.
+    [InlineData("Wow I Can Get Sexual Too", "wow, i can get sexual too")]
+    [InlineData("Beyoncé", "Beyonce")]
+    // Feature / version qualifiers on the candidate are ignored.
+    [InlineData("Helena", "Helena (Remastered 2011)")]
+    [InlineData("So Cold", "So Cold (feat. Someone)")]
+    [InlineData("Comfortably Numb", "Comfortably Numb - Live")]
+    public void Normalization_accepts_the_same_song_written_differently(string requested, string candidateTitle)
+    {
+        var json = $$"""
+        { "results": [ { "trackName": {{System.Text.Json.JsonSerializer.Serialize(candidateTitle)}}, "artistName": "The Band", "releaseDate": "1990-01-01T00:00:00Z", "primaryGenreName": "Rock" } ] }
+        """;
+
+        var meta = ITunesResponseParser.ParseBestMatch(json, requested, "The Band");
+
+        Assert.NotNull(meta);
+        Assert.Equal(1990, meta!.Year);
+    }
+
+    [Fact]
+    public void Matches_when_optional_year_and_genre_are_missing()
+    {
+        const string json = """{ "results": [ { "trackName": "Mystery Song", "artistName": "The Band" } ] }""";
+
+        var meta = ITunesResponseParser.ParseBestMatch(json, "Mystery Song", "The Band");
+
+        Assert.NotNull(meta);
+        Assert.Equal("Mystery Song", meta!.MatchedTitle);
+        Assert.Null(meta.Year);
+        Assert.Null(meta.Genre);
+    }
+
+    [Fact]
+    public void Returns_null_when_the_artist_is_unknown()
+    {
+        // No artist to verify against → we won't guess.
+        const string json = """{ "results": [ { "trackName": "Helena", "artistName": "My Chemical Romance", "primaryGenreName": "Alternative" } ] }""";
+
+        Assert.Null(ITunesResponseParser.ParseBestMatch(json, "Helena", ""));
+    }
+
+    [Fact]
+    public void Returns_null_on_zero_results()
+    {
+        Assert.Null(ITunesResponseParser.ParseBestMatch("""{ "resultCount": 0, "results": [] }""", "Helena", "My Chemical Romance"));
     }
 
     [Theory]
@@ -43,22 +125,8 @@ public class ITunesResponseParserTests
     [InlineData("   ")]
     [InlineData("not json")]
     [InlineData("{ }")]
-    public void ParseFirst_returns_null_on_unusable_payload(string json)
+    public void Returns_null_on_unusable_payload(string json)
     {
-        Assert.Null(ITunesResponseParser.ParseFirst(json));
-    }
-
-    [Fact]
-    public void ParseFirst_tolerates_missing_fields()
-    {
-        // Only a track name; no releaseDate/genre. Should still return a result with nulls, not throw.
-        const string json = """{ "results": [ { "trackName": "Mystery Song" } ] }""";
-
-        var meta = ITunesResponseParser.ParseFirst(json);
-
-        Assert.NotNull(meta);
-        Assert.Equal("Mystery Song", meta!.MatchedTitle);
-        Assert.Null(meta.Year);
-        Assert.Null(meta.Genre);
+        Assert.Null(ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance"));
     }
 }

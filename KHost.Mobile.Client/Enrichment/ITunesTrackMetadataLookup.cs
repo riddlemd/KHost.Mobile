@@ -16,7 +16,9 @@ public sealed class ITunesTrackMetadataLookup(HttpClient httpClient) : ITrackMet
             return null;
 
         var term = string.IsNullOrWhiteSpace(artist) ? title.Trim() : $"{artist.Trim()} {title.Trim()}";
-        var url = $"https://itunes.apple.com/search?term={Uri.EscapeDataString(term)}&entity=song&limit=1&country=US";
+        // Pull a handful of candidates (not just the top hit) so the real recording can still be found when
+        // iTunes ranks a cover first; ParseBestMatch then keeps only a genuine artist+title match.
+        var url = $"https://itunes.apple.com/search?term={Uri.EscapeDataString(term)}&entity=song&limit=25&country=US";
 
         HttpResponseMessage response;
         try
@@ -35,6 +37,6 @@ public sealed class ITunesTrackMetadataLookup(HttpClient httpClient) : ITrackMet
             throw new MetadataLookupException($"Lookup service error ({(int)response.StatusCode}). Try again later.");
 
         var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        return ITunesResponseParser.ParseFirst(json);
+        return ITunesResponseParser.ParseBestMatch(json, title, artist);
     }
 }
