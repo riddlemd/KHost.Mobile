@@ -48,4 +48,9 @@ public sealed class SongListItem
 
     /// <summary>Future link to a KHost.Online library song once online sync exists. Null for offline-only entries.</summary>
     public Guid? LibrarySongId { get; set; }
+
+    /// <summary>True once we've run the keyless year/genre auto-lookup for this song (hit OR miss), so we never
+    /// re-spend a rate-limited call on it. Replaces the old title+artist metadata cache. Defaults to false;
+    /// entries persisted before this field existed deserialize to false and get looked up on next open.</summary>
+    public bool MetadataLookedUp { get; set; }
 }

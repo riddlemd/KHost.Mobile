@@ -88,6 +88,37 @@ public sealed class JsonFileSongListStore : ISongListStore
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    public async Task UpdateRangeAsync(IEnumerable<SongListItem> incoming)
+    {
+        ArgumentNullException.ThrowIfNull(incoming);
+
+        var changed = false;
+        await _gate.WaitAsync();
+        try
+        {
+            var items = await LoadAsync();
+            foreach (var item in incoming)
+            {
+                var index = items.FindIndex(i => i.Id == item.Id);
+                if (index < 0)
+                    continue;
+
+                items[index] = item;
+                changed = true;
+            }
+
+            if (changed)
+                await SaveAsync(items);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (changed)
+            Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     public async Task RemoveAsync(Guid id)
     {
         await _gate.WaitAsync();

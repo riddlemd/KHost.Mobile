@@ -24,6 +24,11 @@ public interface ISongListStore
     /// <summary>Persist edits to an existing item (matched by <see cref="SongListItem.Id"/>).</summary>
     Task UpdateAsync(SongListItem item);
 
+    /// <summary>Bulk-persist edits to many existing items in one shot: loads once, updates each match by
+    /// <see cref="SongListItem.Id"/>, saves once, and fires <see cref="Changed"/> a single time — not per
+    /// item. Ids not present are skipped. Used by the post-import review to write all rows at once.</summary>
+    Task UpdateRangeAsync(IEnumerable<SongListItem> items);
+
     /// <summary>Remove an item by id. No-op if it isn't present.</summary>
     Task RemoveAsync(Guid id);
 

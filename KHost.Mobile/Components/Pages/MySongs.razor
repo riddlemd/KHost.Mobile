@@ -6,28 +6,31 @@
 @inject ILinkLauncher Links
 @inject ISpotifyImportService Spotify
 @inject IYouTubeMusicImportService YtMusic
-@inject IMetadataSuggester Suggester
+@inject ITrackMetadataLookup Metadata
 @inject IJSRuntime JS
 @implements IDisposable
 
 <div class="card">
     <div class="add-head">
         <div class="section-title" style="margin:0">Add a song you'd like to sing</div>
-        <div class="import-icons">
-            <button type="button" class="import-icon-btn" @onclick="() => OpenImport(ImportSource.Spotify)"
-                    title="Import from Spotify" aria-label="Import from Spotify">
-                <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-                    <path fill="#1ed760" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.84-.18-.96-.6-.122-.42.18-.84.6-.96 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.302 1.141zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.481.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z" />
-                </svg>
-            </button>
-            <button type="button" class="import-icon-btn" @onclick="() => OpenImport(ImportSource.YouTubeMusic)"
-                    title="Import from YouTube Music" aria-label="Import from YouTube Music">
-                <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-                    <circle cx="12" cy="12" r="11" fill="#ff0000" />
-                    <circle cx="12" cy="12" r="6.1" fill="#fff" />
-                    <path d="M10.4 9.1 15.2 12 10.4 14.9z" fill="#ff0000" />
-                </svg>
-            </button>
+        <div class="import-group">
+            <span class="import-label">Import from</span>
+            <div class="import-icons">
+                <button type="button" class="import-icon-btn" @onclick="() => OpenImport(ImportSource.Spotify)"
+                        title="Import from Spotify" aria-label="Import from Spotify">
+                    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+                        <path fill="#1ed760" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.84-.18-.96-.6-.122-.42.18-.84.6-.96 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.302 1.141zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.481.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z" />
+                    </svg>
+                </button>
+                <button type="button" class="import-icon-btn" @onclick="() => OpenImport(ImportSource.YouTubeMusic)"
+                        title="Import from YouTube Music" aria-label="Import from YouTube Music">
+                    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+                        <circle cx="12" cy="12" r="11" fill="#ff0000" />
+                        <circle cx="12" cy="12" r="6.1" fill="#fff" />
+                        <path d="M10.4 9.1 15.2 12 10.4 14.9z" fill="#ff0000" />
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -60,6 +63,7 @@
             <div class="field__error">Enter a year between 1 and @CurrentYear.</div>
         }
     </div>
+    <p class="autofill-note">✨ Leave Genre or Release year blank and we'll auto-fill them when you open the song.</p>
     <div class="field">
         <label class="field__label">How did it go? <span class="field__hint">— leave unsung if you haven't yet</span></label>
         <StarRating @bind-Value="_confidence" />
@@ -543,9 +547,8 @@ else
     private string _editNotes = string.Empty;
     private int? _editYear;
 
-    // Detail-view metadata suggestion: a cached year/genre lookup for the open song. When the sheet opens
-    // and a field is blank, we fill it straight from the match (no confirmation) and note what we filled.
-    private TrackMetadata? _detailSuggestion;
+    // Detail-view metadata auto-fill: when the sheet opens on a not-yet-looked-up song with a blank
+    // year/genre, we look it up, fill the blank(s) straight from the match, and note what we filled.
     private bool _suggestionLoading;
     private string? _autoFilledNote;
     private CancellationTokenSource? _suggestCts;
@@ -845,19 +848,19 @@ else
         return Task.CompletedTask;
     }
 
-    // Fetch (or read from cache) a year/genre suggestion for the open song, but only when it has a blank
-    // year or genre to fill. Any match is applied straight to the blank field(s) and persisted — no chip,
-    // no confirmation — since the data's already in hand.
+    // Look up a year/genre for the open song and fill any blank field straight from the match — no chip, no
+    // confirmation. Runs at most once per song: gated on MetadataLookedUp, and skipped entirely when there's
+    // nothing blank to fill. A transient failure returns without setting the flag, so a later open can retry.
     private async Task LoadDetailSuggestionAsync(SongListItem? item)
     {
         _suggestCts?.Cancel();
-        _detailSuggestion = null;
         _autoFilledNote = null;
         _suggestionLoading = false;
 
         if (item is null ||
-            (!string.IsNullOrWhiteSpace(item.Genre) && item.Year.HasValue) ||
-            string.IsNullOrWhiteSpace(item.Title))
+            item.MetadataLookedUp ||
+            string.IsNullOrWhiteSpace(item.Title) ||
+            (!string.IsNullOrWhiteSpace(item.Genre) && item.Year.HasValue))
             return;
 
         _suggestCts = new CancellationTokenSource();
@@ -865,10 +868,18 @@ else
         _suggestionLoading = true;
         try
         {
-            var meta = await Suggester.SuggestAsync(item.Title, item.Artist, token);
+            TrackMetadata? meta;
+            try
+            {
+                meta = await Metadata.LookupAsync(item.Title, item.Artist, token);
+            }
+            catch (MetadataLookupException)
+            {
+                return;   // network/rate-limit failure — leave the flag unset to retry on a later open
+            }
+
             if (token.IsCancellationRequested || _detailItem?.Id != item.Id)
                 return;
-            _detailSuggestion = meta;
 
             var filled = new List<string>();
             if (string.IsNullOrWhiteSpace(item.Genre) && MapGenre(meta?.Genre) is string g)
@@ -883,10 +894,10 @@ else
             }
 
             if (filled.Count > 0)
-            {
                 _autoFilledNote = $"✨ Auto-filled {JoinFields(filled)} from “{meta!.MatchedTitle} — {meta.MatchedArtist}”.";
-                await Store.UpdateAsync(item);   // persist; Store.Changed → RefreshAsync
-            }
+
+            item.MetadataLookedUp = true;   // record the attempt (hit or miss) so we never look up again
+            await Store.UpdateAsync(item);   // persist flag + any fills; Store.Changed → RefreshAsync
         }
         catch (OperationCanceledException) { return; }
         finally
@@ -902,7 +913,6 @@ else
     private void CloseDetail()
     {
         _suggestCts?.Cancel();
-        _detailSuggestion = null;
         _autoFilledNote = null;
         _suggestionLoading = false;
         _detailItem = null;
@@ -1150,19 +1160,22 @@ else
                 token.ThrowIfCancellationRequested();
                 var row = rows[i];
 
-                // Only a live fetch costs a rate-limit slot; a cache hit returns near-instantly. Time the
-                // call and skip the throttle after a fast (cached) response, so re-importing a mostly-known
-                // playlist stays snappy while genuinely new lookups stay spaced out.
-                var sw = System.Diagnostics.Stopwatch.StartNew();
-                row.Suggestion = await Suggester.SuggestAsync(row.Item.Title, row.Item.Artist, token);
-                sw.Stop();
+                // Every lookup here is a live call (these songs were just imported, so none are looked up
+                // yet), so always space them out to stay under the rate limit.
+                try
+                {
+                    row.Suggestion = await Metadata.LookupAsync(row.Item.Title, row.Item.Artist, token);
+                }
+                catch (MetadataLookupException)
+                {
+                    row.Suggestion = null;   // treat a transient failure as "no match" for this pass
+                }
                 row.Done = true;
                 row.Selected = HasApplyable(row);
                 _reviewDoneCount = i + 1;
                 await InvokeAsync(StateHasChanged);
 
-                var hitNetwork = sw.ElapsedMilliseconds > 400;
-                if (hitNetwork && i < rows.Count - 1)
+                if (i < rows.Count - 1)
                     await Task.Delay(ReviewThrottleMs, token);
             }
         }
@@ -1177,33 +1190,38 @@ else
         }
     }
 
-    // Apply the checked suggestions (blank fields only) in one pass, then close the sheet.
+    // Apply the checked suggestions (blank fields only), and mark every looked-up song as done so it isn't
+    // auto-looked-up again — including rows the user unchecked (their choice to skip sticks). One bulk write.
     private async Task ApplyReviewAsync()
     {
         if (_reviewRows is null)
             return;
 
         _reviewCts?.Cancel();
+        var done = _reviewRows.Where(r => r.Done).ToList();
         var applied = 0;
-        foreach (var row in _reviewRows.Where(r => r.Selected && r.Done && HasApplyable(r)))
+        foreach (var row in done)
         {
-            var changed = false;
-            if (string.IsNullOrWhiteSpace(row.Item.Genre) && MapGenre(row.Suggestion?.Genre) is string g)
+            if (row.Selected && HasApplyable(row))
             {
-                row.Item.Genre = g;
-                changed = true;
+                var changed = false;
+                if (string.IsNullOrWhiteSpace(row.Item.Genre) && MapGenre(row.Suggestion?.Genre) is string g)
+                {
+                    row.Item.Genre = g;
+                    changed = true;
+                }
+                if (!row.Item.Year.HasValue && row.Suggestion?.Year is int y)
+                {
+                    row.Item.Year = y;
+                    changed = true;
+                }
+                if (changed)
+                    applied++;
             }
-            if (!row.Item.Year.HasValue && row.Suggestion?.Year is int y)
-            {
-                row.Item.Year = y;
-                changed = true;
-            }
-            if (changed)
-            {
-                await Store.UpdateAsync(row.Item);   // Store.Changed → RefreshAsync
-                applied++;
-            }
+            row.Item.MetadataLookedUp = true;   // looked up in this pass — don't auto-look-up again
         }
+
+        await Store.UpdateRangeAsync(done.Select(r => r.Item));   // one write; Store.Changed → RefreshAsync
 
         _reviewRows = null;
         _reviewEnriching = false;
@@ -1211,6 +1229,8 @@ else
         await FlashAsync($"Filled details for {applied} song{(applied == 1 ? "" : "s")}");
     }
 
+    // Skip applying anything. No writes — the flag stays unset, so each song still gets a fresh, per-song
+    // auto-fill attempt if/when it's opened in the detail sheet later.
     private void SkipReview()
     {
         _reviewCts?.Cancel();
