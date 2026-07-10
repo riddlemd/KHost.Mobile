@@ -302,6 +302,10 @@ else
             {
                 <button class="btn sheet__youtube" @onclick="OpenYouTubeAsync">▶ Find on YouTube</button>
             }
+            @if (Settings.SpotifySearchEnabled)
+            {
+                <button class="btn sheet__spotify" @onclick="OpenSpotifyAsync">♫ Find on Spotify</button>
+            }
             <div class="sheet__actions">
                 <button class="btn btn-primary" @onclick="StartEdit">Edit</button>
             </div>
@@ -847,6 +851,12 @@ else
         _detailItem is null
             ? Task.CompletedTask
             : Links.OpenAsync(YouTubeSearch.UrlFor(_detailItem.Title, _detailItem.Artist));
+
+    // Opens a Spotify search for the song in the OS browser / Spotify app (not the in-app WebView).
+    private Task OpenSpotifyAsync() =>
+        _detailItem is null
+            ? Task.CompletedTask
+            : Links.OpenAsync(SpotifySearch.UrlFor(_detailItem.Title, _detailItem.Artist));
 
     private async Task AddAsync()
     {

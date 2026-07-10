@@ -14,4 +14,7 @@ public interface IAppSettings
 
     /// <summary>When true, the song detail sheet shows the "Find on YouTube" button.</summary>
     bool YouTubeSearchEnabled { get; set; }
+
+    /// <summary>When true, the song detail sheet shows the "Find on Spotify" button.</summary>
+    bool SpotifySearchEnabled { get; set; }
 }
