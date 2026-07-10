@@ -1,0 +1,41 @@
+@page "/settings"
+@layout MainLayout
+@inject IAppSettings Prefs
+
+<section class="settings">
+    <div class="settings__head">
+        <NavLink class="settings__back" href="" aria-label="Back to my songs">←</NavLink>
+        <h1 class="settings__title">Settings</h1>
+    </div>
+
+    <div class="card">
+        <div class="section-title">Song details</div>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Auto-fill year &amp; genre</span>
+                <span class="setting__desc">
+                    Look up a song's year and genre from iTunes and fill any blanks — when you open a song and
+                    after importing a list. Turn off to skip all iTunes lookups.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.AutoFillMetadata" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">“Find on YouTube” button</span>
+                <span class="setting__desc">
+                    Show a button on each song that opens a YouTube search in your browser or the YouTube app.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.YouTubeSearchEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+    </div>
+</section>

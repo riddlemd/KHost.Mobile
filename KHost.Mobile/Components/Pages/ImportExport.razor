@@ -10,6 +10,7 @@
 @inject ISpotifyImportService Spotify
 @inject IYouTubeMusicImportService YtMusic
 @inject ITrackMetadataLookup Metadata
+@inject IAppSettings Settings
 @implements IDisposable
 
 <section class="ie">
@@ -497,11 +498,20 @@
             var added = await Store.ImportAsync(toImport, skipDuplicates: false);   // Store.Changed → reload _items
             await FlashAsync($"Imported {added} song{(added == 1 ? "" : "s")} from {SourceName}");
 
-            // Hand off to the review phase: enrich the freshly-added songs in the background, throttled,
-            // and let the user apply the found year/genre in bulk. The sheet stays open showing progress.
             _importRows = null;
-            _reviewRows = toImport.Select(i => new ReviewRow { Item = i }).ToList();
-            _ = StartReviewEnrichmentAsync();
+            if (Settings.AutoFillMetadata)
+            {
+                // Hand off to the review phase: enrich the freshly-added songs in the background, throttled,
+                // and let the user apply the found year/genre in bulk. The sheet stays open showing progress.
+                _reviewRows = toImport.Select(i => new ReviewRow { Item = i }).ToList();
+                _ = StartReviewEnrichmentAsync();
+            }
+            else
+            {
+                // Auto-fill is off: no iTunes lookups. Close the sheet; the imported songs keep MetadataLookedUp
+                // unset, so they'll get a per-song auto-fill later if the toggle is turned back on.
+                _importOpen = false;
+            }
         }
         finally
         {
