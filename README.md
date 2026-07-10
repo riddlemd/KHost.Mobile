@@ -91,3 +91,5 @@ KHost.Mobile is licensed under the [PolyForm Shield License 1.0.0](LICENSE) — 
 You may use, modify, and self-host KHost.Mobile for any purpose, **including commercial use** (for example, running it for your own karaoke events). You may **not** use it to provide a product or service that competes with KHost or KHost.Mobile — including offering it or a derivative as a hosted/managed service (SaaS), or redistributing it under a different brand — without a separate license.
 
 **Commercial, SaaS, and OEM licenses are available** for those uses — contact Michael Riddle <riddlemd@gmail.com>.
+
+Third-party components bundled in the app are listed, with their licenses, in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) (all MIT / Apache-2.0).
