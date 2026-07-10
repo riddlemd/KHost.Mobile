@@ -435,9 +435,6 @@ else
                             <span class="sheet__muted">never</span>
                         }
                     </span>
-                    <button class="btn btn-secondary sheet__sang-btn" @onclick="MarkSungTodayAsync">
-                        @(_detailItem.LastSungAt.HasValue ? "Sang today" : "Mark sung")
-                    </button>
                 </div>
                 <div class="sheet__row">
                     <span class="sheet__key">Added</span>
@@ -448,6 +445,9 @@ else
             {
                 <div class="suggest-match">@_autoFilledNote</div>
             }
+            <button class="btn btn-secondary sheet__sang-btn" @onclick="MarkSungTodayAsync">
+                @(_detailItem.LastSungAt.HasValue ? "Sang today" : "Mark sung")
+            </button>
             <button class="btn sheet__youtube" @onclick="OpenYouTubeAsync">▶ Find on YouTube</button>
             <div class="sheet__actions">
                 <button class="btn btn-primary" @onclick="StartEdit">Edit</button>

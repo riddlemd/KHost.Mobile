@@ -466,20 +466,16 @@ html, body {
 }
 .sheet__notes { resize: vertical; min-height: 3.5rem; font-family: inherit; line-height: 1.4; }
 
-/* "Last sung" row keeps its label + date on the left; the flex:1 value cell pushes this
-   compact "sang today" button to the right edge of the row. Compound selector so it beats
-   the later `.btn` base (which resets background:none + transparent border). */
+/* "Sang today" — full-width secondary action directly above the YouTube button. Padding/radius
+   inherit from the `.btn` base so it matches the YouTube button's height; the compound selector
+   beats the later `.btn` base (which resets background:none + transparent border). */
 .btn.sheet__sang-btn {
-    flex: 0 0 auto;
-    margin-left: auto;
-    padding: 0.35rem 0.7rem;
-    font-size: 0.8rem;
+    width: 100%;
+    margin-bottom: 0.6rem;
     font-weight: 600;
-    white-space: nowrap;
     background: var(--kh-surface-2);
     color: var(--kh-text);
     border: 1px solid var(--kh-border);
-    border-radius: 0.5rem;
     transition: background 0.12s ease, border-color 0.12s ease;
 }
 .btn.sheet__sang-btn:hover {
