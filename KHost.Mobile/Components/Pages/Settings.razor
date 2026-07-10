@@ -51,4 +51,21 @@
             </span>
         </label>
     </div>
+
+    <div class="card">
+        <div class="section-title">Song list</div>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Scroll to a song when you favorite it</span>
+                <span class="setting__desc">
+                    Tapping a song's star scrolls the list to reveal its new position (favorites move to the top).
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.ScrollToFavorited" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+    </div>
 </section>

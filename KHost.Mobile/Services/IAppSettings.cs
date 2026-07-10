@@ -17,4 +17,7 @@ public interface IAppSettings
 
     /// <summary>When true, the song detail sheet shows the "Find on Spotify" button.</summary>
     bool SpotifySearchEnabled { get; set; }
+
+    /// <summary>When true, tapping a song's favorite star scrolls the list to reveal that song's new position.</summary>
+    bool ScrollToFavorited { get; set; }
 }
