@@ -47,4 +47,33 @@ public static class Genres
         "Singer-Songwriter",
         "Christmas / Holiday",
     ];
+
+    // Map an external (iTunes) genre onto the app's fixed genre list (the edit field is a <select> of All,
+    // so an unmapped value couldn't stick). Exact match, then a few aliases, then a contains fallback.
+    // Shared by the detail-sheet auto-fill and the post-import review.
+    private static readonly Dictionary<string, string> Aliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Hip-Hop/Rap"] = "Hip Hop",
+        ["Singer/Songwriter"] = "Singer-Songwriter",
+        ["Holiday"] = "Christmas / Holiday",
+        ["Worldwide"] = "World",
+    };
+
+    public static string? Map(string? externalGenre)
+    {
+        if (string.IsNullOrWhiteSpace(externalGenre))
+            return null;
+
+        var genre = externalGenre.Trim();
+
+        var exact = All.FirstOrDefault(g => string.Equals(g, genre, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null)
+            return exact;
+
+        if (Aliases.TryGetValue(genre, out var alias))
+            return alias;
+
+        // e.g. "R&B/Soul" contains "R&B"; "Hip-Hop/Rap" contains "Rap".
+        return All.FirstOrDefault(g => genre.Contains(g, StringComparison.OrdinalIgnoreCase));
+    }
 }

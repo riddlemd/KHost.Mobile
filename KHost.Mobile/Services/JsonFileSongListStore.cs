@@ -121,6 +121,7 @@ public sealed class JsonFileSongListStore : ISongListStore
 
     public async Task RemoveAsync(Guid id)
     {
+        var changed = false;
         await _gate.WaitAsync();
         try
         {
@@ -128,6 +129,7 @@ public sealed class JsonFileSongListStore : ISongListStore
             if (items.RemoveAll(i => i.Id == id) == 0)
                 return;
 
+            changed = true;
             await SaveAsync(items);
         }
         finally
@@ -135,7 +137,8 @@ public sealed class JsonFileSongListStore : ISongListStore
             _gate.Release();
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        if (changed)
+            Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public async Task RestoreAsync(SongListItem item)
@@ -145,8 +148,9 @@ public sealed class JsonFileSongListStore : ISongListStore
         {
             var items = await LoadAsync();
             if (items.Any(i => i.Id == item.Id))
-                return;   // already back — e.g. a double Undo
+                return;   // already present — e.g. a double Undo
 
+            // Undo of a removal: re-add the captured copy in its original position by AddedAt ordering.
             items.Add(item);
             await SaveAsync(items);
         }
@@ -168,7 +172,7 @@ public sealed class JsonFileSongListStore : ISongListStore
         {
             var items = await LoadAsync();
 
-            // Seed the dedupe set with what's already stored; Add() also catches repeats within the batch.
+            // Seed the dedupe set from the existing list. Add() also catches repeats within the batch.
             var seen = skipDuplicates
                 ? new HashSet<string>(items.Select(DedupeKey), StringComparer.OrdinalIgnoreCase)
                 : null;

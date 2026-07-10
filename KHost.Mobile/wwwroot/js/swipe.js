@@ -9,6 +9,7 @@ window.khSwipe = {
         container._khSwipeBound = true;
 
         const START_THRESHOLD = 8;    // px of horizontal travel before we treat it as a swipe
+        const TAP_SLOP = 10;          // px of movement (either axis) past which it's a scroll/swipe, not a tap
         const COMMIT_FRACTION = 0.4;  // swipe past 40% of row width to remove
         const SLIDE_MS = 180;
 
@@ -54,6 +55,7 @@ window.khSwipe = {
                 rect,
                 dx: 0,
                 dragging: false,
+                moved: false,
                 pointerId: e.pointerId,
             };
             row.style.transition = 'none';
@@ -63,6 +65,9 @@ window.khSwipe = {
             if (!active) return;
             const dx = e.clientX - active.startX;
             const dy = e.clientY - active.startY;
+
+            // Any real travel in either axis means this is a scroll or swipe — no longer a candidate tap.
+            if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) active.moved = true;
 
             if (!active.dragging) {
                 if (Math.abs(dx) < START_THRESHOLD) return;
@@ -78,15 +83,19 @@ window.khSwipe = {
             showLabel(active.rect, clamped, Math.abs(clamped) > active.rect.width * COMMIT_FRACTION);
         });
 
-        const finish = () => {
+        const finish = (e) => {
             if (!active) return;
             const a = active;
             active = null;
             a.row.classList.remove('song-row--swiping');
 
             if (!a.dragging) {
-                // A clean tap (no horizontal drag) on a non-interactive part of the row opens its detail sheet.
-                dotNetRef.invokeMethodAsync('OpenDetail', a.id);
+                // Open the detail sheet ONLY on a genuine tap: a stationary pointerup. A pointercancel means the
+                // browser took the gesture over to scroll, and any travel past the slop is a scroll/swipe — neither
+                // should open the sheet. This is what stops a scroll from firing the detail page.
+                if (e.type === 'pointerup' && !a.moved) {
+                    dotNetRef.invokeMethodAsync('OpenDetail', a.id);
+                }
                 return;
             }
 

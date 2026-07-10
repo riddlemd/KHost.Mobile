@@ -20,8 +20,10 @@ public static class MauiProgram
 
 		builder.Services.AddMauiBlazorWebView();
 
-		// On-device song list. Singleton so its in-memory cache and Changed event are shared app-wide.
-		builder.Services.AddSingleton<ISongListStore, JsonFileSongListStore>();
+		// On-device song list. Singleton so its in-memory cache and Changed event are shared app-wide. The UI binds
+		// to ISongListStore; the concrete type is also registered so both resolve to the one instance.
+		builder.Services.AddSingleton<JsonFileSongListStore>();
+		builder.Services.AddSingleton<ISongListStore>(sp => sp.GetRequiredService<JsonFileSongListStore>());
 
 		// Opens external links (e.g. a YouTube search) in the OS browser / matching app.
 		builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();

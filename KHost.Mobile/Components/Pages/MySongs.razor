@@ -1,11 +1,7 @@
 @page "/"
 @using KHost.Mobile.Client.Enrichment
-@using KHost.Mobile.Client.Spotify
-@using KHost.Mobile.Client.YouTubeMusic
 @inject ISongListStore Store
 @inject ILinkLauncher Links
-@inject ISpotifyImportService Spotify
-@inject IYouTubeMusicImportService YtMusic
 @inject ITrackMetadataLookup Metadata
 @inject IJSRuntime JS
 @implements IDisposable
@@ -13,25 +9,6 @@
 <div class="card">
     <div class="add-head">
         <div class="section-title" style="margin:0">Add a song you'd like to sing</div>
-        <div class="import-group">
-            <span class="import-label">Import from</span>
-            <div class="import-icons">
-                <button type="button" class="import-icon-btn" @onclick="() => OpenImport(ImportSource.Spotify)"
-                        title="Import from Spotify" aria-label="Import from Spotify">
-                    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-                        <path fill="#1ed760" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.84-.18-.96-.6-.122-.42.18-.84.6-.96 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.302 1.141zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.481.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z" />
-                    </svg>
-                </button>
-                <button type="button" class="import-icon-btn" @onclick="() => OpenImport(ImportSource.YouTubeMusic)"
-                        title="Import from YouTube Music" aria-label="Import from YouTube Music">
-                    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-                        <circle cx="12" cy="12" r="11" fill="#ff0000" />
-                        <circle cx="12" cy="12" r="6.1" fill="#fff" />
-                        <path d="M10.4 9.1 15.2 12 10.4 14.9z" fill="#ff0000" />
-                    </svg>
-                </button>
-            </div>
-        </div>
     </div>
 
     <div class="field">
@@ -242,134 +219,6 @@ else
     </div>
 }
 
-@if (_flash is not null)
-{
-    <div class="snackbar" role="status">
-        <span class="snackbar__text">@_flash</span>
-    </div>
-}
-
-@if (_importOpen)
-{
-    <div class="sheet-backdrop" @onclick="CloseImport"></div>
-    <div class="sheet" role="dialog" aria-modal="true">
-        <button type="button" class="sheet__close" @onclick="CloseImport" aria-label="Close">✕</button>
-        @if (_reviewRows is not null)
-        {
-            <div class="sheet__title">Fill in details</div>
-            <div class="sheet__subtitle">
-                @(_reviewEnriching
-                    ? $"Looking up {_reviewDoneCount} of {_reviewRows.Count}…"
-                    : $"Found details for {_reviewRows.Count(HasApplyable)} of {_reviewRows.Count}. Review, then apply.")
-            </div>
-            <ul class="import-list review-list">
-                @foreach (var row in _reviewRows)
-                {
-                    <li class="import-row">
-                        <label class="import-row__label">
-                            @if (row.Done && HasApplyable(row))
-                            {
-                                <input type="checkbox" @bind="row.Selected" />
-                            }
-                            else
-                            {
-                                <span class="review-spacer"></span>
-                            }
-                            <span class="import-row__text">
-                                <span class="import-row__title">@row.Item.Title</span>
-                                <span class="import-row__artist">@row.Item.Artist</span>
-                            </span>
-                            <span class="review-result">
-                                @if (!row.Done)
-                                {
-                                    <span class="sheet__muted">…</span>
-                                }
-                                else if (HasApplyable(row))
-                                {
-                                    @ReviewSummary(row)
-                                }
-                                else
-                                {
-                                    <span class="sheet__muted">no match</span>
-                                }
-                            </span>
-                        </label>
-                    </li>
-                }
-            </ul>
-            <div class="sheet__actions">
-                <button class="btn btn-secondary" @onclick="SkipReview">Skip</button>
-                <button class="btn btn-primary" @onclick="ApplyReviewAsync" disabled="@(_reviewSelectedCount == 0)">
-                    Apply @_reviewSelectedCount
-                </button>
-            </div>
-        }
-        else
-        {
-        <div class="sheet__title">Import from @SourceName</div>
-        <div class="sheet__subtitle">Paste a public playlist link — we'll pull in the song titles &amp; artists.</div>
-
-        <div class="field" style="margin-top:0.85rem">
-            <label class="field__label" for="imp-url">Playlist link</label>
-            <input id="imp-url" class="input" placeholder="@SourcePlaceholder"
-                   @bind="_importUrl" @bind:event="oninput" />
-        </div>
-
-        @if (_importError is not null)
-        {
-            <div class="field__error">@_importError</div>
-        }
-
-        @if (_importRows is null)
-        {
-            <button class="btn btn-primary" @onclick="FetchImportAsync"
-                    disabled="@(_importBusy || string.IsNullOrWhiteSpace(_importUrl))">
-                @(_importBusy ? "Fetching…" : "Fetch playlist")
-            </button>
-        }
-        else
-        {
-            <div class="import-head">
-                <span class="import-head__name">@_importName</span>
-                <span class="import-head__actions">
-                    <button class="btn-link" @onclick="SelectAllImport">All</button>
-                    <button class="btn-link" @onclick="SelectNoneImport">None</button>
-                </span>
-            </div>
-            @if (_importTruncated)
-            {
-                <div class="field__hint">Showing the first 100 tracks — longer playlists are trimmed.</div>
-            }
-            <ul class="import-list">
-                @foreach (var row in _importRows)
-                {
-                    <li class="import-row @(row.AlreadyInList ? "is-dupe" : "")">
-                        <label class="import-row__label">
-                            <input type="checkbox" @bind="row.Selected" />
-                            <span class="import-row__text">
-                                <span class="import-row__title">@row.Title</span>
-                                <span class="import-row__artist">@row.Artist</span>
-                            </span>
-                            @if (row.AlreadyInList)
-                            {
-                                <span class="import-row__badge">already added</span>
-                            }
-                        </label>
-                    </li>
-                }
-            </ul>
-            <div class="sheet__actions">
-                <button class="btn btn-secondary" @onclick="CloseImport">Cancel</button>
-                <button class="btn btn-primary" @onclick="ImportSelectedAsync"
-                        disabled="@(_importBusy || _selectedImportCount == 0)">
-                    @(_importBusy ? "Importing…" : $"Import {_selectedImportCount} song{(_selectedImportCount == 1 ? "" : "s")}")
-                </button>
-            </div>
-        }
-        }
-    </div>
-}
-
 @if (_detailItem is not null)
 {
     <div class="sheet-backdrop" @onclick="CloseDetail"></div>
@@ -435,9 +284,6 @@ else
                             <span class="sheet__muted">never</span>
                         }
                     </span>
-                    <button class="btn btn-secondary sheet__sang-btn" @onclick="MarkSungTodayAsync">
-                        @(_detailItem.LastSungAt.HasValue ? "Sang today" : "Mark sung")
-                    </button>
                 </div>
                 <div class="sheet__row">
                     <span class="sheet__key">Added</span>
@@ -448,6 +294,9 @@ else
             {
                 <div class="suggest-match">@_autoFilledNote</div>
             }
+            <button class="btn btn-secondary sheet__sang-btn" @onclick="MarkSungTodayAsync">
+                @(_detailItem.LastSungAt.HasValue ? "Sang today" : "Mark sung")
+            </button>
             <button class="btn sheet__youtube" @onclick="OpenYouTubeAsync">▶ Find on YouTube</button>
             <div class="sheet__actions">
                 <button class="btn btn-primary" @onclick="StartEdit">Edit</button>
@@ -591,66 +440,6 @@ else
     private bool _suggestionLoading;
     private string? _autoFilledNote;
     private CancellationTokenSource? _suggestCts;
-
-    // Playlist import sheet (Spotify or YouTube Music). _importRows is null until a fetch succeeds.
-    private enum ImportSource { Spotify, YouTubeMusic }
-    private ImportSource _importSource;
-    private bool _importOpen;
-    private string _importUrl = string.Empty;
-    private bool _importBusy;
-    private string? _importError;
-    private string? _importName;
-    private bool _importTruncated;
-    private List<ImportRow>? _importRows;
-    private int _selectedImportCount => _importRows?.Count(r => r.Selected) ?? 0;
-
-    // Post-import review: after songs are added, enrich them in the background (throttled to respect the
-    // lookup rate limit) and let the user apply the found year/genre in bulk. Null = no review in progress.
-    private List<ReviewRow>? _reviewRows;
-    private bool _reviewEnriching;
-    private int _reviewDoneCount;
-    private CancellationTokenSource? _reviewCts;
-    private int _reviewSelectedCount => _reviewRows?.Count(r => r.Done && HasApplyable(r) && r.Selected) ?? 0;
-
-    // One reviewed song: the persisted item + its suggestion once looked up.
-    private sealed class ReviewRow
-    {
-        public required SongListItem Item { get; init; }
-        public TrackMetadata? Suggestion { get; set; }
-        public bool Done { get; set; }        // lookup finished (hit or miss)
-        public bool Selected { get; set; } = true;
-    }
-
-    // A review row is applyable when its lookup produced a year or a mappable genre to fill.
-    private bool HasApplyable(ReviewRow row) =>
-        row.Suggestion is not null &&
-        (row.Suggestion.Year.HasValue || MapGenre(row.Suggestion.Genre) is not null);
-
-    private string ReviewSummary(ReviewRow row)
-    {
-        var parts = new List<string>();
-        if (row.Suggestion?.Year is int y) parts.Add(y.ToString());
-        if (MapGenre(row.Suggestion?.Genre) is string g) parts.Add(g);
-        return string.Join(" · ", parts);
-    }
-
-    private string SourceName => _importSource == ImportSource.Spotify ? "Spotify" : "YouTube Music";
-    private string SourcePlaceholder => _importSource == ImportSource.Spotify
-        ? "https://open.spotify.com/playlist/…"
-        : "https://music.youtube.com/playlist?list=…";
-
-    // Transient toast (import result), shown in the snackbar slot; auto-dismisses.
-    private string? _flash;
-    private CancellationTokenSource? _flashCts;
-
-    // Source-agnostic preview row: both Spotify and YT Music fetches are projected to title + artist.
-    private sealed class ImportRow
-    {
-        public required string Title { get; init; }
-        public required string Artist { get; init; }
-        public bool Selected { get; set; }
-        public bool AlreadyInList { get; init; }
-    }
 
     // A release year is optional, but when supplied it must be a real year: 1..this year.
     private static int CurrentYear => DateTime.Now.Year;
@@ -921,7 +710,7 @@ else
                 return;
 
             var filled = new List<string>();
-            if (string.IsNullOrWhiteSpace(item.Genre) && MapGenre(meta?.Genre) is string g)
+            if (string.IsNullOrWhiteSpace(item.Genre) && Genres.Map(meta?.Genre) is string g)
             {
                 item.Genre = g;
                 filled.Add("Genre");
@@ -980,34 +769,6 @@ else
         2 => $"{parts[0]} & {parts[1]}",
         _ => $"{string.Join(", ", parts.Take(parts.Count - 1))}, & {parts[^1]}",
     };
-
-    // Map an iTunes genre onto the app's fixed genre list (the edit field is a <select> of Genres.All,
-    // so an unmapped value couldn't stick). Exact match, then a few aliases, then a contains fallback.
-    private static readonly Dictionary<string, string> GenreAliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Hip-Hop/Rap"] = "Hip Hop",
-        ["Singer/Songwriter"] = "Singer-Songwriter",
-        ["Holiday"] = "Christmas / Holiday",
-        ["Worldwide"] = "World",
-    };
-
-    private static string? MapGenre(string? itunesGenre)
-    {
-        if (string.IsNullOrWhiteSpace(itunesGenre))
-            return null;
-
-        var genre = itunesGenre.Trim();
-
-        var exact = Genres.All.FirstOrDefault(g => string.Equals(g, genre, StringComparison.OrdinalIgnoreCase));
-        if (exact is not null)
-            return exact;
-
-        if (GenreAliases.TryGetValue(genre, out var alias))
-            return alias;
-
-        // e.g. "R&B/Soul" contains "R&B"; "Hip-Hop/Rap" contains "Rap".
-        return Genres.All.FirstOrDefault(g => genre.Contains(g, StringComparison.OrdinalIgnoreCase));
-    }
 
     private async Task SaveEditAsync()
     {
@@ -1080,252 +841,6 @@ else
             ? Task.CompletedTask
             : Links.OpenAsync(YouTubeSearch.UrlFor(_detailItem.Title, _detailItem.Artist));
 
-    // ---- Playlist import (Spotify / YouTube Music) --------------------------------------------
-
-    private void OpenImport(ImportSource source)
-    {
-        _importSource = source;
-        _importOpen = true;
-        _importUrl = string.Empty;
-        _importRows = null;
-        _importError = null;
-        _importName = null;
-        _importTruncated = false;
-        _reviewCts?.Cancel();
-        _reviewRows = null;
-        _reviewEnriching = false;
-    }
-
-    private void CloseImport()
-    {
-        _importOpen = false;
-        _importBusy = false;
-        _reviewCts?.Cancel();
-        _reviewRows = null;
-        _reviewEnriching = false;
-    }
-
-    private async Task FetchImportAsync()
-    {
-        if (string.IsNullOrWhiteSpace(_importUrl) || _importBusy)
-            return;
-
-        _importBusy = true;
-        _importError = null;
-        try
-        {
-            // Each source's fetch is projected to a common (name, tracks, truncated) shape.
-            string? name;
-            bool truncated;
-            List<(string Title, string Artist)> tracks;
-
-            if (_importSource == ImportSource.Spotify)
-            {
-                var result = await Spotify.FetchPlaylistAsync(_importUrl.Trim());
-                name = result.Name;
-                truncated = result.LikelyTruncated;
-                tracks = result.Tracks.Select(t => (t.Title, t.Artist)).ToList();
-            }
-            else
-            {
-                var result = await YtMusic.FetchPlaylistAsync(_importUrl.Trim());
-                name = result.Name;
-                truncated = result.LikelyTruncated;
-                tracks = result.Tracks.Select(t => (t.Title, t.Artist)).ToList();
-            }
-
-            _importName = string.IsNullOrWhiteSpace(name) ? "Playlist" : name;
-            _importTruncated = truncated;
-            _importRows = tracks.Select(t => new ImportRow
-            {
-                Title = t.Title,
-                Artist = t.Artist,
-                AlreadyInList = _items.Any(i =>
-                    string.Equals(i.Title.Trim(), t.Title, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(i.Artist.Trim(), t.Artist, StringComparison.OrdinalIgnoreCase)),
-            }).ToList();
-
-            // Pre-select everything not already in the list; leave duplicates unticked.
-            foreach (var row in _importRows)
-                row.Selected = !row.AlreadyInList;
-
-            if (_importRows.Count == 0)
-                _importError = "That playlist has no importable tracks.";
-        }
-        catch (Exception ex) when (ex is SpotifyImportException or YouTubeMusicImportException)
-        {
-            _importError = ex.Message;
-            _importRows = null;
-        }
-        finally
-        {
-            _importBusy = false;
-        }
-    }
-
-    private void SelectAllImport()
-    {
-        if (_importRows is null) return;
-        foreach (var row in _importRows) row.Selected = true;
-    }
-
-    private void SelectNoneImport()
-    {
-        if (_importRows is null) return;
-        foreach (var row in _importRows) row.Selected = false;
-    }
-
-    private async Task ImportSelectedAsync()
-    {
-        if (_importRows is null || _importBusy)
-            return;
-
-        var chosen = _importRows.Where(r => r.Selected).ToList();
-        if (chosen.Count == 0)
-            return;
-
-        _importBusy = true;
-        try
-        {
-            // Imported as unsung wishlist entries: title + artist only (no year/genre from either source).
-            var toImport = chosen.Select(r => new SongListItem { Title = r.Title, Artist = r.Artist }).ToList();
-
-            // Selection already excludes duplicates; a force-ticked duplicate is honored (skipDuplicates: false).
-            var added = await Store.ImportAsync(toImport, skipDuplicates: false);   // Store.Changed → RefreshAsync
-            await FlashAsync($"Imported {added} song{(added == 1 ? "" : "s")} from {SourceName}");
-
-            // Hand off to the review phase: enrich the freshly-added songs in the background, throttled,
-            // and let the user apply the found year/genre in bulk. The sheet stays open showing progress.
-            _importRows = null;
-            _reviewRows = toImport.Select(i => new ReviewRow { Item = i }).ToList();
-            _ = StartReviewEnrichmentAsync();
-        }
-        finally
-        {
-            _importBusy = false;
-        }
-    }
-
-    // Look up each freshly-imported song one at a time, spaced out to stay under the lookup rate limit.
-    // Fire-and-forget from ImportSelectedAsync; cancelled if the sheet closes or a new import starts.
-    private const int ReviewThrottleMs = 3000;   // ~20/min
-
-    private async Task StartReviewEnrichmentAsync()
-    {
-        _reviewCts?.Cancel();
-        _reviewCts = new CancellationTokenSource();
-        var token = _reviewCts.Token;
-
-        var rows = _reviewRows;
-        if (rows is null)
-            return;
-
-        _reviewEnriching = true;
-        _reviewDoneCount = 0;
-        await InvokeAsync(StateHasChanged);
-
-        try
-        {
-            for (var i = 0; i < rows.Count; i++)
-            {
-                token.ThrowIfCancellationRequested();
-                var row = rows[i];
-
-                // Every lookup here is a live call (these songs were just imported, so none are looked up
-                // yet), so always space them out to stay under the rate limit.
-                try
-                {
-                    row.Suggestion = await Metadata.LookupAsync(row.Item.Title, row.Item.Artist, token);
-                }
-                catch (MetadataLookupException)
-                {
-                    row.Suggestion = null;   // treat a transient failure as "no match" for this pass
-                }
-                row.Done = true;
-                row.Selected = HasApplyable(row);
-                _reviewDoneCount = i + 1;
-                await InvokeAsync(StateHasChanged);
-
-                if (i < rows.Count - 1)
-                    await Task.Delay(ReviewThrottleMs, token);
-            }
-        }
-        catch (OperationCanceledException) { return; }
-        finally
-        {
-            if (!token.IsCancellationRequested)
-            {
-                _reviewEnriching = false;
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-    }
-
-    // Apply the checked suggestions (blank fields only), and mark every looked-up song as done so it isn't
-    // auto-looked-up again — including rows the user unchecked (their choice to skip sticks). One bulk write.
-    private async Task ApplyReviewAsync()
-    {
-        if (_reviewRows is null)
-            return;
-
-        _reviewCts?.Cancel();
-        var done = _reviewRows.Where(r => r.Done).ToList();
-        var applied = 0;
-        foreach (var row in done)
-        {
-            if (row.Selected && HasApplyable(row))
-            {
-                var changed = false;
-                if (string.IsNullOrWhiteSpace(row.Item.Genre) && MapGenre(row.Suggestion?.Genre) is string g)
-                {
-                    row.Item.Genre = g;
-                    changed = true;
-                }
-                if (!row.Item.Year.HasValue && row.Suggestion?.Year is int y)
-                {
-                    row.Item.Year = y;
-                    changed = true;
-                }
-                if (changed)
-                    applied++;
-            }
-            row.Item.MetadataLookedUp = true;   // looked up in this pass — don't auto-look-up again
-        }
-
-        await Store.UpdateRangeAsync(done.Select(r => r.Item));   // one write; Store.Changed → RefreshAsync
-
-        _reviewRows = null;
-        _reviewEnriching = false;
-        _importOpen = false;
-        await FlashAsync($"Filled details for {applied} song{(applied == 1 ? "" : "s")}");
-    }
-
-    // Skip applying anything. No writes — the flag stays unset, so each song still gets a fresh, per-song
-    // auto-fill attempt if/when it's opened in the detail sheet later.
-    private void SkipReview()
-    {
-        _reviewCts?.Cancel();
-        _reviewRows = null;
-        _reviewEnriching = false;
-        _importOpen = false;
-    }
-
-    private async Task FlashAsync(string message)
-    {
-        _flashCts?.Cancel();
-        _flashCts = new CancellationTokenSource();
-        var token = _flashCts.Token;
-
-        _flash = message;
-        await InvokeAsync(StateHasChanged);
-
-        try { await Task.Delay(3500, token); }
-        catch (TaskCanceledException) { return; }   // superseded by a newer flash
-
-        _flash = null;
-        await InvokeAsync(StateHasChanged);
-    }
-
     private async Task AddAsync()
     {
         if (!CanAdd)
@@ -1383,11 +898,7 @@ else
         _swipeRef?.Dispose();
         _undoCts?.Cancel();
         _undoCts?.Dispose();
-        _flashCts?.Cancel();
-        _flashCts?.Dispose();
         _suggestCts?.Cancel();
         _suggestCts?.Dispose();
-        _reviewCts?.Cancel();
-        _reviewCts?.Dispose();
     }
 }

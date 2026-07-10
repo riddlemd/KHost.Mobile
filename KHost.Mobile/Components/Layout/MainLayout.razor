@@ -16,6 +16,10 @@
                     <span class="header-menu__icon">@(_theme == "dark" ? "☀️" : "🌙")</span>
                     @(_theme == "dark" ? "Light mode" : "Dark mode")
                 </button>
+                <NavLink class="header-menu__item" role="menuitem" href="import-export" @onclick="CloseMenu">
+                    <span class="header-menu__icon">🔁</span>
+                    Import / Export
+                </NavLink>
                 <NavLink class="header-menu__item" role="menuitem" href="about" @onclick="CloseMenu">
                     <span class="header-menu__icon">ℹ️</span>
                     About
