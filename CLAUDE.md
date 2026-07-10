@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Cross-repo topology
 
-Three repos, kept as **siblings under `repos/`** (the project reference to `KHost.Contracts` is relative — the folders must stay side by side):
+Three repos, kept as **siblings under `repos/`**:
 
 ```
 repos/
@@ -15,8 +15,8 @@ repos/
 └── KHost.Mobile/     THIS repo — the MAUI Blazor Hybrid app.
 ```
 
-- The **only** shared code is `KHost.Contracts` (DTOs + the `IQueueClient` hub interface). It lives in the `KHost.Online` repo (it *is* the server's public API surface) and is referenced here via `..\KHost.Online\KHost.Contracts\KHost.Contracts.csproj`.
-- During early build-out the reference is a **relative project reference** (frictionless for solo dev). Once the contract stabilizes, flip to a published **NuGet package** — which is also how the public `KHost` client will consume it.
+- **The mobile app currently references none of the other repos — it builds standalone.** The online slice is deferred (see Roadmap), so the `KHost.Contracts` reference has been removed for now.
+- When that slice lands, the shared code is `KHost.Contracts` (DTOs + the `IQueueClient` hub interface), which lives in the `KHost.Online` repo (it *is* the server's public API surface). Consume it as a published **NuGet package** — also how the public `KHost` client will — or a relative project reference during build-out. It must stay a plain `net10.0` library with **zero package references**: a platform MAUI head can consume a base `net10.0` library, but not vice-versa.
 - **Never** reference `KHost.Abstractions`/`Domain`/EF from mobile. The wire contract is a projection, not the host's domain model.
 
 ## Solution / project layout
@@ -26,8 +26,7 @@ repos/
 | Project | Role |
 |---|---|
 | `KHost.Mobile` | MAUI Blazor Hybrid host. Thin shell; UI is Razor components (`Components/`). |
-| `KHost.Mobile.Client` | Typed HTTP + SignalR client against KHost.Online. References `KHost.Contracts`. |
-| `KHost.Contracts` | (referenced, lives in KHost.Online repo) wire DTOs + `IQueueClient`. |
+| `KHost.Mobile.Client` | Client library: playlist import (Spotify / YouTube Music) + iTunes metadata lookup. The typed HTTP/SignalR server client is deferred with the online slice. |
 
 > Razor UI lives in `KHost.Mobile/Components/` for now. If a PWA build is ever wanted, extract components into a Razor Class Library (`KHost.Mobile.UI`) — the Hybrid design keeps that door open with no rewrite.
 
@@ -51,8 +50,7 @@ dotnet build KHost.Mobile.Client/KHost.Mobile.Client.csproj
 
 - **iOS cannot build on Windows** without a paired Mac. A bare `dotnet build` on the solution will surface iOS/Apple-toolchain errors that are **not** your code. Build the **Android head explicitly** to verify, and use the **Windows head** for fast UI iteration. iOS is validated when a Mac is in the loop.
 - **`TargetFrameworks` is trimmed to `android;ios;windows`** (maccatalyst/tizen dropped) since the stated targets are iOS/Android. Don't re-add heads without a reason.
-- The relative Contracts reference means **`KHost.Online` must be checked out as a sibling folder**. "Won't restore" almost always means it's missing or moved.
-- Contracts must stay a plain `net10.0` library with **zero package references** — a platform MAUI head can consume a base `net10.0` library, but not vice-versa. If Contracts ever multi-targets or takes a dependency, this whole sharing scheme breaks.
+- This repo **builds standalone** — it no longer references the sibling `KHost.Online`/`KHost.Contracts` projects. (They return with the online slice; see Roadmap.)
 
 ## KHost.Online — the server it talks to
 
@@ -86,7 +84,7 @@ The app currently ships **offline/local UI only**; it does not talk to KHost.Onl
 
 ## Roadmap (server integration — deferred)
 
-Eventual slice: **join venue → search library → request song → live queue** against KHost.Online. `KHost.Mobile.Client` (typed HTTP + `HubConnection`) and the `KHost.Contracts` DTOs are already in place for it. `KHost.Online` REST slice is scaffolded and runtime-verified in its own repo.
+Eventual slice: **join venue → search library → request song → live queue** against KHost.Online. When it lands, `KHost.Mobile.Client` gains the typed HTTP + `HubConnection` server client and re-takes a `KHost.Contracts` reference (removed for now so this repo builds standalone). `KHost.Online`'s REST slice is scaffolded and runtime-verified in its own repo.
 
 ## Gotchas
 

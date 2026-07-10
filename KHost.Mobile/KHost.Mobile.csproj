@@ -79,7 +79,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\KHost.Mobile.Client\KHost.Mobile.Client.csproj" />
-      <ProjectReference Include="..\..\KHost.Online\KHost.Contracts\KHost.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

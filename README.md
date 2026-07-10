@@ -43,9 +43,6 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 - **Android**: the Android SDK and an emulator or a connected device.
 - **iOS**: a paired Mac (iOS cannot be built on Windows).
 
-> **Note**
-> KHost Cue references a shared `KHost.Contracts` project (the wire DTOs) by relative path from a private sibling repository. If a restore fails with a missing project reference, that sibling repo needs to be checked out alongside this one.
-
 ### Build & run
 
 ```bash
@@ -67,7 +64,6 @@ dotnet run --project KHost.Mobile -f net10.0-windows10.0.19041.0 "-p:BaseOutputP
 |---|---|
 | `KHost.Mobile` | The MAUI Blazor Hybrid app — a thin native shell hosting the Razor UI in `Components/`. |
 | `KHost.Mobile.Client` | Client library: playlist import (Spotify / YouTube Music) and iTunes metadata lookup. |
-| `KHost.Contracts` | Shared wire DTOs, referenced from a sibling repository. |
 
 ## 🤝 Contributing
 

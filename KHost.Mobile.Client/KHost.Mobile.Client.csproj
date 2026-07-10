@@ -11,8 +11,4 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\KHost.Online\KHost.Contracts\KHost.Contracts.csproj" />
-  </ItemGroup>
-
 </Project>
