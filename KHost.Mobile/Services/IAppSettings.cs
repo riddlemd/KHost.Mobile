@@ -7,8 +7,8 @@ namespace KHost.Mobile.Services;
 public interface IAppSettings
 {
     /// <summary>
-    /// When true, iTunes is used to auto-fill a song's blank year/genre: on the detail sheet when a song is
-    /// opened, and via the post-import enrichment/review pass. When false, no iTunes lookups run.
+    /// When true, iTunes is used to auto-fill a song's blank year/genre: when a song is added, when the detail
+    /// sheet is opened, and via the post-import enrichment/review pass. When false, no iTunes lookups run.
     /// </summary>
     bool AutoFillMetadata { get; set; }
 

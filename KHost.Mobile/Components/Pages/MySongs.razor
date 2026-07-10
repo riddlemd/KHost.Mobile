@@ -41,7 +41,7 @@
             <div class="field__error">Enter a year between 1 and @CurrentYear.</div>
         }
     </div>
-    <p class="autofill-note">✨ Leave Genre or Release year blank and we'll auto-fill them when you open the song.</p>
+    <p class="autofill-note">✨ Leave Genre or Release year blank and we'll fill them in from iTunes when you add the song.</p>
 
     @if (IsDuplicate)
     {
@@ -436,11 +436,13 @@ else
     private string _editNotes = string.Empty;
     private int? _editYear;
 
-    // Detail-view metadata auto-fill: when the sheet opens on a not-yet-looked-up song with a blank
-    // year/genre, we look it up, fill the blank(s) straight from the match, and note what we filled.
+    // Metadata auto-fill: look up a not-yet-looked-up song's blank year/genre and fill it from the match.
+    // Runs in the background on add, and again when the detail sheet opens (which also shows a note of what
+    // filled — the spinner + note below are sheet-only UI).
     private bool _suggestionLoading;
     private string? _autoFilledNote;
-    private CancellationTokenSource? _suggestCts;
+    private CancellationTokenSource? _suggestCts;                // detail-sheet lookup; cancelled when the sheet closes
+    private readonly CancellationTokenSource _bgFillCts = new(); // add-time background lookups; cancelled on dispose
 
     // A release year is optional, but when supplied it must be a real year: 1..this year.
     private static int CurrentYear => DateTime.Now.Year;
@@ -684,22 +686,67 @@ else
         return Task.CompletedTask;
     }
 
-    // Look up a year/genre for the open song and fill any blank field straight from the match — no chip, no
-    // confirmation. Runs at most once per song: gated on MetadataLookedUp, and skipped entirely when there's
-    // nothing blank to fill. A transient failure returns without setting the flag, so a later open can retry.
+    // A song is eligible for auto-fill when the toggle is on, we haven't looked it up before, it has a title
+    // to search on, and at least one of genre/year is still blank. A guard so callers can skip the work (and
+    // the detail sheet's spinner) when there's nothing to do; re-enabling the toggle lets a later attempt run.
+    private bool ShouldAutoFill(SongListItem item) =>
+        Settings.AutoFillMetadata &&
+        !item.MetadataLookedUp &&
+        !string.IsNullOrWhiteSpace(item.Title) &&
+        (string.IsNullOrWhiteSpace(item.Genre) || !item.Year.HasValue);
+
+    // Look up a year/genre and fill any blank field straight from the match — no chip, no confirmation. Runs
+    // at most once per song (gated on MetadataLookedUp). Persists the fills + the looked-up flag; returns an
+    // "auto-filled ..." note when it filled something, else null. A transient failure returns null WITHOUT
+    // stamping the flag, so a later add/open can retry. Shared by the add-form and detail-sheet paths.
+    private async Task<string?> TryAutoFillMetadataAsync(SongListItem item, CancellationToken token)
+    {
+        if (!ShouldAutoFill(item))
+            return null;
+
+        TrackMetadata? meta;
+        try
+        {
+            meta = await Metadata.LookupAsync(item.Title, item.Artist, token);
+        }
+        catch (MetadataLookupException)
+        {
+            return null;   // network/rate-limit failure — leave the flag unset to retry later
+        }
+
+        if (token.IsCancellationRequested)
+            return null;
+
+        var filled = new List<string>();
+        if (string.IsNullOrWhiteSpace(item.Genre) && Genres.Map(meta?.Genre) is string g)
+        {
+            item.Genre = g;
+            filled.Add("Genre");
+        }
+        if (!item.Year.HasValue && meta?.Year is int y)
+        {
+            item.Year = y;
+            filled.Add("Year");
+        }
+
+        item.MetadataLookedUp = true;   // record the attempt (hit or miss) so we never look up again
+        await Store.UpdateAsync(item);   // persist flag + any fills; Store.Changed → RefreshAsync
+
+        return filled.Count > 0
+            ? $"✨ Auto-filled {JoinFields(filled)} from “{meta!.MatchedTitle} — {meta.MatchedArtist}”."
+            : null;
+    }
+
+    // Detail-sheet entry point: run the lookup for the open song and surface the result as the sheet's note.
+    // The spinner + note are sheet-only UI; the actual fill/persist lives in TryAutoFillMetadataAsync. Skips
+    // the spinner entirely when there's nothing to look up.
     private async Task LoadDetailSuggestionAsync(SongListItem? item)
     {
         _suggestCts?.Cancel();
         _autoFilledNote = null;
         _suggestionLoading = false;
 
-        // The settings gate comes first and returns WITHOUT stamping MetadataLookedUp, so re-enabling the
-        // toggle lets a later open still run the lookup.
-        if (!Settings.AutoFillMetadata ||
-            item is null ||
-            item.MetadataLookedUp ||
-            string.IsNullOrWhiteSpace(item.Title) ||
-            (!string.IsNullOrWhiteSpace(item.Genre) && item.Year.HasValue))
+        if (item is null || !ShouldAutoFill(item))
             return;
 
         _suggestCts = new CancellationTokenSource();
@@ -707,36 +754,10 @@ else
         _suggestionLoading = true;
         try
         {
-            TrackMetadata? meta;
-            try
-            {
-                meta = await Metadata.LookupAsync(item.Title, item.Artist, token);
-            }
-            catch (MetadataLookupException)
-            {
-                return;   // network/rate-limit failure — leave the flag unset to retry on a later open
-            }
-
+            var note = await TryAutoFillMetadataAsync(item, token);
             if (token.IsCancellationRequested || _detailItem?.Id != item.Id)
                 return;
-
-            var filled = new List<string>();
-            if (string.IsNullOrWhiteSpace(item.Genre) && Genres.Map(meta?.Genre) is string g)
-            {
-                item.Genre = g;
-                filled.Add("Genre");
-            }
-            if (!item.Year.HasValue && meta?.Year is int y)
-            {
-                item.Year = y;
-                filled.Add("Year");
-            }
-
-            if (filled.Count > 0)
-                _autoFilledNote = $"✨ Auto-filled {JoinFields(filled)} from “{meta!.MatchedTitle} — {meta.MatchedArtist}”.";
-
-            item.MetadataLookedUp = true;   // record the attempt (hit or miss) so we never look up again
-            await Store.UpdateAsync(item);   // persist flag + any fills; Store.Changed → RefreshAsync
+            _autoFilledNote = note;
         }
         catch (OperationCanceledException) { return; }
         finally
@@ -870,10 +891,28 @@ else
         }
 
         // New songs start on the wishlist (unsung). Sung-state + rating are set later from the detail sheet.
-        await Store.AddAsync(_title, _artist, _notes, _genre, 0, _year);
+        var added = await Store.AddAsync(_title, _artist, _notes, _genre, 0, _year);
         _title = _artist = _notes = _genre = string.Empty;    // Store.Changed triggers the list refresh.
         _year = null;
         _confirmedDuplicate = false;
+
+        // Fill the new song's blank year/genre in the background so the card populates shortly after it
+        // appears — the add returns immediately and doesn't block on the network. Same one-shot lookup the
+        // detail sheet uses; when it lands, Store.UpdateAsync fires Changed → the list re-renders with it.
+        _ = AutoFillAddedAsync(added);
+    }
+
+    // Fire-and-forget from AddAsync: swallows its own failures (a lookup must never crash the app) and is
+    // cancelled if the page is disposed mid-flight. The gate lives in TryAutoFillMetadataAsync, so this is a
+    // no-op when auto-fill is off or the song has no blanks to fill.
+    private async Task AutoFillAddedAsync(SongListItem item)
+    {
+        try
+        {
+            await TryAutoFillMetadataAsync(item, _bgFillCts.Token);
+        }
+        catch (OperationCanceledException) { }
+        catch { /* best-effort background enrichment */ }
     }
 
     private async Task ToggleFavoriteAsync(SongListItem item)
@@ -936,5 +975,7 @@ else
         _undoCts?.Dispose();
         _suggestCts?.Cancel();
         _suggestCts?.Dispose();
+        _bgFillCts.Cancel();
+        _bgFillCts.Dispose();
     }
 }
