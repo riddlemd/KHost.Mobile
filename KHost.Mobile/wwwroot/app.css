@@ -490,6 +490,23 @@ html, body {
     background: #990000;
     transform: scale(0.99);
 }
+/* Find on Spotify — mirrors the YouTube button in Spotify green. */
+.btn.sheet__spotify {
+    width: 100%;
+    margin-bottom: 0.6rem;
+    background: #1db954;          /* resting: Spotify green + white text */
+    color: #fff;
+    border: none;
+    transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+.btn.sheet__spotify:hover {
+    background: #169c46;
+    box-shadow: 0 2px 10px rgba(29, 185, 84, 0.35);
+}
+.btn.sheet__spotify:active {
+    background: #12833a;
+    transform: scale(0.99);
+}
 .sheet__notes { resize: vertical; min-height: 3.5rem; font-family: inherit; line-height: 1.4; }
 
 /* "Sang today" — full-width secondary action directly above the YouTube button. Padding/radius

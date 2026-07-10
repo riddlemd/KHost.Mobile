@@ -37,5 +37,18 @@
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">“Find on Spotify” button</span>
+                <span class="setting__desc">
+                    Show a button on each song that opens a Spotify search in your browser or the Spotify app.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.SpotifySearchEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
     </div>
 </section>

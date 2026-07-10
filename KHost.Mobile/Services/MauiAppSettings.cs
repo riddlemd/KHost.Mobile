@@ -11,6 +11,7 @@ public sealed class MauiAppSettings : IAppSettings
 {
     private const string AutoFillMetadataKey = "settings.autofill_metadata";
     private const string YouTubeSearchKey = "settings.youtube_search";
+    private const string SpotifySearchKey = "settings.spotify_search";
 
     public bool AutoFillMetadata
     {
@@ -22,5 +23,11 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(YouTubeSearchKey, true);
         set => Preferences.Default.Set(YouTubeSearchKey, value);
+    }
+
+    public bool SpotifySearchEnabled
+    {
+        get => Preferences.Default.Get(SpotifySearchKey, true);
+        set => Preferences.Default.Set(SpotifySearchKey, value);
     }
 }
