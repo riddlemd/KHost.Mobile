@@ -10,7 +10,7 @@ namespace KHost.Mobile.Services;
 /// truth once loaded; every mutation rewrites the file. Guarded by a <see cref="SemaphoreSlim"/> so concurrent UI
 /// actions can't corrupt the file or the cache.
 /// </summary>
-public sealed class JsonFileSongListStore : ILocalSongStore
+public sealed class JsonFileSongListStore : ISongListStore
 {
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 
@@ -27,10 +27,7 @@ public sealed class JsonFileSongListStore : ILocalSongStore
         try
         {
             var items = await LoadAsync();
-            // Tombstones (soft-deleted items kept for cloud-sync propagation) are invisible to the UI.
-            return items.Where(i => i.DeletedAt is null)
-                        .OrderByDescending(i => i.AddedAt)
-                        .ToList();
+            return items.OrderByDescending(i => i.AddedAt).ToList();
         }
         finally
         {
@@ -80,7 +77,6 @@ public sealed class JsonFileSongListStore : ILocalSongStore
             if (index < 0)
                 return;
 
-            item.UpdatedAt = DateTimeOffset.Now;   // stamp the edit for last-write-wins cloud sync
             items[index] = item;
             await SaveAsync(items);
         }
@@ -107,7 +103,6 @@ public sealed class JsonFileSongListStore : ILocalSongStore
                 if (index < 0)
                     continue;
 
-                item.UpdatedAt = DateTimeOffset.Now;   // stamp each edit for last-write-wins cloud sync
                 items[index] = item;
                 changed = true;
             }
@@ -126,20 +121,14 @@ public sealed class JsonFileSongListStore : ILocalSongStore
 
     public async Task RemoveAsync(Guid id)
     {
-        var now = DateTimeOffset.Now;
         var changed = false;
         await _gate.WaitAsync();
         try
         {
             var items = await LoadAsync();
-            // Soft-delete: keep the row as a tombstone so the deletion propagates to the user's other
-            // same-ecosystem devices on the next sync instead of the row silently reappearing.
-            var item = items.FirstOrDefault(i => i.Id == id && i.DeletedAt is null);
-            if (item is null)
+            if (items.RemoveAll(i => i.Id == id) == 0)
                 return;
 
-            item.DeletedAt = now;
-            item.UpdatedAt = now;
             changed = true;
             await SaveAsync(items);
         }
@@ -154,30 +143,15 @@ public sealed class JsonFileSongListStore : ILocalSongStore
 
     public async Task RestoreAsync(SongListItem item)
     {
-        var now = DateTimeOffset.Now;
         await _gate.WaitAsync();
         try
         {
             var items = await LoadAsync();
-            var existing = items.FirstOrDefault(i => i.Id == item.Id);
-            if (existing is not null)
-            {
-                if (existing.DeletedAt is null)
-                    return;   // already live — e.g. a double Undo
+            if (items.Any(i => i.Id == item.Id))
+                return;   // already present — e.g. a double Undo
 
-                // Undo of a soft-delete: clear the tombstone in place. Re-adding would hit the
-                // "already present" case (the tombstone is still in the list) and no-op the Undo.
-                existing.DeletedAt = null;
-                existing.UpdatedAt = now;
-            }
-            else
-            {
-                // Tombstone was compacted away between remove and Undo — resurrect the captured copy.
-                item.DeletedAt = null;
-                item.UpdatedAt = now;
-                items.Add(item);
-            }
-
+            // Undo of a removal: re-add the captured copy in its original position by AddedAt ordering.
+            items.Add(item);
             await SaveAsync(items);
         }
         finally
@@ -198,10 +172,9 @@ public sealed class JsonFileSongListStore : ILocalSongStore
         {
             var items = await LoadAsync();
 
-            // Seed the dedupe set from LIVE items only — a title that was previously deleted (tombstoned)
-            // is re-importable, so it comes back as a fresh live entry. Add() also catches repeats within the batch.
+            // Seed the dedupe set from the existing list. Add() also catches repeats within the batch.
             var seen = skipDuplicates
-                ? new HashSet<string>(items.Where(i => i.DeletedAt is null).Select(DedupeKey), StringComparer.OrdinalIgnoreCase)
+                ? new HashSet<string>(items.Select(DedupeKey), StringComparer.OrdinalIgnoreCase)
                 : null;
 
             foreach (var item in incoming)
@@ -215,7 +188,6 @@ public sealed class JsonFileSongListStore : ILocalSongStore
                 if (seen is not null && !seen.Add(DedupeKey(item)))
                     continue;   // already in the list, or a duplicate earlier in this batch
 
-                item.UpdatedAt = DateTimeOffset.Now;   // stamp for last-write-wins cloud sync
                 items.Add(item);
                 added++;
             }
@@ -232,48 +204,6 @@ public sealed class JsonFileSongListStore : ILocalSongStore
             Changed?.Invoke(this, EventArgs.Empty);
 
         return added;
-    }
-
-    public async Task<IReadOnlyList<SongListItem>> GetRawAsync()
-    {
-        await _gate.WaitAsync();
-        try
-        {
-            // A copy so the coordinator can merge without racing a concurrent mutation of the cached list.
-            return (await LoadAsync()).ToList();
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
-
-    public async Task ApplyMergedAsync(IReadOnlyList<SongListItem> syncResult)
-    {
-        ArgumentNullException.ThrowIfNull(syncResult);
-
-        var changed = false;
-        await _gate.WaitAsync();
-        try
-        {
-            // Merge the sync result INTO the live snapshot (not overwrite it): any edit the user made while the
-            // network pull was in flight is in `current` with a newer UpdatedAt, so it survives the union and the
-            // pending debounced sync pushes it. Holding _gate makes the read-merge-write atomic w.r.t. other edits.
-            var current = await LoadAsync();
-            var final = SyncMerge.Compact(SyncMerge.Merge(current, syncResult), DateTimeOffset.Now);
-            if (SyncMerge.Signature(current) == SyncMerge.Signature(final))
-                return;   // converged — nothing to write, no UI churn
-
-            await SaveAsync(final.ToList());
-            changed = true;
-        }
-        finally
-        {
-            _gate.Release();
-        }
-
-        if (changed)
-            Changed?.Invoke(this, EventArgs.Empty);
     }
 
     // Title+artist identity used for de-duplication (trimmed, case-insensitive). The  unit

@@ -1,7 +1,5 @@
 @inherits LayoutComponentBase
-@implements IDisposable
 @inject IJSRuntime JS
-@inject KHost.Mobile.Services.SyncCoordinator Sync
 
 <header class="app-header">
     <div class="app-header__title"><span>🎤</span> KHost Cue</div>
@@ -14,34 +12,6 @@
         {
             <div class="header-menu__scrim" @onclick="CloseMenu"></div>
             <div class="header-menu__panel" role="menu">
-                @if (Sync.AuthState != KHost.Mobile.Services.SyncAuthState.NotConfigured)
-                {
-                    <div class="header-menu__sync">
-                        <div class="header-menu__sync-head">
-                            <span class="header-menu__icon">☁️</span>
-                            <div class="header-menu__sync-text">
-                                <span class="header-menu__sync-title">@Sync.BackendName</span>
-                                <span class="header-menu__sync-status">@SyncStatusText()</span>
-                            </div>
-                        </div>
-                        @if (Sync.AuthState == KHost.Mobile.Services.SyncAuthState.SignedIn)
-                        {
-                            <div class="header-menu__sync-actions">
-                                <button type="button" class="btn header-menu__sync-btn" @onclick="SyncNowAsync" disabled="@Sync.IsSyncing">
-                                    @(Sync.IsSyncing ? "Syncing…" : "Sync now")
-                                </button>
-                                <button type="button" class="btn btn-link header-menu__sync-link" @onclick="DisconnectAsync">Sign out</button>
-                            </div>
-                        }
-                        else
-                        {
-                            <button type="button" class="btn header-menu__sync-btn" @onclick="ConnectAsync" disabled="@_connecting">
-                                @(_connecting ? "Connecting…" : $"Sign in to {Sync.BackendName}")
-                            </button>
-                        }
-                    </div>
-                    <div class="header-menu__divider"></div>
-                }
                 <button type="button" class="header-menu__item" role="menuitem" @onclick="ToggleThemeAsync">
                     <span class="header-menu__icon">@(_theme == "dark" ? "☀️" : "🌙")</span>
                     @(_theme == "dark" ? "Light mode" : "Dark mode")
@@ -70,13 +40,6 @@
 @code {
     private string _theme = "light";
     private bool _menuOpen;
-    private bool _connecting;
-
-    protected override void OnInitialized()
-    {
-        Sync.StateChanged += OnSyncStateChanged;
-        Sync.Start();   // idempotent: kicks the first sync once the UI is up
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -97,36 +60,4 @@
     {
         _theme = await JS.InvokeAsync<string>("khTheme.toggle");
     }
-
-    private Task SyncNowAsync() => Sync.SyncNowAsync();
-
-    private async Task ConnectAsync()
-    {
-        _connecting = true;
-        try { await Sync.ConnectAsync(); }
-        finally { _connecting = false; }
-    }
-
-    private Task DisconnectAsync() => Sync.DisconnectAsync();
-
-    // Short one-line status for the menu, derived from the coordinator's last attempt.
-    private string SyncStatusText()
-    {
-        if (Sync.IsSyncing)
-            return "Syncing…";
-        if (Sync.AuthState == KHost.Mobile.Services.SyncAuthState.SignedOut)
-            return "Not signed in";
-
-        return Sync.LastResult switch
-        {
-            KHost.Mobile.Services.SyncResult.Ok => Sync.AccountLabel is { } a ? $"Synced · {a}" : "Synced",
-            KHost.Mobile.Services.SyncResult.UpToDate => Sync.AccountLabel is { } a ? $"Up to date · {a}" : "Up to date",
-            KHost.Mobile.Services.SyncResult.Failed => Sync.LastError is { Length: > 0 } e ? $"Sync failed: {e}" : "Sync failed",
-            _ => Sync.AccountLabel ?? "Ready",
-        };
-    }
-
-    private void OnSyncStateChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
-
-    public void Dispose() => Sync.StateChanged -= OnSyncStateChanged;
 }

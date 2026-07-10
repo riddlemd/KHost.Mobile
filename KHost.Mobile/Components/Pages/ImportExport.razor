@@ -348,7 +348,6 @@
         foreach (var item in incoming)
         {
             item.Id = Guid.NewGuid();   // fresh identity so a re-import can't collide with an existing row
-            item.DeletedAt = null;      // a live import never carries a tombstone in
         }
         return await Store.ImportAsync(incoming, skipDuplicates: true);
     }
@@ -361,7 +360,7 @@
         _exportBusy = true;
         try
         {
-            // Export the LIVE list (GetAllAsync already drops tombstones) as our own JSON format.
+            // Export the current list as our own JSON format.
             var json = JsonSerializer.Serialize(_items, ExportJsonOptions);
             var fileName = $"khost-songs-{DateTime.Now:yyyy-MM-dd}.json";
             var path = Path.Combine(FileSystem.CacheDirectory, fileName);
