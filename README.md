@@ -9,6 +9,15 @@
 
 KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a personal karaoke wishlist in your pocket. Add songs you'd love to sing, track how each one went, and revisit your history — all stored on your device, fully **offline and local-only**.
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/my-songs.png" width="220" alt="My Songs — the wishlist as sortable cards" />
+  <img src="docs/screenshots/song-detail.png" width="220" alt="Song detail — rating, notes, sung history, and quick links" />
+  <img src="docs/screenshots/import-export.png" width="220" alt="Import & Export — from a file, Spotify, or YouTube Music" />
+  <img src="docs/screenshots/settings.png" width="220" alt="Settings — toggle every extra behavior" />
+</p>
+
 ## ✨ Features
 
 - **My Songs** — a personal wishlist of songs to sing, as a swipeable card list with sorting and text / genre / year / rating filters.
