@@ -23,8 +23,6 @@ browser assets and fonts).
 |---|---|---|---|
 | Microsoft.Maui.Controls (.NET MAUI) | app shell | MIT | Microsoft / .NET Foundation |
 | Microsoft.AspNetCore.Components.WebView.Maui (Blazor Hybrid) | app shell | MIT | Microsoft / .NET Foundation |
-| Microsoft.AspNetCore.SignalR.Client | client library | MIT | Microsoft / .NET Foundation |
-| Microsoft.Extensions.Http | client library | MIT | Microsoft / .NET Foundation |
 | Microsoft.Extensions.Logging.Debug | app shell (debug logging) | MIT | Microsoft / .NET Foundation |
 | Microsoft.Extensions.* (transitive: DI, Logging, Options, Primitives, …) | app shell, client | MIT | Microsoft / .NET Foundation |
 | Bootstrap 5.3.3 (`wwwroot/lib/bootstrap/**`) | web UI assets | MIT | The Bootstrap Authors |
