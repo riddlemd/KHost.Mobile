@@ -25,6 +25,9 @@ public static class MauiProgram
 		builder.Services.AddSingleton<JsonFileSongListStore>();
 		builder.Services.AddSingleton<ISongListStore>(sp => sp.GetRequiredService<JsonFileSongListStore>());
 
+		// User preferences (feature toggles) persisted via MAUI Preferences. Singleton: one view of the flags app-wide.
+		builder.Services.AddSingleton<IAppSettings, MauiAppSettings>();
+
 		// Opens external links (e.g. a YouTube search) in the OS browser / matching app.
 		builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
 

@@ -3,6 +3,7 @@
 @inject ISongListStore Store
 @inject ILinkLauncher Links
 @inject ITrackMetadataLookup Metadata
+@inject IAppSettings Settings
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -297,7 +298,10 @@ else
             <button class="btn btn-secondary sheet__sang-btn" @onclick="MarkSungTodayAsync">
                 @(_detailItem.LastSungAt.HasValue ? "Sang today" : "Mark sung")
             </button>
-            <button class="btn sheet__youtube" @onclick="OpenYouTubeAsync">▶ Find on YouTube</button>
+            @if (Settings.YouTubeSearchEnabled)
+            {
+                <button class="btn sheet__youtube" @onclick="OpenYouTubeAsync">▶ Find on YouTube</button>
+            }
             <div class="sheet__actions">
                 <button class="btn btn-primary" @onclick="StartEdit">Edit</button>
             </div>
@@ -685,7 +689,10 @@ else
         _autoFilledNote = null;
         _suggestionLoading = false;
 
-        if (item is null ||
+        // The settings gate comes first and returns WITHOUT stamping MetadataLookedUp, so re-enabling the
+        // toggle lets a later open still run the lookup.
+        if (!Settings.AutoFillMetadata ||
+            item is null ||
             item.MetadataLookedUp ||
             string.IsNullOrWhiteSpace(item.Title) ||
             (!string.IsNullOrWhiteSpace(item.Genre) && item.Year.HasValue))
