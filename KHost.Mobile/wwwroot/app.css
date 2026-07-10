@@ -232,7 +232,7 @@ html, body {
 .switch__input:focus-visible + .switch__track { outline: 2px solid var(--kh-primary); outline-offset: 2px; }
 
 .app-content {
-    padding: 1rem 1rem calc(var(--kh-nav-h) + env(safe-area-inset-bottom) + 1rem);
+    padding: 1rem 0.6rem calc(var(--kh-nav-h) + env(safe-area-inset-bottom) + 1rem);
     max-width: 640px;
     margin: 0 auto;
     min-height: 100vh;
@@ -1080,6 +1080,10 @@ html, body {
 
 .btn-primary { background-color: var(--kh-primary); color: var(--kh-primary-contrast); width: 100%; }
 .btn-primary:active { background-color: var(--kh-primary-strong); }
+/* Bootstrap's .btn:disabled forces its own blue (--bs-btn-disabled-bg) on a disabled .btn-primary, out-
+   specifying our .btn-primary. Re-assert the brand purple for the disabled state (still dimmed by opacity). */
+.btn-primary:disabled,
+.btn-primary.disabled { background-color: var(--kh-primary); color: var(--kh-primary-contrast); }
 
 .btn-icon {
     padding: 0.5rem;
