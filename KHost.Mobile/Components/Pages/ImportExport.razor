@@ -281,14 +281,21 @@
         _items = await Store.GetAllAsync();
     }
 
-    private async void OnStoreChanged(object? sender, EventArgs e)
+    // Bridge the store's synchronous Changed event to async work without `async void`: a void handler hands
+    // the reload to InvokeAsync, which marshals it onto the render thread (Changed can fire from a background
+    // thread) and owns the continuation. Fire-and-forget by necessity — an event has nothing to await it — but
+    // the task swallows its own failures so nothing is unobserved, matching the store's "don't crash" approach.
+    private void OnStoreChanged(object? sender, EventArgs e) => _ = RefreshFromStoreAsync();
+
+    private async Task RefreshFromStoreAsync()
     {
-        // async void (an EventHandler subscriber, so it can't return Task) — an unobserved throw here could
-        // crash the app, so guard the reload. Matches the store's own "swallow rather than crash" approach.
         try
         {
-            _items = await Store.GetAllAsync();
-            await InvokeAsync(StateHasChanged);
+            await InvokeAsync(async () =>
+            {
+                _items = await Store.GetAllAsync();
+                StateHasChanged();
+            });
         }
         catch
         {
