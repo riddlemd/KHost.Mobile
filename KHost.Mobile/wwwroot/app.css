@@ -593,9 +593,6 @@ html, body {
     border: 1px solid var(--kh-border);
 }
 
-/* Row is tappable (opens the detail sheet). */
-.song-table tbody td:nth-child(2) { cursor: pointer; }
-
 /* ---- Playlist import (Spotify / YouTube Music) -------------------------- */
 /* Header row of the add card: title on the left, import icons pinned top-right. */
 .add-head {
@@ -783,33 +780,23 @@ html, body {
 
 /* ---- Sortable song table ------------------------------------------------ */
 
-/* Full-bleed: pull the table out past the page's 1rem side padding so rows span edge-to-edge. */
-.table-scroll {
-    overflow-x: hidden;   /* no horizontal scroll — columns share the width instead */
-    margin-left: -1rem;
-    margin-right: -1rem;
+/* Song list = a vertical stack of cards. */
+.song-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
 }
 
-.song-table {
-    width: 100%;
-    table-layout: fixed;    /* columns obey the widths below and text wraps rather than overflowing */
-    border-collapse: collapse;
-    font-size: 0.75rem;
-}
-
-/* Song/Artist takes all remaining width; favorite + rating shrink to their content. */
-.song-table thead th:nth-child(1) { width: 2.1rem; }   /* favorite star */
-.song-table thead th:nth-child(2) { width: auto; }     /* Song / Artist / Genre stacked — absorbs the rest */
-.song-table thead th:nth-child(3) { width: 5.75rem; }  /* How it went — just the 5 stars */
-.song-table th:nth-child(1),
-.song-table th:nth-child(3),
-.song-table td:nth-child(1),
-.song-table td:nth-child(3) { white-space: nowrap; }
-
-/* Swipe-to-remove: rows slide horizontally; vertical scroll stays native via pan-y. */
-.song-table tbody tr {
+/* A single song card. position:relative anchors the favorite button; opaque bg so a swiped card
+   doesn't reveal the one beneath it. Vertical scroll stays native via pan-y; swipe.js captures horizontal. */
+.song-card {
+    position: relative;
+    background: var(--kh-surface);
+    border: 1px solid var(--kh-border);
+    border-radius: var(--kh-radius);
+    padding: 0.75rem 0.9rem;
     touch-action: pan-y;
-    background: var(--kh-surface);   /* opaque so a sliding row doesn't show rows beneath it */
+    cursor: pointer;
 }
 .song-row--swiping { cursor: grabbing; }
 
@@ -841,7 +828,7 @@ html, body {
     justify-content: space-between;
     gap: 0.5rem;
 }
-.table-hint {
+.list-hint {
     font-size: 0.72rem;
     font-weight: 400;
     text-transform: none;    /* don't inherit the section-title's uppercase */
@@ -850,56 +837,70 @@ html, body {
     white-space: nowrap;
 }
 
-.song-table th,
-.song-table td {
-    padding: 0.6rem 0.2rem;   /* roomier rows; tighter left/right to conserve width */
-    text-align: left;
-    vertical-align: middle;
-    border-bottom: 1px solid var(--kh-border);
-    overflow-wrap: anywhere;   /* wrap long titles/artists instead of forcing the table wider */
-}
-
-/* Keep content off the very screen edge now that rows are full-bleed. */
-.song-table th:first-child,
-.song-table td:first-child { padding-left: 0.9rem; }
-.song-table th:last-child,
-.song-table td:last-child { padding-right: 0.9rem; }
-
-.song-table thead th {
-    font-size: 0.62rem;
+/* Sort controls that replace the old table header — a row of sort buttons above the cards. */
+.sort-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0.1rem 0.25rem 0.55rem;
+    font-size: 0.68rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.02em;
     color: var(--kh-text-muted);
-    overflow-wrap: normal;   /* wrap between words only — don't split "SUNG" */
+}
+.sort-bar__group { display: flex; align-items: center; gap: 0.15rem; }
+.sort-bar__btn {
+    background: none;
+    border: none;
+    padding: 0.15rem 0.1rem;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    user-select: none;
+}
+.sort-bar__btn:hover { color: var(--kh-text); }
+.sort-bar__arrow { color: var(--kh-primary); }
+.sort-bar__sep { color: var(--kh-border); }
+
+.song-card__title {
+    font-weight: 600;
+    color: var(--kh-text);
+    font-size: 0.95rem;
+    overflow-wrap: anywhere;
+    padding-right: 1.6rem;   /* leave room for the favorite button pinned top-right */
+}
+.song-card__artist {
+    font-size: 0.85rem;
+    opacity: 0.65;           /* singer: dimmer than the title */
+    margin-top: 0.1rem;
+    overflow-wrap: anywhere;
 }
 
-.song-table__sortable { cursor: pointer; user-select: none; }
-.song-table__sortable:hover { color: var(--kh-text); }
-.song-table__arrow { color: var(--kh-primary); }
-.song-table__center { text-align: center; }
-.song-table__title { font-weight: 600; color: var(--kh-text); }
-.song-table__artist { font-size: 0.9em; opacity: 0.65; margin-top: 0.05rem; }   /* singer: smaller + dimmer than the song title */
-.song-table__sep { color: var(--kh-border); margin: 0 0.2rem; }
-.song-table__genre {   /* genre as a small tag under the artist, not its own column */
+/* Lower area: genre + year on the left, rating stars pinned to the right. */
+.song-card__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.55rem;
+}
+.song-card__tags { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; min-width: 0; }
+.song-card__genre {
     display: inline-block;
-    margin-top: 0.3rem;
     padding: 0.04rem 0.45rem;
-    font-size: 0.8em;
+    font-size: 0.72rem;
     line-height: 1.4;
     border-radius: 999px;
     background-color: var(--kh-surface-2);
     color: var(--kh-text-muted);
 }
-.song-table__year {   /* release year, sits beside the genre tag */
-    display: inline-block;
-    margin-top: 0.3rem;
-    margin-left: 0.35rem;
-    font-size: 0.8em;
-    color: var(--kh-text-muted);
-}
-.song-table__muted { color: var(--kh-text-muted); }
-.song-table .stars__star { font-size: 0.85rem; padding: 0.01rem; }   /* compact stars so the rating column fits */
+.song-card__year { font-size: 0.72rem; color: var(--kh-text-muted); }
+
+/* Display-only stars in the card meta row. */
+.song-card .stars__star { font-size: 0.9rem; padding: 0.01rem; }
+.song-card__fav { position: absolute; top: 0.55rem; right: 0.7rem; }
 
 .fav-btn {
     background: none;

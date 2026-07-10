@@ -1,14 +1,23 @@
-@* 0-5 rating. 0 = unsung (shows an "unsung" overlay). Tap the current top star again to clear back to 0. *@
-<div class="stars @(ReadOnly ? "stars--readonly" : "") @(Value <= 0 && !Sung ? "stars--unrated" : "")" role="radiogroup" aria-label="Rating">
+@* 0-5 rating. 0 = unsung (shows an "unsung" overlay). Tap the current top star again to clear back to 0.
+   ReadOnly renders inert <span>s (not disabled <button>s) so a tap on the stars passes through to whatever
+   sits under them — e.g. the song card's tap-to-open handler. *@
+<div class="stars @(ReadOnly ? "stars--readonly" : "") @(Value <= 0 && !Sung ? "stars--unrated" : "")"
+     role="@(ReadOnly ? "img" : "radiogroup")" aria-label="@(ReadOnly ? $"Rating: {Value} of 5" : "Rating")">
     @for (var i = 1; i <= 5; i++)
     {
         var star = i;
-        <button type="button"
-                class="stars__star @(star <= Value ? "is-filled" : "")"
-                @onclick="() => SetAsync(star)"
-                disabled="@ReadOnly"
-                aria-label="@($"{star} of 5 — {Label(star)}")"
-                title="@Label(star)">★</button>
+        if (ReadOnly)
+        {
+            <span class="stars__star @(star <= Value ? "is-filled" : "")" aria-hidden="true">★</span>
+        }
+        else
+        {
+            <button type="button"
+                    class="stars__star @(star <= Value ? "is-filled" : "")"
+                    @onclick="() => SetAsync(star)"
+                    aria-label="@($"{star} of 5 — {Label(star)}")"
+                    title="@Label(star)">★</button>
+        }
     }
     @if (Value <= 0 && !Sung)
     {

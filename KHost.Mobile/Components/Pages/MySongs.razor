@@ -132,14 +132,14 @@
 
 @{
     var visible = Sorted().ToList();
-    _tableRendered = visible.Count > 0;
+    _listRendered = visible.Count > 0;
 }
 
 <div class="section-title section-title--row">
     <span>My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))</span>
     @if (visible.Count > 0)
     {
-        <span class="table-hint">Tap a row to open · swipe left to remove</span>
+        <span class="list-hint">Tap a card to open · swipe left to remove</span>
     }
 </div>
 
@@ -162,53 +162,42 @@ else if (visible.Count == 0)
 }
 else
 {
-    <div class="table-scroll">
-        <table class="song-table">
-            <thead>
-                <tr>
-                    <th aria-label="Favorite"></th>
-                    <th>
-                        <span class="song-table__sortable" @onclick="() => SortBy(SortColumn.Title)">Song <span class="song-table__arrow">@Arrow(SortColumn.Title)</span></span>
-                        <span class="song-table__sep">/</span>
-                        <span class="song-table__sortable" @onclick="() => SortBy(SortColumn.Artist)">Artist <span class="song-table__arrow">@Arrow(SortColumn.Artist)</span></span>
-                    </th>
-                    <th class="song-table__sortable" @onclick="() => SortBy(SortColumn.Confidence)">
-                        How it went <span class="song-table__arrow">@Arrow(SortColumn.Confidence)</span>
-                    </th>
-                </tr>
-            </thead>
-            <tbody @ref="_swipeRoot">
-                @foreach (var item in visible)
+    <div class="sort-bar">
+        <div class="sort-bar__group">
+            <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Title)">Song <span class="sort-bar__arrow">@Arrow(SortColumn.Title)</span></button>
+            <span class="sort-bar__sep">/</span>
+            <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Artist)">Artist <span class="sort-bar__arrow">@Arrow(SortColumn.Artist)</span></button>
+        </div>
+        <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Confidence)">How it went <span class="sort-bar__arrow">@Arrow(SortColumn.Confidence)</span></button>
+    </div>
+    <div class="song-cards" @ref="_swipeRoot">
+        @foreach (var item in visible)
+        {
+            <div class="song-card" @key="item.Id" data-song-id="@item.Id">
+                <button type="button" class="fav-btn song-card__fav @(item.IsFavorite ? "is-fav" : "")"
+                        title="@(item.IsFavorite ? "Remove from favorites" : "Add to favorites")"
+                        aria-pressed="@item.IsFavorite"
+                        @onclick="() => ToggleFavoriteAsync(item)">★</button>
+                <div class="song-card__title">@item.Title</div>
+                @if (!string.IsNullOrWhiteSpace(item.Artist))
                 {
-                    <tr @key="item.Id" data-song-id="@item.Id">
-                        <td class="song-table__center">
-                            <button type="button" class="fav-btn @(item.IsFavorite ? "is-fav" : "")"
-                                    title="@(item.IsFavorite ? "Remove from favorites" : "Add to favorites")"
-                                    aria-pressed="@item.IsFavorite"
-                                    @onclick="() => ToggleFavoriteAsync(item)">★</button>
-                        </td>
-                        <td>
-                            <div class="song-table__title">@item.Title</div>
-                            @if (!string.IsNullOrWhiteSpace(item.Artist))
-                            {
-                                <div class="song-table__artist">@item.Artist</div>
-                            }
-                            @if (!string.IsNullOrWhiteSpace(item.Genre))
-                            {
-                                <span class="song-table__genre">@item.Genre</span>
-                            }
-                            @if (item.Year.HasValue)
-                            {
-                                <span class="song-table__year">@item.Year</span>
-                            }
-                        </td>
-                        <td>
-                            <StarRating Value="DisplayConfidence(item)" ValueChanged="v => UpdateRatingAsync(item, v)" Sung="@item.LastSungAt.HasValue" />
-                        </td>
-                    </tr>
+                    <div class="song-card__artist">@item.Artist</div>
                 }
-            </tbody>
-        </table>
+                <div class="song-card__meta">
+                    <span class="song-card__tags">
+                        @if (!string.IsNullOrWhiteSpace(item.Genre))
+                        {
+                            <span class="song-card__genre">@item.Genre</span>
+                        }
+                        @if (item.Year.HasValue)
+                        {
+                            <span class="song-card__year">@item.Year</span>
+                        }
+                    </span>
+                    <StarRating Value="DisplayConfidence(item)" Sung="@item.LastSungAt.HasValue" ReadOnly="true" />
+                </div>
+            </div>
+        }
     </div>
 }
 
@@ -427,7 +416,7 @@ else
     // Swipe-to-remove wiring: the JS module is delegated on the stable <tbody> element.
     private ElementReference _swipeRoot;
     private DotNetObjectReference<MySongs>? _swipeRef;
-    private bool _tableRendered;
+    private bool _listRendered;
     private bool _swipeBound;
 
     // Undo-after-swipe-remove: the last removed item + a timer to expire the offer.
@@ -436,7 +425,7 @@ else
     private CancellationTokenSource? _undoCts;
     private bool _rangeBound;   // anti-cross clamp bound to the current year-slider inputs
 
-    // Song detail / edit sheet (opened by tapping a row).
+    // Song detail / edit sheet (opened by tapping a card).
     private SongListItem? _detailItem;
     private bool _editing;
     private bool _editFieldsBound;   // khNumeric bound to the edit-form year input
@@ -595,15 +584,15 @@ else
         if (firstRender)
             await JS.InvokeVoidAsync("khNumeric.register");   // add-form year input
 
-        if (_tableRendered && !_swipeBound)
+        if (_listRendered && !_swipeBound)
         {
             _swipeRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("khSwipe.register", _swipeRoot, _swipeRef);
             _swipeBound = true;
         }
-        else if (!_tableRendered)
+        else if (!_listRendered)
         {
-            // Table unmounted (list emptied) — the next mount is a fresh <tbody> that needs rebinding.
+            // Card list unmounted (list emptied) — the next mount is a fresh container that needs rebinding.
             _swipeBound = false;
         }
 
