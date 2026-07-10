@@ -31,15 +31,20 @@ public static class MauiProgram
 		// Opens external links (e.g. a YouTube search) in the OS browser / matching app.
 		builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
 
+		// HTTP-backed services go through IHttpClientFactory (AddHttpClient) so their message handlers are
+		// pooled and rotated — a plain long-lived `new HttpClient()` never picks up DNS changes. Each service
+		// is stateless (only const fields) and consumed via @inject, so the typed client's transient lifetime
+		// is fine. The two that need a browser User-Agent set it per-request, so no config lambda is needed.
+
 		// Token-free import of public YouTube Music playlists (title + artist) via the playlist page.
-		builder.Services.AddSingleton<IYouTubeMusicImportService>(_ => new YouTubeMusicImportService(new HttpClient()));
+		builder.Services.AddHttpClient<IYouTubeMusicImportService, YouTubeMusicImportService>();
 
 		// Token-free import of public Spotify playlists (title + artist) via the embed endpoint.
-		builder.Services.AddSingleton<ISpotifyImportService>(_ => new SpotifyImportService(new HttpClient()));
+		builder.Services.AddHttpClient<ISpotifyImportService, SpotifyImportService>();
 
 		// Keyless release-year + genre lookup (iTunes Search API). Re-lookup is avoided per-song via the
 		// SongListItem.MetadataLookedUp flag, so no separate cache layer is needed.
-		builder.Services.AddSingleton<ITrackMetadataLookup>(_ => new ITunesTrackMetadataLookup(new HttpClient()));
+		builder.Services.AddHttpClient<ITrackMetadataLookup, ITunesTrackMetadataLookup>();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
