@@ -23,9 +23,9 @@
                @bind="_artist" @bind:event="oninput" @bind:after="OnAddFieldChanged" />
     </div>
     <div class="field">
-        <label class="field__label" for="genre">Genre</label>
+        <label class="field__label" for="genre">Genre <span class="field__hint">— optional</span></label>
         <select id="genre" class="input" @bind="_genre">
-            <option value="">Pick a genre (optional)</option>
+            <option value="" disabled>Pick a genre</option>
             @foreach (var g in Genres.All)
             {
                 <option value="@g">@g</option>
@@ -304,7 +304,10 @@ else
             }
             @if (Settings.SpotifySearchEnabled)
             {
-                <button class="btn sheet__spotify" @onclick="OpenSpotifyAsync">♫ Find on Spotify</button>
+                <button class="btn sheet__spotify" @onclick="OpenSpotifyAsync">
+                    <SpotifyIcon Size="18" Fill="#fff" />
+                    Find on Spotify
+                </button>
             }
             <div class="sheet__actions">
                 <button class="btn btn-primary" @onclick="StartEdit">Edit</button>
@@ -322,9 +325,9 @@ else
                 <input id="e-artist" class="input" @bind="_editArtist" @bind:event="oninput" />
             </div>
             <div class="field">
-                <label class="field__label" for="e-genre">Genre</label>
+                <label class="field__label" for="e-genre">Genre <span class="field__hint">— optional</span></label>
                 <select id="e-genre" class="input" @bind="_editGenre">
-                    <option value="">Pick a genre (optional)</option>
+                    <option value="" disabled>Pick a genre</option>
                     @foreach (var g in Genres.All)
                     {
                         <option value="@g">@g</option>
