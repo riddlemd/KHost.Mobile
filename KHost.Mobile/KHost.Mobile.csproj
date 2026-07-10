@@ -34,6 +34,11 @@
         <!-- App Identifier -->
         <ApplicationId>khost.mobile</ApplicationId>
 
+        <!-- Override the VS workload's default MAUI (10.0.20) with the latest serviced release. 10.0.20 hits a
+             known .NET 10 startup crash on Android API 36 ("No view found for id ... NavigationRootManager_
+             ElementBasedFragment", dotnet/maui #35418/#31581). Same feature band (10.0.x), just newer patches. -->
+        <MauiVersion>10.0.80</MauiVersion>
+
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
