@@ -20,7 +20,7 @@ public sealed class YouTubeMusicImportService(HttpClient httpClient) : IYouTubeM
         HttpResponseMessage response;
         try
         {
-            response = await httpClient.SendAsync(request, cancellationToken);
+            response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -32,7 +32,7 @@ public sealed class YouTubeMusicImportService(HttpClient httpClient) : IYouTubeM
         if (!response.IsSuccessStatusCode)
             throw new YouTubeMusicImportException($"YouTube Music returned an error ({(int)response.StatusCode}). Try again later.");
 
-        var html = await response.Content.ReadAsStringAsync(cancellationToken);
+        var html = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return YouTubeMusicPlaylistParser.Parse(html);
     }
 }

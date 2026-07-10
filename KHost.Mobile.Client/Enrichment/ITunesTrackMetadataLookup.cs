@@ -23,7 +23,7 @@ public sealed class ITunesTrackMetadataLookup(HttpClient httpClient) : ITrackMet
         HttpResponseMessage response;
         try
         {
-            response = await httpClient.GetAsync(url, cancellationToken);
+            response = await httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -36,7 +36,7 @@ public sealed class ITunesTrackMetadataLookup(HttpClient httpClient) : ITrackMet
         if (!response.IsSuccessStatusCode)
             throw new MetadataLookupException($"Lookup service error ({(int)response.StatusCode}). Try again later.");
 
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return ITunesResponseParser.ParseBestMatch(json, title, artist);
     }
 }

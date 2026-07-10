@@ -903,7 +903,19 @@ else
         await Store.UpdateAsync(item);
     }
 
-    private async void OnStoreChanged(object? sender, EventArgs e) => await RefreshAsync();
+    private async void OnStoreChanged(object? sender, EventArgs e)
+    {
+        // async void (an EventHandler subscriber, so it can't return Task) — an unobserved throw here could
+        // crash the app, so guard the refresh. Matches the store's own "swallow rather than crash" approach.
+        try
+        {
+            await RefreshAsync();
+        }
+        catch
+        {
+            // Best-effort refresh: keep the current list on screen if a reload fails.
+        }
+    }
 
     private async Task RefreshAsync()
     {

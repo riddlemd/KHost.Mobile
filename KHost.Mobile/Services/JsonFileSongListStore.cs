@@ -12,8 +12,6 @@ namespace KHost.Mobile.Services;
 /// </summary>
 public sealed class JsonFileSongListStore : ISongListStore
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
     private readonly string _filePath = Path.Combine(FileSystem.AppDataDirectory, "song-list.json");
     private readonly SemaphoreSlim _gate = new(1, 1);
 
@@ -223,7 +221,7 @@ public sealed class JsonFileSongListStore : ISongListStore
         try
         {
             await using var stream = File.OpenRead(_filePath);
-            _items = await JsonSerializer.DeserializeAsync<List<SongListItem>>(stream) ?? [];
+            _items = await JsonSerializer.DeserializeAsync(stream, SongListJsonContext.Default.ListSongListItem) ?? [];
         }
         catch (JsonException)
         {
@@ -239,6 +237,6 @@ public sealed class JsonFileSongListStore : ISongListStore
     {
         _items = items;
         await using var stream = File.Create(_filePath);
-        await JsonSerializer.SerializeAsync(stream, items, SerializerOptions);
+        await JsonSerializer.SerializeAsync(stream, items, SongListJsonContext.Default.ListSongListItem);
     }
 }

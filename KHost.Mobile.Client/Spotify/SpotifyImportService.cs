@@ -24,7 +24,7 @@ public sealed class SpotifyImportService(HttpClient httpClient) : ISpotifyImport
         HttpResponseMessage response;
         try
         {
-            response = await httpClient.SendAsync(request, cancellationToken);
+            response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -37,7 +37,7 @@ public sealed class SpotifyImportService(HttpClient httpClient) : ISpotifyImport
         if (!response.IsSuccessStatusCode)
             throw new SpotifyImportException($"Spotify returned an error ({(int)response.StatusCode}). Try again later.");
 
-        var html = await response.Content.ReadAsStringAsync(cancellationToken);
+        var html = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return SpotifyEmbedParser.Parse(html);
     }
 }

@@ -207,8 +207,6 @@
     private bool _fileBusy;
     private bool _exportBusy;
 
-    // Round-trips our own export format. Kept indented for readability across platforms.
-    private static readonly JsonSerializerOptions ExportJsonOptions = new() { WriteIndented = true };
     private static readonly FilePickerFileType JsonFileType = new(new Dictionary<DevicePlatform, IEnumerable<string>>
     {
         [DevicePlatform.Android] = ["application/json"],
@@ -285,8 +283,17 @@
 
     private async void OnStoreChanged(object? sender, EventArgs e)
     {
-        _items = await Store.GetAllAsync();
-        await InvokeAsync(StateHasChanged);
+        // async void (an EventHandler subscriber, so it can't return Task) — an unobserved throw here could
+        // crash the app, so guard the reload. Matches the store's own "swallow rather than crash" approach.
+        try
+        {
+            _items = await Store.GetAllAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Best-effort refresh: a failed reload just leaves the last-known list on screen.
+        }
     }
 
     // ---- File import / export -----------------------------------------------------------------
@@ -331,7 +338,7 @@
         List<SongListItem>? incoming;
         try
         {
-            incoming = await JsonSerializer.DeserializeAsync<List<SongListItem>>(stream);
+            incoming = await JsonSerializer.DeserializeAsync(stream, SongListJsonContext.Default.ListSongListItem);
         }
         catch (JsonException)
         {
@@ -355,8 +362,7 @@
         _exportBusy = true;
         try
         {
-            // Export the current list as our own JSON format.
-            var json = JsonSerializer.Serialize(_items, ExportJsonOptions);
+            var json = JsonSerializer.Serialize(_items.ToList(), SongListJsonContext.Default.ListSongListItem);
             var fileName = $"khost-songs-{DateTime.Now:yyyy-MM-dd}.json";
             var path = Path.Combine(FileSystem.CacheDirectory, fileName);
             await File.WriteAllTextAsync(path, json);
