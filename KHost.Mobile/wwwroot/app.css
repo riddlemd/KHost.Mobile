@@ -231,6 +231,23 @@ html, body {
 .switch__input:checked + .switch__track .switch__thumb { transform: translateX(1.1rem); }
 .switch__input:focus-visible + .switch__track { outline: 2px solid var(--kh-primary); outline-offset: 2px; }
 
+/* Boot splash: fills #app until Blazor renders, matching the native splash (white mark on brand violet)
+   so there's no bare "Loading…" flash between the OS splash and the app. Always violet, theme-independent. */
+.app-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: #7c3aed;
+    color: #fff;
+}
+.app-splash__mark { font-size: 3.5rem; line-height: 1; font-weight: 700; transform: rotate(-45deg); margin-bottom: 0.5rem; }
+.app-splash__name { font-size: 1.4rem; font-weight: 800; }
+
 .app-content {
     padding: 1rem 0.6rem calc(var(--kh-nav-h) + env(safe-area-inset-bottom) + 1rem);
     max-width: 640px;
