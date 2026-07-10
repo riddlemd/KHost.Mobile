@@ -424,6 +424,7 @@ else
     private SongListItem? _undoItem;
     private CancellationTokenSource? _undoCts;
     private bool _rangeBound;   // anti-cross clamp bound to the current year-slider inputs
+    private string? _scrollToSongId;   // set on favorite-toggle; the next render scrolls this card into view
 
     // Song detail / edit sheet (opened by tapping a card).
     private SongListItem? _detailItem;
@@ -619,6 +620,13 @@ else
         else if (!_editing)
         {
             _editFieldsBound = false;
+        }
+
+        // A favorite toggle just re-sorted the list; scroll the affected card into its new position.
+        if (_scrollToSongId is { } scrollId)
+        {
+            _scrollToSongId = null;
+            await JS.InvokeVoidAsync("khScroll.toSong", scrollId);
         }
     }
 
@@ -871,6 +879,9 @@ else
     private async Task ToggleFavoriteAsync(SongListItem item)
     {
         item.IsFavorite = !item.IsFavorite;
+        // Set before the await so the render triggered by the store change carries the pending scroll.
+        if (Settings.ScrollToFavorited)
+            _scrollToSongId = item.Id.ToString();
         await Store.UpdateAsync(item);
     }
 

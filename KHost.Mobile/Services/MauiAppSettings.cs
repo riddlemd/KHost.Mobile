@@ -12,6 +12,7 @@ public sealed class MauiAppSettings : IAppSettings
     private const string AutoFillMetadataKey = "settings.autofill_metadata";
     private const string YouTubeSearchKey = "settings.youtube_search";
     private const string SpotifySearchKey = "settings.spotify_search";
+    private const string ScrollToFavoritedKey = "settings.scroll_to_favorited";
 
     public bool AutoFillMetadata
     {
@@ -29,5 +30,11 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(SpotifySearchKey, true);
         set => Preferences.Default.Set(SpotifySearchKey, value);
+    }
+
+    public bool ScrollToFavorited
+    {
+        get => Preferences.Default.Get(ScrollToFavoritedKey, true);
+        set => Preferences.Default.Set(ScrollToFavoritedKey, value);
     }
 }
