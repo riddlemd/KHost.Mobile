@@ -25,7 +25,7 @@
     <div class="field">
         <label class="field__label" for="genre">Genre <span class="field__hint">— optional</span></label>
         <select id="genre" class="input" @bind="_genre">
-            <option value="" disabled>Pick a genre</option>
+            <option value=""></option>
             @foreach (var g in Genres.All)
             {
                 <option value="@g">@g</option>
@@ -316,7 +316,7 @@ else
             <div class="field">
                 <label class="field__label" for="e-genre">Genre <span class="field__hint">— optional</span></label>
                 <select id="e-genre" class="input" @bind="_editGenre">
-                    <option value="" disabled>Pick a genre</option>
+                    <option value=""></option>
                     @foreach (var g in Genres.All)
                     {
                         <option value="@g">@g</option>
