@@ -7,7 +7,7 @@
 [![UI](https://img.shields.io/badge/UI-MAUI%20Blazor%20Hybrid-5C2D91)](https://learn.microsoft.com/dotnet/maui/)
 [![License](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-orange)](LICENSE)
 
-KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a personal karaoke wishlist in your pocket. Add songs you'd love to sing, track how each one went, and revisit your history — all stored on your device. It's built to eventually connect to a cloud relay so you can join a venue, search the live library, and request songs, but today it runs fully **offline and local-only**.
+KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a personal karaoke wishlist in your pocket. Add songs you'd love to sing, track how each one went, and revisit your history — all stored on your device, fully **offline and local-only**.
 
 ## ✨ Features
 
@@ -21,7 +21,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 ## 🛠️ Tech stack
 
 - **[.NET 10](https://dotnet.microsoft.com/)** with **[.NET MAUI Blazor Hybrid](https://learn.microsoft.com/dotnet/maui/)** — native iOS/Android shell hosting a Razor (Blazor) UI.
-- On-device storage in a JSON file behind an `ISongListStore` interface, so cloud sync can drop in later without touching the UI.
+- On-device storage in a JSON file behind an `ISongListStore` interface that keeps storage concerns out of the UI.
 
 ## 🚀 Getting started
 
@@ -57,12 +57,8 @@ dotnet run --project KHost.Mobile -f net10.0-windows10.0.19041.0 "-p:BaseOutputP
 | Project | Role |
 |---|---|
 | `KHost.Mobile` | The MAUI Blazor Hybrid app — a thin native shell hosting the Razor UI in `Components/`. |
-| `KHost.Mobile.Client` | Client library: typed HTTP + SignalR, playlist import (Spotify / YouTube Music), and iTunes metadata lookup. |
-| `KHost.Contracts` | Shared wire DTOs and the `IQueueClient` hub interface, referenced from a sibling repository. |
-
-## 🗺️ Roadmap
-
-The online experience is scaffolded but not yet enabled. The planned flow — **join a venue → search the library → request a song → follow the live queue** — will talk to a cloud relay over HTTP and SignalR, reusing the `KHost.Contracts` DTOs already in place. Because all local data lives behind `ISongListStore`, sync can arrive without a UI rewrite.
+| `KHost.Mobile.Client` | Client library: playlist import (Spotify / YouTube Music) and iTunes metadata lookup. |
+| `KHost.Contracts` | Shared wire DTOs, referenced from a sibling repository. |
 
 ## 🤝 Contributing
 
