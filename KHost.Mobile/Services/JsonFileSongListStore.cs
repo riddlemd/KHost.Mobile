@@ -139,6 +139,29 @@ public sealed class JsonFileSongListStore : ISongListStore
             Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    public async Task ClearAsync()
+    {
+        var changed = false;
+        await _gate.WaitAsync();
+        try
+        {
+            var items = await LoadAsync();
+            if (items.Count == 0)
+                return;
+
+            items.Clear();
+            changed = true;
+            await SaveAsync(items);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (changed)
+            Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     public async Task RestoreAsync(SongListItem item)
     {
         await _gate.WaitAsync();

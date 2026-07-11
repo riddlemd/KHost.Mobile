@@ -1,6 +1,8 @@
 @page "/settings"
 @layout MainLayout
 @inject IAppSettings Prefs
+@inject ISongListStore Store
+@implements IDisposable
 
 <section class="settings">
     <div class="settings__head">
@@ -68,4 +70,70 @@
             </span>
         </label>
     </div>
+
+    <div class="card">
+        <div class="section-title">Danger zone</div>
+        <p class="setting__desc" style="margin:0 0 0.85rem">
+            Remove every song from your list. This can't be undone.
+        </p>
+        <button type="button" class="btn btn-danger settings__clear" @onclick="AskClear" disabled="@(_songCount == 0)">
+            @(_songCount == 0 ? "Song list is empty" : $"Clear song list ({_songCount})")
+        </button>
+    </div>
 </section>
+
+@if (_confirmClear)
+{
+    <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelClear"></div>
+    <div class="confirm-pop" role="alertdialog" aria-modal="true">
+        <div class="confirm-pop__title">Clear your whole song list?</div>
+        <div class="confirm-pop__date">This removes all @_songCount song@(_songCount == 1 ? "" : "s") and can't be undone.</div>
+        <div class="confirm-pop__actions">
+            <button class="btn btn-secondary" @onclick="CancelClear">Cancel</button>
+            <button class="btn confirm-pop__delete" @onclick="ConfirmClearAsync">Clear all</button>
+        </div>
+    </div>
+}
+
+@code {
+    // The clear button is gated on / labeled with the live count, so track it and refresh on any store change.
+    private int _songCount;
+    private bool _confirmClear;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Store.Changed += OnStoreChanged;
+        await RefreshCountAsync();
+    }
+
+    // Same non-async-void bridge the other pages use: marshal the reload onto the render thread and swallow failures.
+    private void OnStoreChanged(object? sender, EventArgs e) => _ = RefreshFromStoreAsync();
+
+    private async Task RefreshFromStoreAsync()
+    {
+        try { await InvokeAsync(RefreshCountAsync); }
+        catch { /* best-effort: a failed count refresh just leaves the last-known value */ }
+    }
+
+    private async Task RefreshCountAsync()
+    {
+        _songCount = (await Store.GetAllAsync()).Count;
+        StateHasChanged();
+    }
+
+    private void AskClear()
+    {
+        if (_songCount > 0)
+            _confirmClear = true;
+    }
+
+    private void CancelClear() => _confirmClear = false;
+
+    private async Task ConfirmClearAsync()
+    {
+        _confirmClear = false;
+        await Store.ClearAsync();   // Store.Changed → RefreshCountAsync updates the count + button
+    }
+
+    public void Dispose() => Store.Changed -= OnStoreChanged;
+}

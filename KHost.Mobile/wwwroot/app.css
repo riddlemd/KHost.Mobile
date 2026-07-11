@@ -610,6 +610,21 @@ html, body {
     border: 1px solid var(--kh-border);
 }
 
+/* Destructive action at rest — danger-tinted outline, fills solid red on hover (matches .history__remove).
+   Doubled selector (.btn.btn-danger) so it out-specifies the later base .btn color/background, same trick
+   as .btn.confirm-pop__delete above. */
+.btn.btn-danger {
+    background: color-mix(in srgb, var(--kh-danger) 12%, transparent);
+    color: var(--kh-danger);
+    border: 1px solid color-mix(in srgb, var(--kh-danger) 45%, transparent);
+}
+.btn.btn-danger:hover:not(:disabled) {
+    background: var(--kh-danger);
+    border-color: var(--kh-danger);
+    color: #fff;
+}
+.settings__clear { width: 100%; }
+
 /* ---- Playlist import (Spotify / YouTube Music) -------------------------- */
 /* Header row of the add card: title on the left, import icons pinned top-right. */
 .add-head {

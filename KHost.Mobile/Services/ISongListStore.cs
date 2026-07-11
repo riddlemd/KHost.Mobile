@@ -32,6 +32,9 @@ public interface ISongListStore
     /// <summary>Remove an item by id. No-op if it isn't present.</summary>
     Task RemoveAsync(Guid id);
 
+    /// <summary>Remove every song. No-op (and no <see cref="Changed"/>) if the list is already empty.</summary>
+    Task ClearAsync();
+
     /// <summary>Re-insert a previously removed item verbatim (same Id, timestamps, rating). No-op if it's
     /// already present. Backs swipe-to-remove Undo so a restored song returns to its exact place.</summary>
     Task RestoreAsync(SongListItem item);
