@@ -23,7 +23,7 @@
                @bind="_artist" @bind:event="oninput" @bind:after="OnAddFieldChanged" />
     </div>
     <div class="field">
-        <label class="field__label" for="genre">Genre <span class="field__hint">— optional</span></label>
+        <label class="field__label" for="genre">Genre <span class="autofill-star" title="We'll look this up online if you leave it blank">✨</span> <span class="field__hint">— optional</span></label>
         <select id="genre" class="input" @bind="_genre">
             <option value=""></option>
             @foreach (var g in Genres.All)
@@ -33,7 +33,7 @@
         </select>
     </div>
     <div class="field">
-        <label class="field__label" for="year">Release year <span class="field__hint">— optional</span></label>
+        <label class="field__label" for="year">Release year <span class="autofill-star" title="We'll look this up online if you leave it blank">✨</span> <span class="field__hint">— optional</span></label>
         <input id="year" class="input num-year" type="text" inputmode="numeric" maxlength="4"
                placeholder="e.g. 1975" @bind="_year" @bind:event="oninput" />
         @if (_year.HasValue && !YearValid)
@@ -41,7 +41,7 @@
             <div class="field__error">Enter a year between 1 and @CurrentYear.</div>
         }
     </div>
-    <p class="autofill-note">✨ Leave Genre or Release year blank and we'll fill them in from iTunes when you add the song.</p>
+    <p class="autofill-note">✨ Leave a starred field blank and we'll look it up online when you add the song.</p>
 
     @if (IsDuplicate)
     {
@@ -135,12 +135,8 @@
     _listRendered = visible.Count > 0;
 }
 
-<div class="section-title section-title--row">
-    <span>My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))</span>
-    @if (visible.Count > 0)
-    {
-        <span class="list-hint">Tap a card to open · swipe left to remove</span>
-    }
+<div class="section-title">
+    My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))
 </div>
 
 @if (_items.Count == 0)

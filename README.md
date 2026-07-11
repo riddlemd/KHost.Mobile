@@ -58,6 +58,14 @@ dotnet run --project KHost.Mobile -f net10.0-windows10.0.19041.0 "-p:BaseOutputP
 
 > `-p:BaseOutputPath=./obj/_build` keeps build output out of the IDE's `bin/` folder so it doesn't get locked while the IDE is open.
 
+### Sample data for testing
+
+Need songs to populate the list while testing? This public **YouTube Music** playlist imports cleanly via **Import & Export → YouTube Music**:
+
+```
+https://music.youtube.com/playlist?list=PLrB1lrYJ3YfvS2ZaTJZ_D8vvIv_fowkNM
+```
+
 ## 📁 Project structure
 
 | Project | Role |

@@ -839,21 +839,6 @@ html, body {
 }
 #kh-swipe-label.is-armed { filter: brightness(1.12); }
 
-.section-title--row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem;
-}
-.list-hint {
-    font-size: 0.72rem;
-    font-weight: 400;
-    text-transform: none;    /* don't inherit the section-title's uppercase */
-    letter-spacing: normal;
-    color: var(--kh-text-muted);
-    white-space: nowrap;
-}
-
 /* Sort controls that replace the old table header — a row of sort buttons above the cards. */
 .sort-bar {
     display: flex;
