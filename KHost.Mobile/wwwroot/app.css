@@ -481,12 +481,17 @@ html, body {
     max-width: 640px;
     max-height: 85vh;
     overflow-y: auto;
+    overscroll-behavior: contain;   /* the sheet's own scroll never chains to the page behind it */
     background: var(--kh-surface);
     border-radius: var(--kh-radius) var(--kh-radius) 0 0;
     box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.3);
     padding: 1.25rem 1.15rem calc(1.15rem + env(safe-area-inset-bottom));
     animation: sheet-up 0.22s ease;
 }
+
+/* While a bottom sheet is open the page behind is frozen: a drag on the sheet (or a swipe up) can no
+   longer scroll the song list underneath. Set by khSheet.register / cleared by khSheet.teardown. */
+body.kh-sheet-open { overflow: hidden; }
 @keyframes sheet-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes sheet-up { from { transform: translate(-50%, 100%); } to { transform: translate(-50%, 0); } }
 

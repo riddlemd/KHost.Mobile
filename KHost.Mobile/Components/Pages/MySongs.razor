@@ -208,7 +208,7 @@ else
 @if (_detailItem is not null)
 {
     <div class="sheet-backdrop" @onclick="CloseDetail"></div>
-    <div class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet" role="dialog" aria-modal="true" @ref="_detailSheet">
         <button type="button" class="sheet__close" @onclick="CloseDetail" aria-label="Close">✕</button>
 
         @if (!_editing)
@@ -415,6 +415,10 @@ else
     private bool _listRendered;
     private bool _swipeBound;
 
+    // Detail-sheet drag-to-dismiss (pull down to close; the page behind is locked while it's open).
+    private ElementReference _detailSheet;
+    private bool _sheetBound;
+
     // Undo-after-swipe-remove: the last removed item + a timer to expire the offer.
     private const int UndoWindowMs = 5000;
     private SongListItem? _undoItem;
@@ -595,6 +599,18 @@ else
             _swipeBound = false;
         }
 
+        // Detail sheet: bind pull-down-to-dismiss + lock the page behind it. Re-bind on each open.
+        if (_detailItem is not null && !_sheetBound)
+        {
+            _swipeRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSheet.register", _detailSheet, _swipeRef);
+            _sheetBound = true;
+        }
+        else if (_detailItem is null)
+        {
+            _sheetBound = false;
+        }
+
         // Bind the anti-cross clamp whenever the year slider is on screen. It unmounts when the
         // filter is collapsed or drops below 2 distinct years, so re-bind the fresh inputs on return.
         var sliderPresent = _items.Count > 0 && _filtersOpen && ShowYearFilter;
@@ -773,6 +789,15 @@ else
         _suggestionLoading = false;
         _detailItem = null;
         _editing = false;
+        _ = JS.InvokeVoidAsync("khSheet.teardown");   // unlock the page scroll (any close path lands here)
+    }
+
+    // Pull-down-to-dismiss from khSheet: the sheet already animated off-screen, so just close.
+    [JSInvokable]
+    public void CloseDetailFromSwipe()
+    {
+        CloseDetail();
+        StateHasChanged();
     }
 
     private void StartEdit()
