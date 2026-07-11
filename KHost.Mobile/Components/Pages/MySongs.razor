@@ -163,8 +163,14 @@ else
             <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Title)">Song <span class="sort-bar__arrow">@Arrow(SortColumn.Title)</span></button>
             <span class="sort-bar__sep">/</span>
             <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Artist)">Artist <span class="sort-bar__arrow">@Arrow(SortColumn.Artist)</span></button>
+            <span class="sort-bar__sep">/</span>
+            <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Confidence)">How it went <span class="sort-bar__arrow">@Arrow(SortColumn.Confidence)</span></button>
         </div>
-        <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Confidence)">How it went <span class="sort-bar__arrow">@Arrow(SortColumn.Confidence)</span></button>
+        @if (visible.Count >= 2)
+        {
+            <button type="button" class="sort-bar__surprise" aria-label="Pick a random song"
+                    @onclick="() => SurpriseMe(visible)">🎲 Surprise me</button>
+        }
     </div>
     <div class="song-cards" @ref="_swipeRoot">
         @foreach (var item in visible)
@@ -683,6 +689,37 @@ else
         if (item is not null)
             await Store.RestoreAsync(item);   // Store.Changed → refresh puts the row back
     }
+
+    private Guid? _lastSurpriseId;
+
+    // 🎲 Surprise me: pick a random song from the currently visible (filtered) list and open its
+    // detail sheet. Rerolls once so it won't immediately repeat the previous pick on lists of 2+.
+    private Task SurpriseMe(IReadOnlyList<SongListItem> pool)
+    {
+        if (pool.Count == 0)
+            return Task.CompletedTask;
+
+        // Optionally drop songs already sung today so the shuffle suggests something fresh. If that
+        // leaves nothing (everything's been sung today), fall back to the full pool rather than dead-end.
+        IReadOnlyList<SongListItem> candidates = pool;
+        if (Settings.SurpriseSkipSungToday)
+        {
+            var fresh = pool.Where(i => !SungToday(i)).ToList();
+            if (fresh.Count > 0)
+                candidates = fresh;
+        }
+
+        var pick = candidates[Random.Shared.Next(candidates.Count)];
+        if (pick.Id == _lastSurpriseId && candidates.Count >= 2)
+            pick = candidates[Random.Shared.Next(candidates.Count)];
+
+        _lastSurpriseId = pick.Id;
+        return OpenDetail(pick.Id.ToString());
+    }
+
+    // A song counts as "sung today" if any of its performance timestamps falls on the local calendar day.
+    private static bool SungToday(SongListItem item) =>
+        item.SungDates.Any(d => d.LocalDateTime.Date == DateTime.Today);
 
     // A tap on a row (routed from swipe.js) opens that song's detail sheet.
     [JSInvokable]

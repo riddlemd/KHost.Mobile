@@ -898,6 +898,20 @@ body.kh-sheet-open { overflow: hidden; }
 .sort-bar__btn:hover { color: var(--kh-text); }
 .sort-bar__arrow { color: var(--kh-primary); }
 .sort-bar__sep { color: var(--kh-border); }
+.sort-bar__surprise {
+    background: var(--kh-surface-2);
+    color: var(--kh-primary);
+    border: 1px solid var(--kh-border);
+    border-radius: 999px;
+    padding: 0.25rem 0.7rem;
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: none;   /* .sort-bar is uppercase; the pill reads better mixed-case */
+    white-space: nowrap;
+    cursor: pointer;
+}
+.sort-bar__surprise:hover { border-color: var(--kh-primary); }
 
 .song-card__title {
     font-weight: 600;

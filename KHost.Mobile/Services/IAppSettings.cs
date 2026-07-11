@@ -20,4 +20,11 @@ public interface IAppSettings
 
     /// <summary>When true, tapping a song's favorite star scrolls the list to reveal that song's new position.</summary>
     bool ScrollToFavorited { get; set; }
+
+    /// <summary>
+    /// When true, the "Surprise me" random picker skips any song already sung today, so it suggests something
+    /// fresh. If every candidate has already been sung today it falls back to the full list rather than doing
+    /// nothing.
+    /// </summary>
+    bool SurpriseSkipSungToday { get; set; }
 }
