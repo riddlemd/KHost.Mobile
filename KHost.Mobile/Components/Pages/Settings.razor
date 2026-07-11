@@ -69,6 +69,20 @@
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">“Surprise me” skips today's songs</span>
+                <span class="setting__desc">
+                    The 🎲 random picker won't suggest a song you've already sung today (unless you've sung
+                    everything on the list today).
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseSkipSungToday" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
     </div>
 
     <div class="card">

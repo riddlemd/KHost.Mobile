@@ -483,3 +483,6 @@ $RECYCLE.BIN/
 
 # KHost.Mobile local user data (defensive: normally lives in AppData, not the repo)
 **/song-list.json
+
+# Local planning / research notes — not part of the shipped repo
+/research/
