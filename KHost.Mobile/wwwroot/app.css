@@ -78,7 +78,8 @@ html, body {
     padding-top: env(safe-area-inset-top);
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-left: 1rem;   /* left-justified brand; the menu button is absolute top-right, so no right padding needed */
     background: linear-gradient(135deg, var(--kh-primary-strong), var(--kh-primary));
     color: #fff;
     box-shadow: var(--kh-shadow);
@@ -91,6 +92,15 @@ html, body {
     display: flex;
     align-items: center;
     gap: 0.4rem;
+}
+
+/* The "kH" wordmark — same rotated bold lockup as the app icon / boot splash. Replaces the mic emoji
+   wherever the brand appears; sizes off the container's font-size so each spot keeps its own scale. */
+.brand-mark {
+    display: inline-block;
+    font-weight: 800;
+    line-height: 1;
+    transform: rotate(-45deg);
 }
 
 /* Header dropdown menu — trigger sits top-right so the title stays centred. */
@@ -170,11 +180,11 @@ html, body {
     color: var(--kh-text-muted);
     font-size: 0.8rem;
 }
-.about__back { display: inline-flex; margin-top: 1.75rem; }
 
-/* ---- Settings page ----------------------------------------------------- */
-.settings__head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
-.settings__back {
+/* ---- Shared page header (Settings, Import/Export, About) ---------------- */
+/* One back-control + title style everywhere, so the "return to My songs" arrow is identical on every page. */
+.page-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+.page-back {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -185,10 +195,11 @@ html, body {
     font-size: 1.2rem;
     color: var(--kh-text);
     text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
 }
-.settings__back:hover { background: var(--kh-surface-2); }
-/* h1 is the FocusOnNavigate target (a11y); suppress the ring on this non-interactive heading (matches About). */
-.settings__title { margin: 0; font-size: 1.25rem; font-weight: 700; outline: none; }
+.page-back:hover { background: var(--kh-surface-2); }
+/* h1 is the FocusOnNavigate target (a11y); suppress the ring on this non-interactive heading. */
+.page-title { margin: 0; font-size: 1.25rem; font-weight: 700; outline: none; }
 
 /* A settings row: label text on the left, toggle switch on the right. The whole row is a <label>, so a tap
    anywhere on it flips the switch. */
@@ -750,27 +761,6 @@ html, body {
 }
 
 /* ---- Import / Export page ------------------------------------------------ */
-.ie__head {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-}
-.ie__back {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.1rem;
-    height: 2.1rem;
-    flex-shrink: 0;
-    border-radius: 50%;
-    font-size: 1.2rem;
-    text-decoration: none;
-    color: var(--kh-text);
-    -webkit-tap-highlight-color: transparent;
-}
-.ie__back:hover { background: var(--kh-surface-2); }
-.ie__title { margin: 0; font-size: 1.25rem; font-weight: 700; }
 .ie__lead {
     margin: 0.25rem 0 0.85rem;
     font-size: 0.85rem;
