@@ -2,7 +2,12 @@
 @inject IJSRuntime JS
 
 <header class="app-header">
-    <div class="app-header__title"><span class="brand-mark">kH</span> Cue</div>
+    <div class="app-header__title">
+        <span class="brand-lockup" aria-label="KHost Cue">
+            <span class="brand-lockup__kh">kH</span>
+            <span class="brand-lockup__cue">Cue</span>
+        </span>
+    </div>
     <div class="header-menu">
         <button type="button" class="header-menu__btn" @onclick="ToggleMenu"
                 aria-haspopup="true" aria-expanded="@_menuOpen" aria-label="Menu">

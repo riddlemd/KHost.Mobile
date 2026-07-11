@@ -103,6 +103,27 @@ html, body {
     transform: rotate(-45deg);
 }
 
+/* Header logo: the kH-over-Cue lockup from the app icon, stacked compactly to fit the 3.5rem bar. */
+.brand-lockup {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    gap: 0.12rem;
+}
+.brand-lockup__kh {
+    font-weight: 800;
+    font-size: 1.15rem;
+    line-height: 1;
+    transform: rotate(-45deg);
+}
+.brand-lockup__cue {
+    font-weight: 800;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    line-height: 1;
+}
+
 /* Header dropdown menu — trigger sits top-right so the title stays centred. */
 .header-menu {
     position: absolute;
@@ -164,7 +185,9 @@ html, body {
 .header-menu__icon { font-size: 1.05rem; line-height: 1; width: 1.3rem; text-align: center; }
 
 /* ---- About page -------------------------------------------------------- */
-.about { text-align: center; padding: 1.5rem 1rem; max-width: 30rem; margin: 0 auto; }
+/* Box model matches the Settings/Import pages (both rely on .app-content's padding + max-width);
+   only the centered text is About-specific. */
+.about { text-align: center; }
 .about__logo { font-size: 3rem; line-height: 1; }
 /* h1 is the FocusOnNavigate target (a11y); suppress the ring on this non-interactive heading. */
 .about__title { font-size: 1.6rem; font-weight: 800; margin-top: 0.5rem; outline: none; }

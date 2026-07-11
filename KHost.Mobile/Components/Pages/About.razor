@@ -1,5 +1,6 @@
 @page "/about"
 @layout MainLayout
+@using Microsoft.Maui.ApplicationModel
 
 <section class="about">
     <div class="page-head">
@@ -9,7 +10,7 @@
     <div class="about__logo brand-mark">kH</div>
     <div class="about__title">Cue</div>
     <p class="about__tagline">You're on cue.</p>
-    <p class="about__version">Version 1.0</p>
+    <p class="about__version">Version @AppInfo.Current.VersionString</p>
 
     <p class="about__lead">
         The singer &amp; patron companion app for <strong>KHost</strong> — open-source karaoke host software.

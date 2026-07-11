@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- BACKUP of the original app-icon foreground: the "kH" monogram only (no "Cue").
+     Restore by copying this over KHost.Mobile/Resources/AppIcon/appiconfg.svg. -->
+<svg width="456" height="456" viewBox="0 0 456 456" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <!-- KHost Cue app icon foreground — "kH" monogram, rotated 45deg counter-clockwise.
+         White on brand violet, within the adaptive safe zone. -->
+    <!-- y is the text baseline; the SVG rasterizer ignores dominant-baseline, so we place the
+         baseline at 228 + half the cap height (~75) to sit the visual center on the rotation pivot. -->
+    <text x="228" y="303" text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="210"
+          fill="#ffffff" transform="rotate(-45 228 228)">kH</text>
+</svg>

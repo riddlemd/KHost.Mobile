@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg width="456" height="456" viewBox="0 0 456 456" version="1.1" xmlns="http://www.w3.org/2000/svg">
-    <!-- KHost Cue app icon foreground — "kH" monogram, rotated 45deg counter-clockwise.
-         White on brand violet, within the adaptive safe zone. -->
-    <!-- y is the text baseline; the SVG rasterizer ignores dominant-baseline, so we place the
-         baseline at 228 + half the cap height (~75) to sit the visual center on the rotation pivot. -->
-    <text x="228" y="303" text-anchor="middle"
-          font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="210"
-          fill="#ffffff" transform="rotate(-45 228 228)">kH</text>
+    <!-- KHost Cue app icon foreground — the "kH" monogram (rotated 45deg CCW) with "Cue" beneath,
+         mirroring the About-page lockup. White on brand violet, kept within the adaptive safe zone.
+         The kH-only original is backed up at /branding/appiconfg-kh-only.svg. -->
+    <!-- kH: y is the baseline; the rasterizer ignores dominant-baseline, so the baseline sits at
+         (visual-center + ~0.357*font-size) and the rotation pivots on that same visual center. -->
+    <text x="228" y="243" text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="140"
+          fill="#ffffff" transform="rotate(-45 228 193)">kH</text>
+    <text x="228" y="352" text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="84"
+          fill="#ffffff">Cue</text>
 </svg>
