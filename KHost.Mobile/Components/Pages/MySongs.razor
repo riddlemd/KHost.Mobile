@@ -2,6 +2,7 @@
 @using KHost.Mobile.Client.Enrichment
 @using KHost.Mobile.Client.Lyrics
 @inject ISongListStore Store
+@inject ITonightStore Tonight
 @inject ILinkLauncher Links
 @inject ITrackMetadataLookup Metadata
 @inject ILyricsClient Lyrics
@@ -10,12 +11,56 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-<div class="card">
-    <div class="add-head">
-        <div class="section-title" style="margin:0">Add a song you'd like to sing</div>
+@* "Tonight" on-deck set list — pinned at the top when it has songs; absent when empty (build it from a song's
+   detail sheet or the ＋ Add picker). Collapsible; drag the ⠿ handle to reorder; tap ◯ to check a song off. *@
+@if (_tonight.Count > 0)
+{
+    <div class="card tonight @(_tonightCollapsed ? "collapsed" : "")">
+        <div class="tonight__head" @onclick="() => _tonightCollapsed = !_tonightCollapsed">
+            <span class="tonight__mic">🎤</span>
+            <span class="tonight__title">Tonight</span>
+            <span class="tonight__progress">@TonightProgressLabel</span>
+            <span class="tonight__chevron">▾</span>
+        </div>
+        <div class="tonight__progressbar"><span style="width:@TonightPct%"></span></div>
+        @if (!_tonightCollapsed)
+        {
+            <div class="tonight__body" @ref="_tonightList">
+                @foreach (var (entry, song) in TonightRows())
+                {
+                    <div class="setrow @(entry.Completed ? "done" : "")" @key="entry.SongId" data-song-id="@entry.SongId">
+                        <span class="setrow__handle" title="Drag to reorder">⠿</span>
+                        <span class="setrow__pos">@(entry.Order + 1)</span>
+                        <div class="setrow__main">
+                            <div class="setrow__title">@song.Title</div>
+                            @if (!string.IsNullOrWhiteSpace(song.Artist))
+                            {
+                                <div class="setrow__artist">@song.Artist</div>
+                            }
+                        </div>
+                        <button type="button" class="setrow__check" aria-pressed="@entry.Completed"
+                                title="@(entry.Completed ? "Undo — mark not sung" : "Mark sung")"
+                                @onclick="() => ToggleTonightDoneAsync(entry, song)">✓</button>
+                        <button type="button" class="setrow__remove" title="Remove from tonight"
+                                @onclick="() => ArmRemoveFromTonight(song)">✕</button>
+                    </div>
+                }
+            </div>
+            <div class="tonight__foot">
+                <button type="button" class="btn tonight__end" @onclick="AskEndNight">End night</button>
+            </div>
+        }
     </div>
+}
 
-    <div class="field">
+<div class="card">
+    <button type="button" class="filters-toggle" @onclick="() => _addOpen = !_addOpen" aria-expanded="@_addOpen">
+        <span class="filters-toggle__label">Add a song you'd like to sing</span>
+        <span class="filters-toggle__chevron @(_addOpen ? "is-open" : "")">▾</span>
+    </button>
+    @if (_addOpen)
+    {
+    <div class="field" style="margin-top:0.85rem">
         <label class="field__label" for="title">Song title</label>
         <input id="title" class="input" placeholder="e.g. Bohemian Rhapsody"
                @bind="_title" @bind:event="oninput" @bind:after="OnAddFieldChanged" />
@@ -54,6 +99,7 @@
     <button class="btn btn-primary" @onclick="AddAsync" disabled="@(!CanAdd)">
         @(IsDuplicate && _confirmedDuplicate ? "Add anyway" : "Add to my list")
     </button>
+    }
 </div>
 
 @if (_items.Count > 0)
@@ -193,6 +239,22 @@ else
         @foreach (var item in visible)
         {
             <div class="song-card" @key="item.Id" data-song-id="@item.Id">
+                <button type="button" class="tonight-add-btn song-card__tonight @(IsInTonight(item) ? "is-on" : "")"
+                        title="@(IsInTonight(item) ? "In tonight's set — tap to remove" : "Add to tonight")"
+                        aria-pressed="@IsInTonight(item)"
+                        @onclick="() => QuickToggleTonightAsync(item)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 6h12M3 10h12M3 14h7" />
+                        @if (IsInTonight(item))
+                        {
+                            <path d="M14 17.2l2.2 2.2L20.5 15" />
+                        }
+                        else
+                        {
+                            <path d="M17 14v6M14 17h6" />
+                        }
+                    </svg>
+                </button>
                 <button type="button" class="fav-btn song-card__fav @(item.IsFavorite ? "is-fav" : "")"
                         title="@(item.IsFavorite ? "Remove from favorites" : "Add to favorites")"
                         aria-pressed="@item.IsFavorite"
@@ -346,8 +408,11 @@ else
             {
                 <div class="suggest-match">@_autoFilledNote</div>
             }
-            <button class="btn btn-secondary sheet__sang-btn" @onclick="OpenRatingPrompt">
+            <button class="btn btn-secondary sheet__sang-btn" @onclick="() => OpenRatingPrompt(_detailItem)">
                 @(_detailItem.Performances.Count > 0 ? "Sang it again" : "Mark sung")
+            </button>
+            <button class="btn sheet__tonight @(IsInTonight(_detailItem) ? "is-on" : "")" @onclick="ToggleDetailTonightAsync">
+                @(IsInTonight(_detailItem) ? "🎤 In tonight ✓" : "🎤 Add to tonight")
             </button>
             @if (Settings.YouTubeSearchEnabled)
             {
@@ -466,6 +531,32 @@ else
     </div>
 }
 
+@if (_tonightRemoveSong is not null)
+{
+    <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelRemoveFromTonight"></div>
+    <div class="confirm-pop" role="alertdialog" aria-modal="true">
+        <div class="confirm-pop__title">Remove from tonight?</div>
+        <div class="confirm-pop__date">“@_tonightRemoveSong.Title” drops off tonight's set. It stays in your song list.</div>
+        <div class="confirm-pop__actions">
+            <button class="btn btn-secondary" @onclick="CancelRemoveFromTonight">Cancel</button>
+            <button class="btn confirm-pop__delete" @onclick="ConfirmRemoveFromTonightAsync">Remove</button>
+        </div>
+    </div>
+}
+
+@if (_confirmEndNight)
+{
+    <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelEndNight"></div>
+    <div class="confirm-pop" role="alertdialog" aria-modal="true">
+        <div class="confirm-pop__title">End the night?</div>
+        <div class="confirm-pop__date">Clears tonight's @_tonight.Count-song set. Songs you sang stay in your history.</div>
+        <div class="confirm-pop__actions">
+            <button class="btn btn-secondary" @onclick="CancelEndNight">Cancel</button>
+            <button class="btn confirm-pop__delete" @onclick="EndNightAsync">End night</button>
+        </div>
+    </div>
+}
+
 @if (_historyItem is not null)
 {
     <div class="sheet-backdrop sheet-backdrop--history" @onclick="CloseHistory"></div>
@@ -527,6 +618,7 @@ else
     private int _filterRating = -1;      // "how it went" average, rounded (-1 Any, 0 Not rated, 1-5 stars)
     private int _filterEnjoyment = -1;   // enjoyment rating (-1 Any, 0 Not rated, 1-5 stars)
     private bool _filtersOpen;   // collapsed by default so the filter bar stays compact
+    private bool _addOpen;   // the add-song form; collapsed by default to declutter, expand to add
 
     // Year range slider. Handles are null until the user drags them, then they follow the selection;
     // the effective bounds are the min/max release year present across dated songs (recomputed on refresh).
@@ -557,6 +649,19 @@ else
     private bool _lyricsSheetBound;
     private bool _pageLocked;   // mirrors body.kh-sheet-open; reconciled from sheet state each render
 
+    // "Tonight" on-deck set list (its own store). Joined to _items for display.
+    private IReadOnlyList<TonightEntry> _tonight = [];
+    private bool _tonightCollapsed;
+    private ElementReference _tonightList;
+    private bool _tonightDragBound;
+    private SongListItem? _tonightRemoveSong;   // the song whose ✕ (remove-from-tonight) confirm is armed
+    private bool _confirmEndNight;
+    // A tonight check-off logs a performance via the rating-prompt flow; this marks which song's completion is
+    // pending so LogPerformanceAsync can flip its Tonight flag once the performance is saved.
+    private Guid? _tonightCompletingSongId;
+    // In-flight guard: the song whose check-off is currently running, so a double-tap can't double-log it.
+    private Guid? _tonightToggling;
+
     // Lyrics lookup (LRCLIB) shown in its own sheet; fetched fresh each open.
     private SongListItem? _lyricsItem;
     private string? _lyricsText;
@@ -576,6 +681,7 @@ else
     private SongListItem? _detailItem;
     private bool _editing;
     private bool _editFieldsBound;   // khNumeric bound to the edit-form year input
+    private bool _addFieldsBound;    // khNumeric bound to the add-form year input (re-bind when the form reopens)
     private string _editTitle = string.Empty;
     private string _editArtist = string.Empty;
     private string _editGenre = string.Empty;
@@ -730,13 +836,23 @@ else
     protected override async Task OnInitializedAsync()
     {
         Store.Changed += OnStoreChanged;
+        Tonight.Changed += OnTonightChanged;
         await RefreshAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-            await JS.InvokeVoidAsync("khNumeric.register");   // add-form year input
+        // Add-form year input needs the digit-only guard. The form is collapsible, so re-bind whenever it's
+        // (re)shown — collapsing remounts a fresh input that has lost the guard.
+        if (_addOpen && !_addFieldsBound)
+        {
+            await JS.InvokeVoidAsync("khNumeric.register");
+            _addFieldsBound = true;
+        }
+        else if (!_addOpen)
+        {
+            _addFieldsBound = false;
+        }
 
         if (_listRendered && !_swipeBound)
         {
@@ -803,9 +919,23 @@ else
             _lyricsSheetBound = false;
         }
 
+        // Tonight set: bind drag-to-reorder on the list body while it's shown. Collapsing/expanding remounts a
+        // fresh body element, so reset the flag when it's hidden and re-bind on return.
+        if (_tonight.Count > 0 && !_tonightCollapsed && !_tonightDragBound)
+        {
+            _swipeRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khTonight.register", _tonightList, _swipeRef);
+            _tonightDragBound = true;
+        }
+        else if (_tonight.Count == 0 || _tonightCollapsed)
+        {
+            _tonightDragBound = false;
+        }
+
         // Reconcile the page-scroll lock straight from sheet state every render, so it can never get stranded
         // on a close path that skips cleanup (e.g. a touch swipe-dismiss). Only touch JS when it actually flips.
-        var anySheetOpen = _detailItem is not null || _historyItem is not null || _ratingPromptItem is not null || _lyricsItem is not null;
+        var anySheetOpen = _detailItem is not null || _historyItem is not null || _ratingPromptItem is not null
+            || _lyricsItem is not null;
         if (anySheetOpen != _pageLocked)
         {
             _pageLocked = anySheetOpen;
@@ -1086,14 +1216,20 @@ else
         _ => "Tap a star to rate — or skip below",
     };
 
-    private void OpenRatingPrompt()
+    private void OpenRatingPrompt(SongListItem? item)
     {
-        _ratingPromptItem = _detailItem;
+        if (item is null)
+            return;
+        _ratingPromptItem = item;
         _ratingPromptValue = 0;
         _ratingPromptNote = string.Empty;
     }
 
-    private void CloseRatingPrompt() => _ratingPromptItem = null;
+    private void CloseRatingPrompt()
+    {
+        _ratingPromptItem = null;
+        _tonightCompletingSongId = null;   // cancelled without logging — leave the tonight row unchecked
+    }
 
     private Task SaveRatingPromptAsync() => LogPerformanceAsync(_ratingPromptValue);
 
@@ -1113,14 +1249,24 @@ else
         if (_ratingPromptItem is null)
             return;
 
-        _ratingPromptItem.Performances.Add(new Performance
+        var performance = new Performance
         {
             Date = DateTimeOffset.Now,
             HowItWent = Math.Clamp(howItWent, 0, 5),
             Note = string.IsNullOrWhiteSpace(_ratingPromptNote) ? null : _ratingPromptNote.Trim(),
-        });
+        };
+        _ratingPromptItem.Performances.Add(performance);
         _ratingPromptItem.Status = SongListItemStatus.Sang;
         await Store.UpdateAsync(_ratingPromptItem);
+
+        // If this prompt was opened by checking a Tonight row off, flip that entry to done now that the
+        // performance is saved, and remember the performance so an undo can remove exactly this one.
+        if (_tonightCompletingSongId == _ratingPromptItem.Id)
+        {
+            await Tonight.SetCompletedAsync(_ratingPromptItem.Id, true, performance.Id);
+            _tonightCompletingSongId = null;
+        }
+
         _ratingPromptItem = null;
     }
 
@@ -1365,12 +1511,150 @@ else
     {
         _items = await Store.GetAllAsync();
         RecomputeYearBounds();
+        // Drop any tonight entries whose song was deleted (orphan pruning), then reload the joined set.
+        await Tonight.PruneAsync(_items.Select(i => i.Id).ToList());
+        _tonight = await Tonight.GetAllAsync();
         await InvokeAsync(StateHasChanged);
+    }
+
+    // Tonight store changed (add/remove/reorder/complete/clear) — reload just the set and re-render.
+    private void OnTonightChanged(object? sender, EventArgs e) => _ = RefreshTonightAsync();
+
+    private async Task RefreshTonightAsync()
+    {
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                _tonight = await Tonight.GetAllAsync();
+                StateHasChanged();
+            });
+        }
+        catch { /* best-effort: keep the last-known set on screen if a reload fails */ }
+    }
+
+    // ---- Tonight set list --------------------------------------------------------------------
+
+    private int TonightDone => _tonight.Count(e => e.Completed);
+    private int TonightPct => _tonight.Count == 0 ? 0 : (int)Math.Round(TonightDone * 100.0 / _tonight.Count);
+    private string TonightProgressLabel =>
+        _tonight.Count == 0 ? "empty"
+        : TonightDone == _tonight.Count ? $"all {_tonight.Count} done 🎉"
+        : $"{TonightDone} of {_tonight.Count} done";
+
+    // Join the tonight entries (ordered) to their songs; skip any whose song is momentarily missing.
+    private IEnumerable<(TonightEntry entry, SongListItem song)> TonightRows()
+    {
+        var byId = _items.ToDictionary(i => i.Id);
+        foreach (var entry in _tonight.OrderBy(e => e.Order))
+            if (byId.TryGetValue(entry.SongId, out var song))
+                yield return (entry, song);
+    }
+
+    private bool IsInTonight(SongListItem? item) => item is not null && _tonight.Any(e => e.SongId == item.Id);
+
+    // Card quick-add: a direct toggle (like the favorite star / detail-sheet toggle) — no confirm, since it's a
+    // one-tap action and re-adding is just as quick. The set-list ✕ keeps its confirm for deliberate removals.
+    private Task QuickToggleTonightAsync(SongListItem item) =>
+        IsInTonight(item) ? Tonight.RemoveAsync(item.Id) : Tonight.AddAsync(item.Id);
+
+    // Removing a queued song is confirmed (it's a deliberate "take this off my set" action).
+    private void ArmRemoveFromTonight(SongListItem song) => _tonightRemoveSong = song;
+    private void CancelRemoveFromTonight() => _tonightRemoveSong = null;
+
+    private async Task ConfirmRemoveFromTonightAsync()
+    {
+        var song = _tonightRemoveSong;
+        _tonightRemoveSong = null;
+        if (song is not null)
+            await Tonight.RemoveAsync(song.Id);
+    }
+
+    private async Task ToggleDetailTonightAsync()
+    {
+        if (_detailItem is null)
+            return;
+        // The detail-sheet toggle is an explicit on/off, so no remove-confirm here (that's for the set-list ✕).
+        if (IsInTonight(_detailItem))
+            await Tonight.RemoveAsync(_detailItem.Id);
+        else
+            await Tonight.AddAsync(_detailItem.Id);
+    }
+
+    // Check a tonight song off (or undo it). Checking off logs a performance via the same "mark sung" flow the
+    // detail sheet uses — honoring the Rate-each-performance toggle (prompt when on, silent log when off) — and
+    // flips the entry's completed flag. Undo clears the flag and removes the performance this check-off logged.
+    private async Task ToggleTonightDoneAsync(TonightEntry entry, SongListItem song)
+    {
+        if (_tonightToggling == entry.SongId)
+            return;   // a check-off for this row is already running — ignore the double-tap
+        _tonightToggling = entry.SongId;
+        try
+        {
+            if (entry.Completed)
+            {
+                // Undo: remove the exact performance this check-off logged (matched by persisted id, so it works
+                // even across an app restart), then clear the flag.
+                if (entry.CompletedPerformanceId is { } perfId &&
+                    song.Performances.FirstOrDefault(p => p.Id == perfId) is { } perf &&
+                    song.Performances.Remove(perf))
+                {
+                    if (song.Performances.Count == 0)
+                        song.Status = SongListItemStatus.WantToSing;
+                    await Store.UpdateAsync(song);
+                }
+                await Tonight.SetCompletedAsync(entry.SongId, false);
+                return;
+            }
+
+            if (Settings.RatePerformances)
+            {
+                // Defer completion to LogPerformanceAsync (fires when the prompt is saved/skipped/swiped away).
+                _tonightCompletingSongId = entry.SongId;
+                OpenRatingPrompt(song);
+            }
+            else
+            {
+                // Toggle off: log an unrated performance and complete immediately, no prompt.
+                var perf = new Performance { Date = DateTimeOffset.Now, HowItWent = 0 };
+                song.Performances.Add(perf);
+                song.Status = SongListItemStatus.Sang;
+                await Store.UpdateAsync(song);
+                await Tonight.SetCompletedAsync(entry.SongId, true, perf.Id);
+            }
+        }
+        finally
+        {
+            _tonightToggling = null;
+        }
+    }
+
+    private void AskEndNight() => _confirmEndNight = true;
+    private void CancelEndNight() => _confirmEndNight = false;
+
+    private async Task EndNightAsync()
+    {
+        _confirmEndNight = false;
+        _tonightCollapsed = false;
+        await Tonight.ClearAsync();
+    }
+
+    // Drag-to-reorder callback from khTonight: the new top-to-bottom order of song ids.
+    [JSInvokable]
+    public async Task ReorderTonight(string[] orderedIds)
+    {
+        var guids = orderedIds
+            .Select(s => Guid.TryParse(s, out var g) ? g : (Guid?)null)
+            .Where(g => g.HasValue)
+            .Select(g => g!.Value)
+            .ToList();
+        await Tonight.ReorderAsync(guids);
     }
 
     public void Dispose()
     {
         Store.Changed -= OnStoreChanged;
+        Tonight.Changed -= OnTonightChanged;
         // Safety net: never leave the page-scroll lock on if this page is torn down with a sheet open.
         if (_pageLocked)
             _ = JS.InvokeVoidAsync("khSheet.setLock", false);

@@ -7,21 +7,25 @@
 [![UI](https://img.shields.io/badge/UI-MAUI%20Blazor%20Hybrid-5C2D91)](https://learn.microsoft.com/dotnet/maui/)
 [![License](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-orange)](LICENSE)
 
-KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a personal karaoke wishlist in your pocket. Add songs you'd love to sing, track how each one went, and revisit your history — all stored on your device, fully **offline and local-only**.
+KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a personal karaoke wishlist in your pocket. Add songs you'd love to sing, line up a set for the night, rate how each performance went, and look up lyrics on the spot — with your list stored **on your device**.
 
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/my-songs.png" width="220" alt="My Songs — the wishlist as sortable cards" />
-  <img src="docs/screenshots/song-detail.png" width="220" alt="Song detail — rating, notes, sung history, and quick links" />
-  <img src="docs/screenshots/import-export.png" width="220" alt="Import & Export — from a file, Spotify, or YouTube Music" />
-  <img src="docs/screenshots/settings.png" width="220" alt="Settings — toggle every extra behavior" />
+  <img src="docs/screenshots/my-songs.png" width="200" alt="My Songs — the Tonight set list above the wishlist of sortable cards" />
+  <img src="docs/screenshots/song-detail.png" width="200" alt="Song detail — per-performance ratings, enjoyment, sung history, and quick links" />
+  <img src="docs/screenshots/lyrics.png" width="200" alt="Lyrics — looked up in-app from LRCLIB" />
+  <img src="docs/screenshots/settings.png" width="200" alt="Settings — toggle every extra behavior" />
 </p>
 
 ## ✨ Features
 
-- **My Songs** — a personal wishlist of songs to sing, as a swipeable card list with sorting and text / genre / year / rating filters.
-- **Song details** — mark a song sung (with a running history of dates), rate it, add notes, and jump straight to it on **YouTube** or **Spotify**.
+- **Tonight set list** — build an on-deck set for the venue: add songs, drag to reorder, and check each one off as you sing it, with live *“X of Y done”* progress. It's its own list, kept separate from your wishlist.
+- **My Songs** — a personal wishlist of songs to sing, as a swipeable card list with sorting and text / genre / year / rating filters. One tap on a card adds a song straight to tonight's set.
+- **Ratings & history** — rate *every* performance (a "how it went" score that averages over time) plus a separate **enjoyment** rating, jot per-performance notes, and keep a running sung-history for each song.
+- **Lyrics** — look a song's lyrics up in-app from **[LRCLIB](https://lrclib.net/)** (no account needed) and cache them on-device so they open instantly next time.
+- **Surprise me** — can't decide what to sing? One tap picks a random song for you — and it can skip anything you've already sung today.
+- **Quick links** — jump straight to any song on **YouTube** or **Spotify**.
 - **Favorites** — star the songs you love; they float to the top of the list.
 - **Import & export** — pull songs from a public **Spotify** or **YouTube Music** playlist link, or a KHost Cue `.json` file, and export your whole list back out.
 - **Auto-fill** — looks up a song's release year and genre automatically (via the iTunes Search API) so you don't have to type them.
@@ -30,7 +34,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 ## 🛠️ Tech stack
 
 - **[.NET 10](https://dotnet.microsoft.com/)** with **[.NET MAUI Blazor Hybrid](https://learn.microsoft.com/dotnet/maui/)** — native iOS/Android shell hosting a Razor (Blazor) UI.
-- On-device storage in a JSON file behind an `ISongListStore` interface that keeps storage concerns out of the UI.
+- On-device storage in JSON files behind interfaces (`ISongListStore`, `ITonightStore`, `ILyricsCache`) that keep storage concerns out of the UI.
 
 ## 🚀 Getting started
 
@@ -71,7 +75,7 @@ https://music.youtube.com/playlist?list=PLrB1lrYJ3YfvS2ZaTJZ_D8vvIv_fowkNM
 | Project | Role |
 |---|---|
 | `KHost.Mobile` | The MAUI Blazor Hybrid app — a thin native shell hosting the Razor UI in `Components/`. |
-| `KHost.Mobile.Client` | Client library: playlist import (Spotify / YouTube Music) and iTunes metadata lookup. |
+| `KHost.Mobile.Client` | Client library: playlist import (Spotify / YouTube Music), iTunes metadata lookup, and LRCLIB lyrics lookup. |
 
 ## 🤝 Contributing
 

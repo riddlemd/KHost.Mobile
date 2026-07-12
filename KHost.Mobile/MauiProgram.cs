@@ -27,6 +27,10 @@ public static class MauiProgram
 		builder.Services.AddSingleton<JsonFileSongListStore>();
 		builder.Services.AddSingleton<ISongListStore>(sp => sp.GetRequiredService<JsonFileSongListStore>());
 
+		// "Tonight" on-deck set list — its own JSON-file store (separate from the song list). Singleton so its
+		// in-memory set + Changed event are shared app-wide.
+		builder.Services.AddSingleton<ITonightStore, JsonFileTonightStore>();
+
 		// User preferences (feature toggles) persisted via MAUI Preferences. Singleton: one view of the flags app-wide.
 		builder.Services.AddSingleton<IAppSettings, MauiAppSettings>();
 
