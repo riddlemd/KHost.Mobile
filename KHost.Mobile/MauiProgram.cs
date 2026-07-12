@@ -1,6 +1,7 @@
 ﻿using KHost.Mobile.Client.Enrichment;
 using KHost.Mobile.Client.Lyrics;
 using KHost.Mobile.Client.Spotify;
+using KHost.Mobile.Client.Updates;
 using KHost.Mobile.Client.YouTubeMusic;
 using KHost.Mobile.Services;
 using Microsoft.Extensions.Logging;
@@ -63,6 +64,18 @@ public static class MauiProgram
 			http.DefaultRequestHeaders.UserAgent.ParseAdd(
 				$"KHost.Mobile/{AppInfo.Current.VersionString} (+https://github.com/riddlemd/KHost.Mobile)");
 		});
+
+		// "Update available" check — reads this repo's GitHub Releases feed. GitHub's REST API requires a
+		// User-Agent; the Accept header pins the v3 media type. Orchestrated by IAppUpdateService (which owns
+		// the version compare, the setting gate, and the once-per-launch memoization).
+		builder.Services.AddHttpClient<IUpdateClient, GitHubReleaseClient>(http =>
+		{
+			http.BaseAddress = new Uri("https://api.github.com/");
+			http.DefaultRequestHeaders.UserAgent.ParseAdd(
+				$"KHost.Mobile/{AppInfo.Current.VersionString} (+https://github.com/riddlemd/KHost.Mobile)");
+			http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+		});
+		builder.Services.AddSingleton<IAppUpdateService, MauiAppUpdateService>();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
