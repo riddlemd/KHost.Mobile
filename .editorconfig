@@ -1,0 +1,75 @@
+# EditorConfig — https://editorconfig.org
+# Encodes the mechanical house style for KHost.Mobile (see AGENTS.md for the intent + patterns
+# this file can't express). Based on the existing hand-written app code (4-space, file-scoped
+# namespaces, _camelCase private fields, Async suffix).
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml,css,js,html,xml,props,targets,csproj,slnx}]
+indent_size = 2
+
+[*.{razor,cshtml}]
+indent_size = 4
+
+# ---- C# ----
+[*.cs]
+indent_size = 4
+
+# Namespaces & usings
+csharp_style_namespace_declarations = file_scoped:warning
+dotnet_sort_system_directives_first = true
+csharp_using_directive_placement = outside_namespace:warning
+
+# `this.` is never used in this codebase
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+
+# `var` when the type is apparent
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_for_built_in_types = true:silent
+csharp_style_var_elsewhere = false:silent
+
+# Modern C# the code already leans on
+csharp_style_prefer_primary_constructors = true:suggestion
+csharp_prefer_simple_using_statement = true:suggestion
+csharp_style_prefer_switch_expression = true:suggestion
+csharp_style_prefer_pattern_matching = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_object_initializer = true:suggestion
+csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
+dotnet_style_prefer_conditional_expression_over_assignment = true:silent
+
+# Expression-bodied members — used for one-liners only, so keep it non-nagging
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+csharp_style_expression_bodied_properties = when_on_single_line:silent
+csharp_style_expression_bodied_accessors = when_on_single_line:silent
+csharp_style_expression_bodied_lambdas = when_on_single_line:silent
+
+# Braces: Allman, and single-line guard `if`s without braces are allowed
+csharp_new_line_before_open_brace = all
+csharp_prefer_braces = when_multiline:silent
+
+# ---- Naming ----
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel.capitalization = camel_case
+dotnet_naming_style.underscore_camel.required_prefix = _
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel
+dotnet_naming_rule.private_fields_underscore.severity = warning
+
+dotnet_naming_symbols.async_methods.applicable_kinds = method
+dotnet_naming_symbols.async_methods.required_modifiers = async
+dotnet_naming_style.async_suffix.capitalization = pascal_case
+dotnet_naming_style.async_suffix.required_suffix = Async
+dotnet_naming_rule.async_methods_end_in_async.symbols = async_methods
+dotnet_naming_rule.async_methods_end_in_async.style = async_suffix
+dotnet_naming_rule.async_methods_end_in_async.severity = suggestion
