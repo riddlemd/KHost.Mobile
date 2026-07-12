@@ -21,7 +21,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 ## ✨ Features
 
 - **Tonight set list** — build an on-deck set for the venue: add songs, drag to reorder, and check each one off as you sing it, with live *“X of Y done”* progress. It's its own list, kept separate from your wishlist.
-- **My Songs** — a personal wishlist of songs to sing, as a swipeable card list with sorting and text / genre / year / rating filters. One tap on a card adds a song straight to tonight's set.
+- **My Songs** — a personal wishlist of songs to sing, as a swipeable card list with sorting and multi-select filters (text, genre, year, how-it-went / enjoyment rating). One tap on a card adds a song straight to tonight's set.
 - **Ratings & history** — rate *every* performance (a "how it went" score that averages over time) plus a separate **enjoyment** rating, jot per-performance notes, and keep a running sung-history for each song.
 - **Lyrics** — look a song's lyrics up in-app from **[LRCLIB](https://lrclib.net/)** (no account needed) and cache them on-device so they open instantly next time.
 - **Surprise me** — can't decide what to sing? One tap picks a random song for you — and it can skip anything you've already sung today.
