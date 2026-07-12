@@ -162,6 +162,14 @@
                     <option value="5">★★★★★</option>
                 </select>
             </div>
+            <div class="field filters__field">
+                <label class="field__label" for="f-tonight">Tonight</label>
+                <select id="f-tonight" class="input input--sm" @bind="_filterTonight">
+                    <option value="-1">Any</option>
+                    <option value="1">In tonight's set</option>
+                    <option value="0">Not in set</option>
+                </select>
+            </div>
             @if (ShowYearFilter)
             {
                 <div class="field filters__field filters__field--wide">
@@ -617,6 +625,7 @@ else
     private string _filterGenre = string.Empty;
     private int _filterRating = -1;      // "how it went" average, rounded (-1 Any, 0 Not rated, 1-5 stars)
     private int _filterEnjoyment = -1;   // enjoyment rating (-1 Any, 0 Not rated, 1-5 stars)
+    private int _filterTonight = -1;     // tonight-set membership (-1 Any, 1 In set, 0 Not in set)
     private bool _filtersOpen;   // collapsed by default so the filter bar stays compact
     private bool _addOpen;   // the add-song form; collapsed by default to declutter, expand to add
 
@@ -786,6 +795,7 @@ else
         !string.IsNullOrWhiteSpace(_filterGenre) ||
         _filterRating >= 0 ||
         _filterEnjoyment >= 0 ||
+        _filterTonight >= 0 ||
         YearFilterActive;
 
     private void ClearFilters()
@@ -793,6 +803,7 @@ else
         _filterName = _filterArtist = _filterGenre = string.Empty;
         _filterRating = -1;
         _filterEnjoyment = -1;
+        _filterTonight = -1;
         _filterYearLo = _filterYearHi = null;
     }
 
@@ -810,6 +821,8 @@ else
             q = q.Where(i => RoundedAvg(i) == _filterRating);
         if (_filterEnjoyment >= 0)
             q = q.Where(i => i.Enjoyment == _filterEnjoyment);
+        if (_filterTonight >= 0)
+            q = q.Where(i => IsInTonight(i) == (_filterTonight == 1));
         if (YearFilterActive)
             q = q.Where(i => i.Year.HasValue && i.Year.Value >= YearLo && i.Year.Value <= YearHi);
 
