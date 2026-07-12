@@ -624,6 +624,71 @@ body.kh-sheet-open { overflow: hidden; }
 .lyrics__status { margin-top: 1rem; color: var(--kh-text-muted); }
 .lyrics__attribution { margin-top: 0.85rem; font-size: 0.75rem; color: var(--kh-text-muted); }
 
+/* ---- "Tonight" on-deck set list ---------------------------------------- */
+/* Pinned card at the top of My Songs. Violet-accented so it reads as the active in-venue mode. */
+.card.tonight { border: 1px solid var(--kh-primary); box-shadow: 0 2px 14px rgba(124, 58, 237, 0.18); padding: 0; overflow: hidden; }
+.tonight__head {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 0.9rem; cursor: pointer;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.10), rgba(124, 58, 237, 0.02));
+}
+.tonight__mic { font-size: 1.15rem; }
+.tonight__title { font-weight: 700; font-size: 1.02rem; color: var(--kh-text); }
+.tonight__progress {
+    margin-left: auto; font-size: 0.78rem; color: var(--kh-primary); font-weight: 600;
+    background: rgba(124, 58, 237, 0.12); padding: 0.15rem 0.55rem; border-radius: 1rem; white-space: nowrap;
+}
+.tonight__chevron { transition: transform 0.15s ease; color: var(--kh-text-muted); font-size: 0.9rem; }
+.card.tonight.collapsed .tonight__chevron { transform: rotate(-90deg); }
+.tonight__progressbar { height: 3px; background: var(--kh-surface-2); }
+.tonight__progressbar > span { display: block; height: 100%; background: var(--kh-primary); transition: width 0.25s ease; }
+
+.tonight__body { padding: 0.35rem 0.5rem 0.5rem; }
+.setrow {
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.4rem;
+    background: var(--kh-surface); position: relative; touch-action: pan-y;
+}
+.setrow + .setrow { border-top: 1px solid var(--kh-border); }
+.setrow--dragging { z-index: 2; box-shadow: var(--kh-shadow); border-radius: 0.6rem; background: var(--kh-surface-2); }
+.setrow__handle {
+    cursor: grab; color: var(--kh-text-muted); font-size: 1.05rem; padding: 0.1rem 0.2rem;
+    touch-action: none; user-select: none; line-height: 1; flex: 0 0 auto;
+}
+.setrow__handle:active { cursor: grabbing; }
+.setrow__pos {
+    width: 1.35rem; height: 1.35rem; flex: 0 0 auto; border-radius: 50%;
+    background: var(--kh-surface-2); color: var(--kh-text-muted);
+    display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700;
+}
+.setrow__main { min-width: 0; flex: 1 1 auto; }
+.setrow__title { font-weight: 600; font-size: 0.92rem; color: var(--kh-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.setrow__artist { font-size: 0.76rem; color: var(--kh-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.setrow__check {
+    flex: 0 0 auto; width: 1.6rem; height: 1.6rem; border-radius: 50%; cursor: pointer;
+    border: 2px solid var(--kh-border); background: transparent; color: transparent;
+    display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 700;
+    transition: all 0.12s ease; padding: 0;
+}
+.setrow__check:hover { border-color: var(--kh-primary); }
+.setrow__remove {
+    flex: 0 0 auto; border: none; background: transparent; color: var(--kh-text-muted);
+    cursor: pointer; font-size: 0.9rem; padding: 0.15rem 0.3rem; opacity: 0.55;
+}
+.setrow__remove:hover { opacity: 1; color: var(--kh-danger); }
+/* Done: dimmed + struck, filled check + position pip. Stays in its slot as progress. */
+.setrow.done .setrow__title { text-decoration: line-through; color: var(--kh-text-muted); }
+.setrow.done .setrow__artist { opacity: 0.6; }
+.setrow.done .setrow__pos { background: var(--kh-primary); color: var(--kh-primary-contrast); }
+.setrow.done .setrow__check { background: var(--kh-primary); border-color: var(--kh-primary); color: var(--kh-primary-contrast); }
+
+.tonight__foot { display: flex; gap: 0.5rem; padding: 0.5rem; }
+.btn.tonight__end { flex: 1; background: transparent; border-color: transparent; color: var(--kh-danger); font-weight: 600; }
+.btn.tonight__end:hover { background: rgba(220, 38, 38, 0.08); }
+
+/* "Add to tonight" toggle in the detail sheet — violet like Lyrics; outlined once the song is on deck. */
+.btn.sheet__tonight { width: 100%; margin-bottom: 0.6rem; background: var(--kh-primary); color: #fff; border: none; transition: background 0.12s ease, box-shadow 0.12s ease; }
+.btn.sheet__tonight:hover { background: var(--kh-primary-strong); box-shadow: 0 2px 10px rgba(124, 58, 237, 0.35); }
+.btn.sheet__tonight.is-on { background: transparent; color: var(--kh-primary); border: 1px solid var(--kh-primary); }
+
 /* "Sang today" — full-width secondary action directly above the YouTube button. Padding/radius
    inherit from the `.btn` base so it matches the YouTube button's height; the compound selector
    beats the later `.btn` base (which resets background:none + transparent border). */
@@ -978,7 +1043,7 @@ body.kh-sheet-open { overflow: hidden; }
     color: var(--kh-text);
     font-size: 0.95rem;
     overflow-wrap: anywhere;
-    padding-right: 1.6rem;   /* leave room for the favorite button pinned top-right */
+    padding-right: 3.3rem;   /* leave room for the tonight + favorite buttons pinned top-right */
 }
 .song-card__artist {
     font-size: 0.85rem;
@@ -1010,6 +1075,26 @@ body.kh-sheet-open { overflow: hidden; }
 /* Display-only stars in the card meta row. */
 .song-card .stars__star { font-size: 0.9rem; padding: 0.01rem; }
 .song-card__fav { position: absolute; top: 0.55rem; right: 0.7rem; }
+
+/* Quick "add to tonight" — sits just left of the favorite star. Monochrome queue-plus glyph that tints
+   faint grey → violet when the song is on tonight's set (mirrors the star's grey → gold). */
+.song-card__tonight { position: absolute; top: 0.5rem; right: 2.35rem; }
+.tonight-add-btn {
+    background: none;
+    border: none;
+    padding: 0.1rem;
+    cursor: pointer;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--kh-border);            /* not queued: same faint grey as an empty star */
+    transition: color 0.12s ease, transform 0.12s ease;
+}
+.tonight-add-btn svg { width: 19px; height: 19px; display: block; }
+.tonight-add-btn svg path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tonight-add-btn.is-on { color: var(--kh-primary); }   /* queued for tonight = violet */
+.tonight-add-btn:active { transform: scale(0.85); }
 
 .fav-btn {
     background: none;
@@ -1084,12 +1169,72 @@ body.kh-sheet-open { overflow: hidden; }
 
 .filters__grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;   /* two compact columns: Name/Artist, Genre/How-it-went */
+    /* minmax(0,1fr) — columns stay equal regardless of a field's content (a long multi-select summary must
+       not stretch its column). Plain `1fr` sizes to min-content and made the columns uneven. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 0.6rem 0.75rem;
 }
 .filters__field { margin-bottom: 0; }
-.filters__field--wide { grid-column: 1 / -1; }   /* year slider spans the full filter width */
+.filters__field--wide { grid-column: 1 / -1; }   /* year slider + genre multi-select span the full filter width */
 .filters__clear { margin-top: 0.85rem; }
+
+/* ---- Multi-select filter (native <details>/<summary> + checkboxes) ------- */
+/* Native disclosure so mobile WebViews render it reliably. The panel floats over the content below
+   (absolute) instead of pushing the rest of the page down. */
+.msf { width: 100%; position: relative; }
+.msf__summary {
+    list-style: none;   /* hide the default disclosure triangle (Firefox) */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background-color: var(--kh-surface-2);
+    border: 1px solid var(--kh-border);
+    border-radius: 0.55rem;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.85rem;
+    color: var(--kh-text);
+}
+.msf__summary::-webkit-details-marker { display: none; }   /* hide it (Chromium/WebKit) */
+.msf__summary::marker { content: ""; }
+/* min-width:0 lets the text ellipsis instead of forcing the control (and its grid column) wider.
+   Explicit color — the Android WebView doesn't reliably inherit --kh-text onto these, same as the Tonight rows. */
+.msf__val { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--kh-text); }
+.msf__val--placeholder { color: var(--kh-text-muted); }
+.msf__count {
+    flex: 0 0 auto; background: var(--kh-primary); color: var(--kh-primary-contrast);
+    font-size: 0.64rem; font-weight: 700; border-radius: 999px; padding: 0.04rem 0.42rem;
+}
+.msf__chev { flex: 0 0 auto; color: var(--kh-text-muted); font-size: 0.8rem; transition: transform 0.15s ease; }
+.msf[open] .msf__chev { transform: rotate(180deg); }
+.msf__panel {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    z-index: 40;
+    max-height: 13rem;
+    overflow-y: auto;
+    border: 1px solid var(--kh-border);
+    border-radius: 0.55rem;
+    background-color: var(--kh-surface);
+    box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.28);
+    padding: 0.2rem;
+    -webkit-overflow-scrolling: touch;
+}
+.msf__panel--tall { max-height: none; }   /* rating menus are short (6 rows) — show them all, no scroll */
+.msf__empty { padding: 0.5rem 0.6rem; font-size: 0.82rem; color: var(--kh-text-muted); }
+.msf__opt {
+    display: flex; align-items: center; gap: 0.55rem;
+    padding: 0.4rem 0.5rem; border-radius: 0.4rem; cursor: pointer; font-size: 0.85rem;
+    color: var(--kh-text);   /* explicit so genre option labels aren't dark on Android WebView */
+}
+.msf__opt:hover { background-color: var(--kh-surface-2); }
+.msf__opt input { width: 1.05rem; height: 1.05rem; accent-color: var(--kh-primary); flex: 0 0 auto; margin: 0; }
+.msf__stars { letter-spacing: 0.06em; }
+.msf__stars--hot { color: var(--kh-star-hot); }
+.msf__stars--cool { color: var(--kh-star-cool); }
+.msf__notrated { color: var(--kh-text-muted); }
 
 /* ---- Dual-handle range slider (year filter) ----------------------------- */
 /* From/To number inputs (manual entry) sit above the slider; both drive the same range. */

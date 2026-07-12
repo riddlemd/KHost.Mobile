@@ -87,6 +87,20 @@
 
         <label class="setting">
             <span class="setting__text">
+                <span class="setting__title">“Tonight” set list</span>
+                <span class="setting__desc">
+                    Pin an on-deck set to the top of My Songs — add songs, reorder them, and check each off as you
+                    sing it. Turn off to hide it; your saved set is kept and comes back when you re-enable it.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.TonightEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
                 <span class="setting__title">Scroll to song when favorited</span>
                 <span class="setting__desc">
                     Tapping a song's star scrolls the list to reveal its new position (favorites move to the top).
@@ -94,6 +108,19 @@
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.ScrollToFavorited" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">“Surprise me” button</span>
+                <span class="setting__desc">
+                    Show the 🎲 button that picks a random song from your list for you.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseEnabled" />
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>

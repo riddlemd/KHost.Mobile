@@ -19,6 +19,11 @@ public enum SongListItemStatus
 /// </summary>
 public sealed class Performance
 {
+    /// <summary>Stable identity for this performance, so other stores (e.g. the Tonight set) can reference the exact
+    /// one they logged and undo it later. Defaults to a fresh id; entries persisted before this field existed
+    /// deserialize to a new id on load (harmless — nothing references those).</summary>
+    public Guid Id { get; set; } = Guid.NewGuid();
+
     /// <summary>When the song was sung.</summary>
     public DateTimeOffset Date { get; set; }
 

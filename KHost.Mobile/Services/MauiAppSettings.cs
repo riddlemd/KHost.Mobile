@@ -10,6 +10,8 @@ namespace KHost.Mobile.Services;
 public sealed class MauiAppSettings : IAppSettings
 {
     private const string AutoFillMetadataKey = "settings.autofill_metadata";
+    private const string TonightKey = "settings.tonight";
+    private const string SurpriseKey = "settings.surprise";
     private const string YouTubeSearchKey = "settings.youtube_search";
     private const string SpotifySearchKey = "settings.spotify_search";
     private const string LyricsKey = "settings.lyrics";
@@ -22,6 +24,18 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(AutoFillMetadataKey, true);
         set => Preferences.Default.Set(AutoFillMetadataKey, value);
+    }
+
+    public bool TonightEnabled
+    {
+        get => Preferences.Default.Get(TonightKey, true);
+        set => Preferences.Default.Set(TonightKey, value);
+    }
+
+    public bool SurpriseEnabled
+    {
+        get => Preferences.Default.Get(SurpriseKey, true);
+        set => Preferences.Default.Set(SurpriseKey, value);
     }
 
     public bool YouTubeSearchEnabled
