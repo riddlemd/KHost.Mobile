@@ -35,7 +35,8 @@ public static class Genres
         "Latin",
         "Metal",
         "Motown",
-        "Musical Theatre",
+        "Musical Comedy",
+        "Musicals",
         "New Wave",
         "Oldies",
         "Opera",
@@ -73,6 +74,11 @@ public static class Genres
         // shadow them onto an earlier, shorter entry ("Pop-Punk"→"Pop", "Reggaeton…"→"Reggae").
         ["Pop-Punk"] = "Pop Punk",
         ["Reggaeton y Hip-Hop"] = "Reggaeton",
+        // Curated fills for iTunes genres with no direct app equivalent.
+        ["British Invasion"] = "Classic Rock",
+        ["Adult Contemporary"] = "Rock",
+        ["Vocal"] = "Oldies",
+        ["Comedy"] = "Musical Comedy",
     };
 
     public static string? Map(string? externalGenre)
