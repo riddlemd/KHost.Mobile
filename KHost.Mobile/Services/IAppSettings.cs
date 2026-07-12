@@ -52,4 +52,10 @@ public interface IAppSettings
     /// rather just log the performance (and jot a note) without judging it — the prompt then only asks for a note.
     /// </summary>
     bool RatePerformances { get; set; }
+
+    /// <summary>
+    /// When true, the app checks GitHub for a newer release once at startup and shows a banner when one is
+    /// available. When false, no update check runs (no network request) and the banner never appears.
+    /// </summary>
+    bool UpdateCheckEnabled { get; set; }
 }

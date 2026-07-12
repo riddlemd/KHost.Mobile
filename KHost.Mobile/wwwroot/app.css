@@ -295,6 +295,44 @@ html, body {
 /* No bottom nav rendered: reclaim the reserved tab-bar space. */
 .app-content--no-nav { padding-bottom: calc(env(safe-area-inset-bottom) + 1rem); }
 
+/* ---- "Update available" banner ------------------------------------------ */
+.update-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 0.9rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--kh-primary);
+    border-radius: 0.6rem;
+    background: color-mix(in srgb, var(--kh-primary) 14%, var(--kh-surface));
+    color: var(--kh-text);
+    font-size: 0.9rem;
+}
+.update-banner__icon { flex: 0 0 auto; font-size: 1.05rem; }
+.update-banner__text { flex: 1 1 auto; min-width: 0; color: var(--kh-text); }
+.update-banner__action {
+    flex: 0 0 auto;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.35rem 0.8rem;
+    background: var(--kh-primary);
+    color: var(--kh-primary-contrast);
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.update-banner__action:active { transform: scale(0.96); }
+.update-banner__close {
+    flex: 0 0 auto;
+    border: none;
+    background: none;
+    color: var(--kh-text-muted);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0.2rem 0.25rem;
+    cursor: pointer;
+}
+
 /* ---- Bottom tab bar ----------------------------------------------------- */
 
 .app-nav {

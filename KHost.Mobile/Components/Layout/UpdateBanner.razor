@@ -1,0 +1,34 @@
+@inject IAppUpdateService Updates
+@inject ILinkLauncher Links
+
+@* Shown once per launch when GitHub has a newer release than this build (and the check is enabled and not
+   dismissed). "Update" opens the release page in the browser; ✕ hides it for the session. *@
+@if (_status.UpdateAvailable && !Updates.Dismissed)
+{
+    <div class="update-banner" role="status">
+        <span class="update-banner__icon" aria-hidden="true">🎉</span>
+        <span class="update-banner__text">
+            Version <strong>@_status.LatestVersion</strong> is available.
+        </span>
+        <button type="button" class="update-banner__action" @onclick="OpenReleaseAsync">Update</button>
+        <button type="button" class="update-banner__close" aria-label="Dismiss" @onclick="Dismiss">✕</button>
+    </div>
+}
+
+@code {
+    private AppUpdateStatus _status = AppUpdateStatus.None;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Memoized in the service, so this only hits the network on the first component to ask this launch.
+        _status = await Updates.GetStatusAsync();
+    }
+
+    private async Task OpenReleaseAsync()
+    {
+        if (_status.ReleaseUrl is { } url)
+            await Links.OpenAsync(url);
+    }
+
+    private void Dismiss() => Updates.Dismiss();
+}

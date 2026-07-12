@@ -19,6 +19,7 @@ public sealed class MauiAppSettings : IAppSettings
     private const string ScrollToFavoritedKey = "settings.scroll_to_favorited";
     private const string SurpriseSkipSungTodayKey = "settings.surprise_skip_sung_today";
     private const string RatePerformancesKey = "settings.rate_performances";
+    private const string UpdateCheckKey = "settings.update_check";
 
     public bool AutoFillMetadata
     {
@@ -78,5 +79,11 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(RatePerformancesKey, true);
         set => Preferences.Default.Set(RatePerformancesKey, value);
+    }
+
+    public bool UpdateCheckEnabled
+    {
+        get => Preferences.Default.Get(UpdateCheckKey, true);
+        set => Preferences.Default.Set(UpdateCheckKey, value);
     }
 }
