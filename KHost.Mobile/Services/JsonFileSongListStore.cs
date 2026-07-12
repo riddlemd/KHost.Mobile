@@ -33,10 +33,8 @@ public sealed class JsonFileSongListStore : ISongListStore
         }
     }
 
-    public async Task<SongListItem> AddAsync(string title, string artist, string? notes = null, string? genre = null, int confidence = 0, int? year = null)
+    public async Task<SongListItem> AddAsync(string title, string artist, string? notes = null, string? genre = null, int? year = null)
     {
-        var rating = Math.Clamp(confidence, 0, 5);
-        var sung = rating >= 1;
         var item = new SongListItem
         {
             Title = title.Trim(),
@@ -44,9 +42,7 @@ public sealed class JsonFileSongListStore : ISongListStore
             Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
             Genre = string.IsNullOrWhiteSpace(genre) ? null : genre.Trim(),
             Year = year,
-            Status = sung ? SongListItemStatus.Sang : SongListItemStatus.WantToSing,
-            SungDates = sung ? [DateTimeOffset.Now] : [],
-            Confidence = rating,
+            Status = SongListItemStatus.WantToSing,   // new songs start on the wishlist; sung later from the detail sheet
         };
 
         await _gate.WaitAsync();
@@ -209,6 +205,7 @@ public sealed class JsonFileSongListStore : ISongListStore
                 if (seen is not null && !seen.Add(DedupeKey(item)))
                     continue;   // already in the list, or a duplicate earlier in this batch
 
+                MigrateToPerformances(item);   // fold a legacy-format import (old Cue export) into Performances
                 items.Add(item);
                 added++;
             }
@@ -252,7 +249,44 @@ public sealed class JsonFileSongListStore : ISongListStore
             _items = [];
         }
 
+        // One-time migration from the pre-per-performance shape (SungDates + single Confidence) into Performances.
+        // Runs only on first load; persists the result so later launches read the already-migrated file.
+        var migrated = false;
+        foreach (var item in _items)
+            migrated |= MigrateToPerformances(item);
+
+        if (migrated)
+            await SaveAsync(_items);
+
         return _items;
+    }
+
+    // Fold a legacy song into the Performances model: each old sung timestamp becomes a Performance carrying the
+    // song's old single rating; a rated-but-dateless legacy entry gets one performance stamped at AddedAt. The legacy
+    // fields are then emptied so new writes stop carrying them. Returns true if anything changed. No-op once migrated.
+    private static bool MigrateToPerformances(SongListItem item)
+    {
+        if (item.Performances.Count > 0)
+            return false;
+        if (item.SungDates.Count == 0 && item.Confidence == 0)
+            return false;
+
+        var rating = Math.Clamp(item.Confidence, 0, 5);
+        if (item.SungDates.Count > 0)
+        {
+            foreach (var date in item.SungDates)
+                item.Performances.Add(new Performance { Date = date, HowItWent = rating });
+        }
+        else
+        {
+            // Rated with no recorded date (shouldn't normally happen) — anchor a single performance at AddedAt.
+            item.Performances.Add(new Performance { Date = item.AddedAt, HowItWent = rating });
+        }
+
+        item.Status = item.Performances.Count > 0 ? SongListItemStatus.Sang : SongListItemStatus.WantToSing;
+        item.SungDates = [];
+        item.Confidence = 0;
+        return true;
     }
 
     // Callers must hold _gate.

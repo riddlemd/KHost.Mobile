@@ -27,4 +27,10 @@ public interface IAppSettings
     /// nothing.
     /// </summary>
     bool SurpriseSkipSungToday { get; set; }
+
+    /// <summary>
+    /// When true, marking a song sung shows a "how it went" star rating on the prompt. Turn off for singers who'd
+    /// rather just log the performance (and jot a note) without judging it — the prompt then only asks for a note.
+    /// </summary>
+    bool RatePerformances { get; set; }
 }

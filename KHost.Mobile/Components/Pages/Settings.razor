@@ -83,6 +83,20 @@
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Rate each performance</span>
+                <span class="setting__desc">
+                    Ask “how did it go?” with a star rating when you mark a song sung. Turn off if you'd rather just
+                    log it (and jot a note) without judging the performance.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.RatePerformances" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
     </div>
 
     <div class="card">

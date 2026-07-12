@@ -16,6 +16,8 @@
     --kh-text-muted: #6b6b76;
     --kh-border: #e3e3ea;
     --kh-danger: #dc2626;
+    --kh-star-hot: #e5484d;    /* "how it went" rating — warm red */
+    --kh-star-cool: #3b82f6;   /* "enjoyment" rating — blue (distinct from the gold favorite star) */
     --kh-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
 
     --kh-header-h: 3.5rem;
@@ -53,6 +55,8 @@
     --kh-text-muted: #9a9aa6;
     --kh-border: #2e2e3a;
     --kh-danger: #f87171;
+    --kh-star-hot: #ff6369;
+    --kh-star-cool: #60a5fa;
     --kh-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 /* `data-theme="light"` needs no block: the base :root is already light, and the OS-dark
@@ -342,6 +346,8 @@ html, body {
     color: var(--kh-text-muted);
     margin: 0.5rem 0.25rem;
 }
+/* "My songs (N)" header carries the Surprise-me pill on the right. */
+.section-title--songs { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 
 .song-list { list-style: none; margin: 0; padding: 0; }
 
@@ -398,6 +404,8 @@ html, body {
     transition: color 0.1s ease;
 }
 .stars__star.is-filled { color: #f5b301; }   /* filled = gold, brand-neutral and readable in both themes */
+.stars--hot  .stars__star.is-filled { color: var(--kh-star-hot); }    /* "how it went" — red */
+.stars--cool .stars__star.is-filled { color: var(--kh-star-cool); }   /* "enjoyment" — blue */
 .stars__star:disabled { cursor: default; }
 .stars--readonly .stars__star { cursor: default; }
 
@@ -416,6 +424,25 @@ html, body {
     letter-spacing: 0.05em;
     color: var(--kh-text-muted);
 }
+
+/* ---- Two-rating display (how it went / enjoyment) ----------------------- */
+/* Card ratings sit on their own line below the genre/year meta line. */
+.song-card__ratings-row { display: flex; align-items: center; justify-content: flex-end; margin-top: 0.4rem; }
+.song-card__ratings { display: inline-flex; align-items: center; gap: 0.5rem; }
+.song-card__ratings .rating-grp { display: inline-flex; align-items: center; gap: 0.25rem; }
+.song-card__ratings .rating-sep { width: 1px; align-self: stretch; background: var(--kh-border); margin: 0.15rem 0; }
+.rating-num { font-size: 0.78rem; font-weight: 700; color: var(--kh-text); }
+.rating-num--muted { color: var(--kh-text-muted); font-weight: 500; }
+
+/* Detail-sheet rating rows reuse .sheet__val; the history link sits after the average. */
+.sheet__val .rating-num { margin-left: 0.1rem; }
+
+/* Per-sing rating prompt ("How did it go?") — centered, sits above the detail sheet. */
+.rating-prompt { text-align: center; }
+.rating-prompt .stars { justify-content: center; margin: 0.4rem 0 0.2rem; font-size: 2rem; }
+.rating-prompt__hint { font-size: 0.8rem; color: var(--kh-text-muted); min-height: 1.1rem; margin-bottom: 0.6rem; }
+.rating-prompt__note { display: block; width: 100%; max-width: 22rem; margin: 0 auto; }
+.rating-prompt__skip { display: block; margin: 0.7rem auto 0; }
 
 .empty-state {
     text-align: center;
@@ -593,11 +620,12 @@ body.kh-sheet-open { overflow: hidden; }
 .sheet--history { z-index: 43; }
 .sheet-backdrop--history { z-index: 42; }
 .history { margin-top: 1rem; max-height: 55vh; overflow-y: auto; }
-.history__table { width: 100%; border-collapse: collapse; }
-.history__row { border-bottom: 1px solid var(--kh-border); }
-.history__row:first-child { border-top: 1px solid var(--kh-border); }
-.history__date { padding: 0.7rem 0.25rem; font-size: 0.9rem; }
-.history__action { width: 6.5rem; text-align: right; padding: 0.4rem 0.25rem; white-space: nowrap; }
+.history__item { padding: 0.65rem 0.25rem; border-bottom: 1px solid var(--kh-border); }
+.history__item:first-child { border-top: 1px solid var(--kh-border); }
+.history__top { display: flex; align-items: center; gap: 0.5rem; }
+.history__date { font-size: 0.9rem; flex: 1 1 auto; min-width: 0; }
+.history__top .stars { font-size: 1rem; }
+.history__note { margin-top: 0.5rem; }
 /* Reads as a delete control at rest — danger-tinted glyph, field and outline — so it's
    clearly distinct from the neutral gray sheet-close (✕) button above it. */
 .history__remove {
@@ -885,7 +913,7 @@ body.kh-sheet-open { overflow: hidden; }
     letter-spacing: 0.02em;
     color: var(--kh-text-muted);
 }
-.sort-bar__group { display: flex; align-items: center; gap: 0.15rem; }
+.sort-bar__group { display: flex; align-items: center; flex-wrap: wrap; gap: 0.15rem; row-gap: 0.2rem; }
 .sort-bar__btn {
     background: none;
     border: none;

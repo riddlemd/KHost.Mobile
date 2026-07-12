@@ -101,6 +101,18 @@
                     <option value="5">★★★★★</option>
                 </select>
             </div>
+            <div class="field filters__field">
+                <label class="field__label" for="f-enjoy">Enjoyment</label>
+                <select id="f-enjoy" class="input input--sm" @bind="_filterEnjoyment">
+                    <option value="-1">Any</option>
+                    <option value="0">Not rated</option>
+                    <option value="1">★</option>
+                    <option value="2">★★</option>
+                    <option value="3">★★★</option>
+                    <option value="4">★★★★</option>
+                    <option value="5">★★★★★</option>
+                </select>
+            </div>
             @if (ShowYearFilter)
             {
                 <div class="field filters__field filters__field--wide">
@@ -135,8 +147,13 @@
     _listRendered = visible.Count > 0;
 }
 
-<div class="section-title">
-    My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))
+<div class="section-title section-title--songs">
+    <span>My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))</span>
+    @if (visible.Count >= 2)
+    {
+        <button type="button" class="sort-bar__surprise" aria-label="Pick a random song"
+                @onclick="() => SurpriseMe(visible)">🎲 Surprise me</button>
+    }
 </div>
 
 @if (_items.Count == 0)
@@ -164,13 +181,10 @@ else
             <span class="sort-bar__sep">/</span>
             <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Artist)">Artist <span class="sort-bar__arrow">@Arrow(SortColumn.Artist)</span></button>
             <span class="sort-bar__sep">/</span>
-            <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Confidence)">How it went <span class="sort-bar__arrow">@Arrow(SortColumn.Confidence)</span></button>
+            <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.HowItWent)">How it went <span class="sort-bar__arrow">@Arrow(SortColumn.HowItWent)</span></button>
+            <span class="sort-bar__sep">/</span>
+            <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Enjoyment)">Enjoyment <span class="sort-bar__arrow">@Arrow(SortColumn.Enjoyment)</span></button>
         </div>
-        @if (visible.Count >= 2)
-        {
-            <button type="button" class="sort-bar__surprise" aria-label="Pick a random song"
-                    @onclick="() => SurpriseMe(visible)">🎲 Surprise me</button>
-        }
     </div>
     <div class="song-cards" @ref="_swipeRoot">
         @foreach (var item in visible)
@@ -196,7 +210,32 @@ else
                             <span class="song-card__year">@item.Year</span>
                         }
                     </span>
-                    <StarRating Value="DisplayConfidence(item)" Sung="@item.LastSungAt.HasValue" ReadOnly="true" />
+                </div>
+                <div class="song-card__ratings-row">
+                    <span class="song-card__ratings">
+                        <span class="rating-grp">
+                            @if (item.AverageHowItWent is { } avg)
+                            {
+                                <StarRating Value="RoundedAvg(item)" Tone="hot" Sung="true" ReadOnly="true" />
+                                <span class="rating-num">@avg.ToString("0.0")</span>
+                            }
+                            else
+                            {
+                                <span class="rating-num rating-num--muted">—</span>
+                            }
+                        </span>
+                        <span class="rating-sep"></span>
+                        <span class="rating-grp">
+                            @if (item.Enjoyment >= 1)
+                            {
+                                <StarRating Value="item.Enjoyment" Tone="cool" Sung="true" ReadOnly="true" />
+                            }
+                            else
+                            {
+                                <span class="rating-num rating-num--muted">—</span>
+                            }
+                        </span>
+                    </span>
                 </div>
             </div>
         }
@@ -252,9 +291,27 @@ else
                     </span>
                 </div>
                 <div class="sheet__row">
-                    <span class="sheet__key">Rating</span>
+                    <span class="sheet__key">How it went</span>
                     <span class="sheet__val">
-                        <StarRating Value="DisplayConfidence(_detailItem)" ValueChanged="v => UpdateRatingAsync(_detailItem, v)" Sung="@_detailItem.LastSungAt.HasValue" />
+                        @if (_detailItem.Performances.Count == 0)
+                        {
+                            <span class="sheet__muted">unsung</span>
+                        }
+                        else if (_detailItem.AverageHowItWent is { } avg)
+                        {
+                            <StarRating Value="RoundedAvg(_detailItem)" Tone="hot" Sung="true" ReadOnly="true" />
+                            <span class="rating-num">@avg.ToString("0.0")</span>
+                        }
+                        else
+                        {
+                            <span class="sheet__muted">sung, not rated</span>
+                        }
+                    </span>
+                </div>
+                <div class="sheet__row">
+                    <span class="sheet__key">Enjoyment</span>
+                    <span class="sheet__val">
+                        <StarRating Value="_detailItem.Enjoyment" Tone="cool" Sung="true" ValueChanged="v => UpdateEnjoymentAsync(_detailItem, v)" />
                     </span>
                 </div>
                 <div class="sheet__row">
@@ -268,7 +325,7 @@ else
                         {
                             <button class="btn-link sheet__history-link" @onclick="OpenHistory">
                                 @_detailItem.LastSungAt.Value.ToString("MMM d, yyyy · h:mm tt")
-                                <span class="sheet__history-count">(@_detailItem.SungDates.Count)</span>
+                                <span class="sheet__history-count">(@_detailItem.Performances.Count)</span>
                             </button>
                         }
                         else
@@ -286,8 +343,8 @@ else
             {
                 <div class="suggest-match">@_autoFilledNote</div>
             }
-            <button class="btn btn-secondary sheet__sang-btn" @onclick="MarkSungTodayAsync">
-                @(_detailItem.LastSungAt.HasValue ? "Sang today" : "Mark sung")
+            <button class="btn btn-secondary sheet__sang-btn" @onclick="OpenRatingPrompt">
+                @(_detailItem.Performances.Count > 0 ? "Sang it again" : "Mark sung")
             </button>
             @if (Settings.YouTubeSearchEnabled)
             {
@@ -347,40 +404,69 @@ else
     </div>
 }
 
+@if (_ratingPromptItem is not null)
+{
+    <div class="sheet-backdrop sheet-backdrop--history" @onclick="CloseRatingPrompt"></div>
+    <div class="sheet sheet--history rating-prompt" role="dialog" aria-modal="true" @ref="_ratingPromptSheet">
+        <button type="button" class="sheet__close" @onclick="CloseRatingPrompt" aria-label="Close">✕</button>
+        <div class="sheet__title">@(Settings.RatePerformances ? "How did it go?" : "Have any notes?")</div>
+        <div class="sheet__subtitle">@_ratingPromptItem.Title · just now</div>
+        @if (Settings.RatePerformances)
+        {
+            <StarRating Value="_ratingPromptValue" Tone="hot" Sung="true" ValueChanged="v => _ratingPromptValue = v" />
+            <div class="rating-prompt__hint">@RatingPromptHint</div>
+        }
+        <input class="input input--sm rating-prompt__note" placeholder="Add a note (optional)"
+               @bind="_ratingPromptNote" @bind:event="oninput" />
+        <div class="sheet__actions">
+            <button class="btn btn-primary" @onclick="SaveRatingPromptAsync" disabled="@(Settings.RatePerformances && _ratingPromptValue < 1)">Save</button>
+        </div>
+        @if (Settings.RatePerformances)
+        {
+            <button type="button" class="btn-link rating-prompt__skip" @onclick="SkipRatingPromptAsync">Skip — just log that I sang it</button>
+        }
+    </div>
+}
+
 @if (_historyItem is not null)
 {
     <div class="sheet-backdrop sheet-backdrop--history" @onclick="CloseHistory"></div>
-    <div class="sheet sheet--history" role="dialog" aria-modal="true">
+    <div class="sheet sheet--history" role="dialog" aria-modal="true" @ref="_historySheet">
         <button type="button" class="sheet__close" @onclick="CloseHistory" aria-label="Close">✕</button>
         <div class="sheet__title">Sung history</div>
-        <div class="sheet__subtitle">@_historyItem.Title</div>
+        <div class="sheet__subtitle">
+            @_historyItem.Title
+            @if (_historyItem.AverageHowItWent is { } avg)
+            {
+                <text> · avg @avg.ToString("0.0") over @_historyItem.Performances.Count</text>
+            }
+        </div>
 
         <div class="history">
-            <table class="history__table">
-                <tbody>
-                    @foreach (var (date, index) in _historyItem.SungDates
-                        .Select((d, i) => (d, i))
-                        .OrderByDescending(x => x.d))
-                    {
-                        <tr class="history__row">
-                            <td class="history__date">@date.ToString("MMM d, yyyy · h:mm tt")</td>
-                            <td class="history__action">
-                                <button class="history__remove" @onclick="() => ArmRemoveSungDate(index)" aria-label="Remove this date">✕</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            @foreach (var (perf, index) in _historyItem.Performances
+                .Select((p, i) => (p, i))
+                .OrderByDescending(x => x.p.Date))
+            {
+                <div class="history__item">
+                    <div class="history__top">
+                        <span class="history__date">@perf.Date.ToString("MMM d, yyyy · h:mm tt")</span>
+                        <StarRating Value="perf.HowItWent" Tone="hot" Sung="true" ValueChanged="v => UpdatePerformanceRatingAsync(index, v)" />
+                        <button class="history__remove" @onclick="() => ArmRemoveSungDate(index)" aria-label="Remove this performance">✕</button>
+                    </div>
+                    <input class="input input--sm history__note" placeholder="Add a note…"
+                           value="@perf.Note" @onchange="e => UpdatePerformanceNoteAsync(index, e.Value?.ToString())" />
+                </div>
+            }
         </div>
     </div>
 }
 
-@if (_historyItem is not null && _historyConfirmIndex is { } confirmIndex && confirmIndex < _historyItem.SungDates.Count)
+@if (_historyItem is not null && _historyConfirmIndex is { } confirmIndex && confirmIndex < _historyItem.Performances.Count)
 {
     <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelRemoveSungDate"></div>
     <div class="confirm-pop" role="alertdialog" aria-modal="true">
-        <div class="confirm-pop__title">Remove this date?</div>
-        <div class="confirm-pop__date">@_historyItem.SungDates[confirmIndex].ToString("MMM d, yyyy · h:mm tt")</div>
+        <div class="confirm-pop__title">Remove this performance?</div>
+        <div class="confirm-pop__date">@_historyItem.Performances[confirmIndex].Date.ToString("MMM d, yyyy · h:mm tt")</div>
         <div class="confirm-pop__actions">
             <button class="btn btn-secondary" @onclick="CancelRemoveSungDate">Cancel</button>
             <button class="btn confirm-pop__delete" @onclick="() => RemoveSungDateAsync(confirmIndex)">Remove</button>
@@ -400,7 +486,8 @@ else
     private string _filterName = string.Empty;
     private string _filterArtist = string.Empty;
     private string _filterGenre = string.Empty;
-    private int _filterRating = -1;
+    private int _filterRating = -1;      // "how it went" average, rounded (-1 Any, 0 Not rated, 1-5 stars)
+    private int _filterEnjoyment = -1;   // enjoyment rating (-1 Any, 0 Not rated, 1-5 stars)
     private bool _filtersOpen;   // collapsed by default so the filter bar stays compact
 
     // Year range slider. Handles are null until the user drags them, then they follow the selection;
@@ -411,7 +498,7 @@ else
     private int _yearMax;
     private int _yearDistinctCount;
 
-    private enum SortColumn { Added, Title, Artist, Confidence }
+    private enum SortColumn { Added, Title, Artist, HowItWent, Enjoyment }
     private SortColumn _sort = SortColumn.Added;
     private bool _sortDescending = true;   // default: newest added first
 
@@ -424,6 +511,11 @@ else
     // Detail-sheet drag-to-dismiss (pull down to close; the page behind is locked while it's open).
     private ElementReference _detailSheet;
     private bool _sheetBound;
+    private ElementReference _historySheet;
+    private bool _historySheetBound;
+    private ElementReference _ratingPromptSheet;
+    private bool _ratingPromptSheetBound;
+    private bool _pageLocked;   // mirrors body.kh-sheet-open; reconciled from sheet state each render
 
     // Undo-after-swipe-remove: the last removed item + a timer to expire the offer.
     private const int UndoWindowMs = 5000;
@@ -487,7 +579,7 @@ else
         {
             _sort = column;
             // Sensible default direction: dates/rating high-first, text A-Z.
-            _sortDescending = column is SortColumn.Added or SortColumn.Confidence;
+            _sortDescending = column is SortColumn.Added or SortColumn.HowItWent or SortColumn.Enjoyment;
         }
     }
 
@@ -539,12 +631,14 @@ else
         !string.IsNullOrWhiteSpace(_filterArtist) ||
         !string.IsNullOrWhiteSpace(_filterGenre) ||
         _filterRating >= 0 ||
+        _filterEnjoyment >= 0 ||
         YearFilterActive;
 
     private void ClearFilters()
     {
         _filterName = _filterArtist = _filterGenre = string.Empty;
         _filterRating = -1;
+        _filterEnjoyment = -1;
         _filterYearLo = _filterYearHi = null;
     }
 
@@ -559,7 +653,9 @@ else
         if (!string.IsNullOrWhiteSpace(_filterGenre))
             q = q.Where(i => (i.Genre ?? string.Empty).Contains(_filterGenre.Trim(), StringComparison.OrdinalIgnoreCase));
         if (_filterRating >= 0)
-            q = q.Where(i => DisplayConfidence(i) == _filterRating);
+            q = q.Where(i => RoundedAvg(i) == _filterRating);
+        if (_filterEnjoyment >= 0)
+            q = q.Where(i => i.Enjoyment == _filterEnjoyment);
         if (YearFilterActive)
             q = q.Where(i => i.Year.HasValue && i.Year.Value >= YearLo && i.Year.Value <= YearHi);
 
@@ -573,7 +669,8 @@ else
         {
             SortColumn.Title => filtered.OrderBy(i => i.Title, StringComparer.OrdinalIgnoreCase),
             SortColumn.Artist => filtered.OrderBy(i => i.Artist, StringComparer.OrdinalIgnoreCase),
-            SortColumn.Confidence => filtered.OrderBy(DisplayConfidence),
+            SortColumn.HowItWent => filtered.OrderBy(AvgSortKey),
+            SortColumn.Enjoyment => filtered.OrderBy(i => i.Enjoyment),
             _ => filtered.OrderBy(i => i.AddedAt),
         };
         var ordered = _sortDescending ? ascending.Reverse() : ascending;
@@ -615,6 +712,43 @@ else
         else if (_detailItem is null)
         {
             _sheetBound = false;
+        }
+
+        // History sheet: same pull-down-to-dismiss, but it has an inner scrolling list — khSheet's scroller
+        // detection only lets the drag take over at the list's top, and a bigger threshold means it takes a
+        // deliberate, stronger swipe to close (so a normal scroll-flick doesn't dismiss it).
+        if (_historyItem is not null && !_historySheetBound)
+        {
+            _swipeRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSheet.register", _historySheet, _swipeRef,
+                new { closeMethod = "CloseHistoryFromSwipe", closePx = 150 });
+            _historySheetBound = true;
+        }
+        else if (_historyItem is null)
+        {
+            _historySheetBound = false;
+        }
+
+        // Rating prompt: pull down to dismiss, which logs the performance without a rating (same as "Skip").
+        if (_ratingPromptItem is not null && !_ratingPromptSheetBound)
+        {
+            _swipeRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSheet.register", _ratingPromptSheet, _swipeRef,
+                new { closeMethod = "SkipRatingPromptFromSwipe" });
+            _ratingPromptSheetBound = true;
+        }
+        else if (_ratingPromptItem is null)
+        {
+            _ratingPromptSheetBound = false;
+        }
+
+        // Reconcile the page-scroll lock straight from sheet state every render, so it can never get stranded
+        // on a close path that skips cleanup (e.g. a touch swipe-dismiss). Only touch JS when it actually flips.
+        var anySheetOpen = _detailItem is not null || _historyItem is not null || _ratingPromptItem is not null;
+        if (anySheetOpen != _pageLocked)
+        {
+            _pageLocked = anySheetOpen;
+            await JS.InvokeVoidAsync("khSheet.setLock", anySheetOpen);
         }
 
         // Bind the anti-cross clamp whenever the year slider is on screen. It unmounts when the
@@ -719,7 +853,7 @@ else
 
     // A song counts as "sung today" if any of its performance timestamps falls on the local calendar day.
     private static bool SungToday(SongListItem item) =>
-        item.SungDates.Any(d => d.LocalDateTime.Date == DateTime.Today);
+        item.Performances.Any(p => p.Date.LocalDateTime.Date == DateTime.Today);
 
     // A tap on a row (routed from swipe.js) opens that song's detail sheet.
     [JSInvokable]
@@ -826,7 +960,7 @@ else
         _suggestionLoading = false;
         _detailItem = null;
         _editing = false;
-        _ = JS.InvokeVoidAsync("khSheet.teardown");   // unlock the page scroll (any close path lands here)
+        // The page-scroll lock is reconciled from state in OnAfterRenderAsync — no explicit unlock needed here.
     }
 
     // Pull-down-to-dismiss from khSheet: the sheet already animated off-screen, so just close.
@@ -874,13 +1008,59 @@ else
         _editing = false;
     }
 
-    private async Task MarkSungTodayAsync()
+    // ---- "Sang it" rating prompt -------------------------------------------------------------
+    // Marking a song sung records a new performance; the singer rates how it went (or skips → unrated).
+
+    private SongListItem? _ratingPromptItem;
+    private int _ratingPromptValue;
+    private string _ratingPromptNote = string.Empty;
+
+    private string RatingPromptHint => _ratingPromptValue switch
     {
-        if (_detailItem is null)
+        1 => "Not confident",
+        2 => "Shaky",
+        3 => "Okay",
+        4 => "Confident",
+        5 => "Nailed it",
+        _ => "Tap a star to rate — or skip below",
+    };
+
+    private void OpenRatingPrompt()
+    {
+        _ratingPromptItem = _detailItem;
+        _ratingPromptValue = 0;
+        _ratingPromptNote = string.Empty;
+    }
+
+    private void CloseRatingPrompt() => _ratingPromptItem = null;
+
+    private Task SaveRatingPromptAsync() => LogPerformanceAsync(_ratingPromptValue);
+
+    private Task SkipRatingPromptAsync() => LogPerformanceAsync(0);
+
+    // Pull-down-to-dismiss from khSheet: log the sing without a rating (the sheet already animated off-screen).
+    [JSInvokable]
+    public async Task SkipRatingPromptFromSwipe()
+    {
+        await LogPerformanceAsync(0);
+        StateHasChanged();
+    }
+
+    // Append a performance (its how-it-went rating — or 0 when skipped — plus an optional note) and mark the song sung.
+    private async Task LogPerformanceAsync(int howItWent)
+    {
+        if (_ratingPromptItem is null)
             return;
-        _detailItem.SungDates.Add(DateTimeOffset.Now);
-        _detailItem.Status = SongListItemStatus.Sang;
-        await Store.UpdateAsync(_detailItem);
+
+        _ratingPromptItem.Performances.Add(new Performance
+        {
+            Date = DateTimeOffset.Now,
+            HowItWent = Math.Clamp(howItWent, 0, 5),
+            Note = string.IsNullOrWhiteSpace(_ratingPromptNote) ? null : _ratingPromptNote.Trim(),
+        });
+        _ratingPromptItem.Status = SongListItemStatus.Sang;
+        await Store.UpdateAsync(_ratingPromptItem);
+        _ratingPromptItem = null;
     }
 
     // ---- Sung history sheet ------------------------------------------------------------------
@@ -900,28 +1080,56 @@ else
         _historyConfirmIndex = null;
     }
 
+    // Pull-down-to-dismiss from khSheet (history sheet already animated off-screen). No teardown here — the
+    // detail sheet is still open behind it, so the page-scroll lock must stay until that closes.
+    [JSInvokable]
+    public void CloseHistoryFromSwipe()
+    {
+        CloseHistory();
+        StateHasChanged();
+    }
+
     private void ArmRemoveSungDate(int index) => _historyConfirmIndex = index;
 
     private void CancelRemoveSungDate() => _historyConfirmIndex = null;
 
     private async Task RemoveSungDateAsync(int index)
     {
-        if (_historyItem is null || index < 0 || index >= _historyItem.SungDates.Count)
+        if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
             return;
 
-        _historyItem.SungDates.RemoveAt(index);
+        _historyItem.Performances.RemoveAt(index);
         _historyConfirmIndex = null;
 
-        if (_historyItem.SungDates.Count == 0)
+        if (_historyItem.Performances.Count == 0)
         {
-            // Last date gone — the song reverts to unsung: back on the wishlist, rating no longer applies.
+            // Last performance gone — the song reverts to unsung: back on the wishlist.
             _historyItem.Status = SongListItemStatus.WantToSing;
-            _historyItem.Confidence = 0;
             await Store.UpdateAsync(_historyItem);
             CloseHistory();
             return;
         }
 
+        await Store.UpdateAsync(_historyItem);
+    }
+
+    // Edit one performance's "how it went" rating from the history sheet; the song's average recomputes from it.
+    private async Task UpdatePerformanceRatingAsync(int index, int rating)
+    {
+        if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
+            return;
+
+        _historyItem.Performances[index].HowItWent = Math.Clamp(rating, 0, 5);
+        await Store.UpdateAsync(_historyItem);
+    }
+
+    // Edit one performance's note from the history sheet (saved on blur/change).
+    private async Task UpdatePerformanceNoteAsync(int index, string? note)
+    {
+        if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
+            return;
+
+        _historyItem.Performances[index].Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
         await Store.UpdateAsync(_historyItem);
     }
 
@@ -949,7 +1157,7 @@ else
         }
 
         // New songs start on the wishlist (unsung). Sung-state + rating are set later from the detail sheet.
-        var added = await Store.AddAsync(_title, _artist, _notes, _genre, 0, _year);
+        var added = await Store.AddAsync(_title, _artist, _notes, _genre, _year);
         _title = _artist = _notes = _genre = string.Empty;    // Store.Changed triggers the list refresh.
         _year = null;
         _confirmedDuplicate = false;
@@ -982,21 +1190,17 @@ else
         await Store.UpdateAsync(item);
     }
 
-    // Rating is now independent of sung-state (sung ⟺ SungDates is non-empty). This is just the star value.
-    private static int DisplayConfidence(SongListItem item) => item.Confidence;
+    // Whole-star value for the red "how it went" display: the rounded average of rated performances (0 when none).
+    private static int RoundedAvg(SongListItem item) =>
+        item.AverageHowItWent is { } avg ? (int)Math.Round(avg, MidpointRounding.AwayFromZero) : 0;
 
-    private async Task UpdateRatingAsync(SongListItem item, int rating)
+    // Sort key for "how it went": the true average; unrated/unsung songs sort below every rated one.
+    private static double AvgSortKey(SongListItem item) => item.AverageHowItWent ?? -1;
+
+    // Edit the per-song enjoyment rating (blue). Independent of sung-state.
+    private async Task UpdateEnjoymentAsync(SongListItem item, int rating)
     {
-        item.Confidence = rating;
-        if (rating >= 1)
-        {
-            // Rating a song also marks it sung, if it wasn't already.
-            item.Status = SongListItemStatus.Sang;
-            if (item.SungDates.Count == 0)
-                item.SungDates.Add(DateTimeOffset.Now);
-        }
-        // rating == 0 clears only the rating — sung-state (SungDates/Status) is left untouched.
-
+        item.Enjoyment = Math.Clamp(rating, 0, 5);
         await Store.UpdateAsync(item);
     }
 
@@ -1028,6 +1232,9 @@ else
     public void Dispose()
     {
         Store.Changed -= OnStoreChanged;
+        // Safety net: never leave the page-scroll lock on if this page is torn down with a sheet open.
+        if (_pageLocked)
+            _ = JS.InvokeVoidAsync("khSheet.setLock", false);
         _swipeRef?.Dispose();
         _undoCts?.Cancel();
         _undoCts?.Dispose();
