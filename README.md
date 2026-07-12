@@ -29,6 +29,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 - **Favorites** — star the songs you love; they float to the top of the list.
 - **Import & export** — pull songs from a public **Spotify** or **YouTube Music** playlist link, or a KHost Cue `.json` file, and export your whole list back out.
 - **Auto-fill** — looks up a song's release year and genre automatically (via the iTunes Search API) so you don't have to type them.
+- **Update alerts** — tells you when a newer version is available (from the app's GitHub Releases) with a one-tap link to grab it.
 - **Made to feel at home** — mobile-first layout, light & dark themes, and a tidy Settings screen where every extra behavior can be toggled off.
 
 ## 🛠️ Tech stack
