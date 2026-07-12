@@ -1,9 +1,9 @@
-﻿namespace KHost.Mobile;
+namespace KHost.Mobile;
 
 public partial class MainPage : ContentPage
 {
-	public MainPage()
-	{
-		InitializeComponent();
-	}
+    public MainPage()
+    {
+        InitializeComponent();
+    }
 }

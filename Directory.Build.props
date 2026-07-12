@@ -4,6 +4,8 @@
        Warnings are errors so the build stays clean; see AGENTS.md for the conventions. -->
   <PropertyGroup>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Run the .editorconfig code-style (IDExxxx) analyzers during build, so style is enforced, not just IDE-suggested. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
 </Project>

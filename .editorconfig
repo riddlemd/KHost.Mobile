@@ -21,6 +21,9 @@ indent_size = 4
 [*.cs]
 indent_size = 4
 
+# Enforce whitespace/formatting in build (with EnforceCodeStyleInBuild)
+dotnet_diagnostic.IDE0055.severity = warning
+
 # Namespaces & usings
 csharp_style_namespace_declarations = file_scoped:warning
 dotnet_sort_system_directives_first = true
@@ -58,6 +61,25 @@ csharp_new_line_before_open_brace = all
 csharp_prefer_braces = when_multiline:silent
 
 # ---- Naming ----
+# Order matters: the first rule whose symbol spec matches a symbol wins, so the
+# specific const / static-readonly rules must precede the catch-all field rule.
+
+# const fields -> PascalCase (e.g. the "settings.*" keys)
+dotnet_naming_symbols.constant_fields.applicable_kinds = field
+dotnet_naming_symbols.constant_fields.required_modifiers = const
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+dotnet_naming_rule.constants_are_pascal_case.symbols = constant_fields
+dotnet_naming_rule.constants_are_pascal_case.style = pascal_case
+dotnet_naming_rule.constants_are_pascal_case.severity = warning
+
+# static readonly fields -> PascalCase (e.g. Genres.Aliases, ITunesResponseParser.Qualifiers)
+dotnet_naming_symbols.static_readonly_fields.applicable_kinds = field
+dotnet_naming_symbols.static_readonly_fields.required_modifiers = static,readonly
+dotnet_naming_rule.static_readonly_are_pascal_case.symbols = static_readonly_fields
+dotnet_naming_rule.static_readonly_are_pascal_case.style = pascal_case
+dotnet_naming_rule.static_readonly_are_pascal_case.severity = warning
+
+# other private (instance) fields -> _camelCase
 dotnet_naming_symbols.private_fields.applicable_kinds = field
 dotnet_naming_symbols.private_fields.applicable_accessibilities = private
 dotnet_naming_style.underscore_camel.capitalization = camel_case
