@@ -1,8 +1,11 @@
 @page "/"
 @using KHost.Mobile.Client.Enrichment
+@using KHost.Mobile.Client.Lyrics
 @inject ISongListStore Store
 @inject ILinkLauncher Links
 @inject ITrackMetadataLookup Metadata
+@inject ILyricsClient Lyrics
+@inject ILyricsCache LyricsCache
 @inject IAppSettings Settings
 @inject IJSRuntime JS
 @implements IDisposable
@@ -357,6 +360,10 @@ else
                     Find on Spotify
                 </button>
             }
+            @if (Settings.LyricsEnabled)
+            {
+                <button class="btn sheet__lyrics" @onclick="OpenLyricsAsync">📖 Lyrics</button>
+            }
             <div class="sheet__actions">
                 <button class="btn btn-primary" @onclick="StartEdit">Edit</button>
             </div>
@@ -424,6 +431,37 @@ else
         @if (Settings.RatePerformances)
         {
             <button type="button" class="btn-link rating-prompt__skip" @onclick="SkipRatingPromptAsync">Skip — just log that I sang it</button>
+        }
+    </div>
+}
+
+@if (_lyricsItem is not null)
+{
+    <div class="sheet-backdrop sheet-backdrop--history" @onclick="CloseLyrics"></div>
+    <div class="sheet sheet--history" role="dialog" aria-modal="true" @ref="_lyricsSheet">
+        <button type="button" class="sheet__close" @onclick="CloseLyrics" aria-label="Close">✕</button>
+        <div class="sheet__title">Lyrics</div>
+        <div class="sheet__subtitle">@_lyricsItem.Title@(string.IsNullOrWhiteSpace(_lyricsItem.Artist) ? "" : $" · {_lyricsItem.Artist}")</div>
+        @if (_lyricsLoading)
+        {
+            <div class="lyrics__status">Looking up lyrics…</div>
+        }
+        else if (_lyricsError is not null)
+        {
+            <div class="lyrics__status">@_lyricsError</div>
+        }
+        else if (_lyricsInstrumental)
+        {
+            <div class="lyrics__status">This track is instrumental — no lyrics.</div>
+        }
+        else if (string.IsNullOrWhiteSpace(_lyricsText))
+        {
+            <div class="lyrics__status">No lyrics found for this song.</div>
+        }
+        else
+        {
+            <div class="lyrics">@_lyricsText</div>
+            <div class="lyrics__attribution">Lyrics via LRCLIB</div>
         }
     </div>
 }
@@ -515,7 +553,17 @@ else
     private bool _historySheetBound;
     private ElementReference _ratingPromptSheet;
     private bool _ratingPromptSheetBound;
+    private ElementReference _lyricsSheet;
+    private bool _lyricsSheetBound;
     private bool _pageLocked;   // mirrors body.kh-sheet-open; reconciled from sheet state each render
+
+    // Lyrics lookup (LRCLIB) shown in its own sheet; fetched fresh each open.
+    private SongListItem? _lyricsItem;
+    private string? _lyricsText;
+    private string? _lyricsError;
+    private bool _lyricsLoading;
+    private bool _lyricsInstrumental;
+    private CancellationTokenSource? _lyricsCts;
 
     // Undo-after-swipe-remove: the last removed item + a timer to expire the offer.
     private const int UndoWindowMs = 5000;
@@ -742,9 +790,22 @@ else
             _ratingPromptSheetBound = false;
         }
 
+        // Lyrics sheet: pull down to dismiss; it scrolls, so the same scroll-aware, stronger swipe as history.
+        if (_lyricsItem is not null && !_lyricsSheetBound)
+        {
+            _swipeRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSheet.register", _lyricsSheet, _swipeRef,
+                new { closeMethod = "CloseLyricsFromSwipe", closePx = 150 });
+            _lyricsSheetBound = true;
+        }
+        else if (_lyricsItem is null)
+        {
+            _lyricsSheetBound = false;
+        }
+
         // Reconcile the page-scroll lock straight from sheet state every render, so it can never get stranded
         // on a close path that skips cleanup (e.g. a touch swipe-dismiss). Only touch JS when it actually flips.
-        var anySheetOpen = _detailItem is not null || _historyItem is not null || _ratingPromptItem is not null;
+        var anySheetOpen = _detailItem is not null || _historyItem is not null || _ratingPromptItem is not null || _lyricsItem is not null;
         if (anySheetOpen != _pageLocked)
         {
             _pageLocked = anySheetOpen;
@@ -1145,6 +1206,84 @@ else
             ? Task.CompletedTask
             : Links.OpenAsync(SpotifySearch.UrlFor(_detailItem.Title, _detailItem.Artist));
 
+    // ---- Lyrics sheet (LRCLIB) ---------------------------------------------------------------
+    // Opens the lyrics sheet for the current song and fetches its plain lyrics fresh. State is cleared to the
+    // loading view first so a re-open never flashes the previous song's lyrics; the fetch is cancellable so a
+    // quick close (or reopening on another song) abandons an in-flight lookup without touching stale state.
+    private async Task OpenLyricsAsync()
+    {
+        if (_detailItem is null)
+            return;
+
+        _lyricsItem = _detailItem;
+        _lyricsText = _lyricsError = null;
+        _lyricsInstrumental = false;
+        _lyricsLoading = true;
+
+        _lyricsCts?.Cancel();
+        _lyricsCts?.Dispose();
+        _lyricsCts = new CancellationTokenSource();
+        var token = _lyricsCts.Token;
+
+        var title = _lyricsItem.Title;
+        var artist = _lyricsItem.Artist;
+
+        try
+        {
+            LyricsResult? result;
+            var useCache = Settings.LyricsCacheEnabled;
+
+            // Read-through cache: a hit (including a cached "no match") skips the network; a miss fetches and
+            // writes back. When caching is off, always fetch fresh and store nothing.
+            if (useCache && await LyricsCache.GetAsync(title, artist) is { } hit)
+            {
+                result = hit.Result;
+            }
+            else
+            {
+                result = await Lyrics.FetchAsync(title, artist, token);
+                if (useCache && !token.IsCancellationRequested)
+                    await LyricsCache.SetAsync(title, artist, result);
+            }
+
+            if (token.IsCancellationRequested)
+                return;
+
+            if (result is null)
+                _lyricsText = null;             // no match → "No lyrics found" view
+            else if (result.Instrumental)
+                _lyricsInstrumental = true;     // matched, but the track has no lyrics
+            else
+                _lyricsText = result.PlainLyrics;
+        }
+        catch (OperationCanceledException) { return; }   // superseded / closed — leave state to the newer open
+        catch (LyricsLookupException ex) { _lyricsError = ex.Message; }
+        catch { _lyricsError = "Couldn't load lyrics. Try again."; }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _lyricsLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void CloseLyrics()
+    {
+        _lyricsCts?.Cancel();
+        _lyricsItem = null;
+        // Page-scroll lock is reconciled from state in OnAfterRenderAsync; detail sheet stays open behind this.
+    }
+
+    // Pull-down-to-dismiss from khSheet (the lyrics sheet already animated off-screen).
+    [JSInvokable]
+    public void CloseLyricsFromSwipe()
+    {
+        CloseLyrics();
+        StateHasChanged();
+    }
+
     private async Task AddAsync()
     {
         if (!CanAdd)
@@ -1240,6 +1379,8 @@ else
         _undoCts?.Dispose();
         _suggestCts?.Cancel();
         _suggestCts?.Dispose();
+        _lyricsCts?.Cancel();
+        _lyricsCts?.Dispose();
         _bgFillCts.Cancel();
         _bgFillCts.Dispose();
     }

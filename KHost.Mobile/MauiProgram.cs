@@ -1,8 +1,10 @@
 ﻿using KHost.Mobile.Client.Enrichment;
+using KHost.Mobile.Client.Lyrics;
 using KHost.Mobile.Client.Spotify;
 using KHost.Mobile.Client.YouTubeMusic;
 using KHost.Mobile.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Maui.ApplicationModel;
 
 namespace KHost.Mobile;
 
@@ -28,6 +30,9 @@ public static class MauiProgram
 		// User preferences (feature toggles) persisted via MAUI Preferences. Singleton: one view of the flags app-wide.
 		builder.Services.AddSingleton<IAppSettings, MauiAppSettings>();
 
+		// On-device lyrics cache (JSON file). Singleton so its in-memory map + Changed event are shared app-wide.
+		builder.Services.AddSingleton<ILyricsCache, JsonFileLyricsCache>();
+
 		// Opens external links (e.g. a YouTube search) in the OS browser / matching app.
 		builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
 
@@ -45,6 +50,15 @@ public static class MauiProgram
 		// Keyless release-year + genre lookup (iTunes Search API). Re-lookup is avoided per-song via the
 		// SongListItem.MetadataLookedUp flag, so no separate cache layer is needed.
 		builder.Services.AddHttpClient<ITrackMetadataLookup, ITunesTrackMetadataLookup>();
+
+		// Keyless lyrics lookup (LRCLIB). Base address + the descriptive User-Agent LRCLIB's fair-use policy
+		// asks for are set here (the client library stays MAUI-free, so the app version is injected at this seam).
+		builder.Services.AddHttpClient<ILyricsClient, LrcLibLyricsClient>(http =>
+		{
+			http.BaseAddress = new Uri("https://lrclib.net/");
+			http.DefaultRequestHeaders.UserAgent.ParseAdd(
+				$"KHost.Mobile/{AppInfo.Current.VersionString} (+https://github.com/riddlemd/KHost.Mobile)");
+		});
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();

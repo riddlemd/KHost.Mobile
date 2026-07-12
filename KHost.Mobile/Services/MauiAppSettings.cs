@@ -12,6 +12,8 @@ public sealed class MauiAppSettings : IAppSettings
     private const string AutoFillMetadataKey = "settings.autofill_metadata";
     private const string YouTubeSearchKey = "settings.youtube_search";
     private const string SpotifySearchKey = "settings.spotify_search";
+    private const string LyricsKey = "settings.lyrics";
+    private const string LyricsCacheKey = "settings.lyrics_cache";
     private const string ScrollToFavoritedKey = "settings.scroll_to_favorited";
     private const string SurpriseSkipSungTodayKey = "settings.surprise_skip_sung_today";
     private const string RatePerformancesKey = "settings.rate_performances";
@@ -32,6 +34,18 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(SpotifySearchKey, true);
         set => Preferences.Default.Set(SpotifySearchKey, value);
+    }
+
+    public bool LyricsEnabled
+    {
+        get => Preferences.Default.Get(LyricsKey, true);
+        set => Preferences.Default.Set(LyricsKey, value);
+    }
+
+    public bool LyricsCacheEnabled
+    {
+        get => Preferences.Default.Get(LyricsCacheKey, true);
+        set => Preferences.Default.Set(LyricsCacheKey, value);
     }
 
     public bool ScrollToFavorited
