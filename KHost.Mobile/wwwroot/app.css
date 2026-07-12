@@ -590,7 +590,39 @@ body.kh-sheet-open { overflow: hidden; }
     background: #12833a;
     transform: scale(0.99);
 }
+/* Lyrics — mirrors the YouTube/Spotify buttons in the brand violet. */
+.btn.sheet__lyrics {
+    width: 100%;
+    margin-bottom: 0.6rem;
+    background: var(--kh-primary);   /* resting: brand violet + white text */
+    color: #fff;
+    border: none;
+    transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+.btn.sheet__lyrics:hover {
+    background: var(--kh-primary-strong);
+    box-shadow: 0 2px 10px rgba(124, 58, 237, 0.35);
+}
+.btn.sheet__lyrics:active {
+    background: var(--kh-primary-strong);
+    transform: scale(0.99);
+}
 .sheet__notes { resize: vertical; min-height: 3.5rem; font-family: inherit; line-height: 1.4; }
+
+/* ---- Lyrics sheet (LRCLIB) ---------------------------------------------- */
+/* Same stacking as the history sheet — sits above the detail sheet on its own backdrop. */
+.lyrics {
+    margin-top: 1rem;
+    max-height: 60vh;
+    overflow-y: auto;
+    white-space: pre-wrap;         /* LRCLIB returns \n-delimited plain text; keep its line breaks */
+    line-height: 1.5;
+    font-size: 0.95rem;
+    color: var(--kh-text);
+    -webkit-overflow-scrolling: touch;
+}
+.lyrics__status { margin-top: 1rem; color: var(--kh-text-muted); }
+.lyrics__attribution { margin-top: 0.85rem; font-size: 0.75rem; color: var(--kh-text-muted); }
 
 /* "Sang today" — full-width secondary action directly above the YouTube button. Padding/radius
    inherit from the `.btn` base so it matches the YouTube button's height; the compound selector

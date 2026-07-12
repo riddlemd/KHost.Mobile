@@ -2,6 +2,7 @@
 @layout MainLayout
 @inject IAppSettings Prefs
 @inject ISongListStore Store
+@inject ILyricsCache LyricsCache
 @implements IDisposable
 
 <section class="settings">
@@ -49,6 +50,33 @@
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.SpotifySearchEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">“Lyrics” button</span>
+                <span class="setting__desc">
+                    Show a button on each song that looks up its lyrics from LRCLIB and shows them in the app.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.LyricsEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Cache lyrics on this device</span>
+                <span class="setting__desc">
+                    Save looked-up lyrics so re-opening a song shows them instantly, without going back online.
+                    Turn off to always fetch fresh. Clear the saved copies from the Danger zone below.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.LyricsCacheEnabled" />
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
@@ -102,6 +130,13 @@
     <div class="card">
         <div class="section-title">Danger zone</div>
         <p class="setting__desc" style="margin:0 0 0.85rem">
+            Empty the saved lyrics. They'll be looked up again next time you open them — nothing is lost for good.
+        </p>
+        <button type="button" class="btn btn-danger settings__clear" @onclick="ClearLyricsCacheAsync" disabled="@(_lyricsCacheCount == 0)">
+            @(_lyricsCacheCount == 0 ? "Lyrics cache is empty" : $"Clear lyrics cache ({_lyricsCacheCount})")
+        </button>
+
+        <p class="setting__desc" style="margin:1.1rem 0 0.85rem">
             Remove every song from your list. This can't be undone.
         </p>
         <button type="button" class="btn btn-danger settings__clear" @onclick="AskClear" disabled="@(_songCount == 0)">
@@ -124,13 +159,15 @@
 }
 
 @code {
-    // The clear button is gated on / labeled with the live count, so track it and refresh on any store change.
+    // The clear buttons are gated on / labeled with their live counts, so track both and refresh on any change.
     private int _songCount;
+    private int _lyricsCacheCount;
     private bool _confirmClear;
 
     protected override async Task OnInitializedAsync()
     {
         Store.Changed += OnStoreChanged;
+        LyricsCache.Changed += OnStoreChanged;
         await RefreshCountAsync();
     }
 
@@ -146,7 +183,14 @@
     private async Task RefreshCountAsync()
     {
         _songCount = (await Store.GetAllAsync()).Count;
+        _lyricsCacheCount = await LyricsCache.CountAsync();
         StateHasChanged();
+    }
+
+    // Cached lyrics are recoverable (they re-fetch on next open), so this clears straight away — no confirm sheet.
+    private async Task ClearLyricsCacheAsync()
+    {
+        await LyricsCache.ClearAsync();   // LyricsCache.Changed → RefreshCountAsync updates the count + button
     }
 
     private void AskClear()
@@ -163,5 +207,9 @@
         await Store.ClearAsync();   // Store.Changed → RefreshCountAsync updates the count + button
     }
 
-    public void Dispose() => Store.Changed -= OnStoreChanged;
+    public void Dispose()
+    {
+        Store.Changed -= OnStoreChanged;
+        LyricsCache.Changed -= OnStoreChanged;
+    }
 }
