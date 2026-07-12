@@ -12,6 +12,13 @@ public interface IAppSettings
     /// </summary>
     bool AutoFillMetadata { get; set; }
 
+    /// <summary>
+    /// When true, the "Tonight" on-deck set list is available: it's pinned atop My Songs and every song gets a
+    /// quick "add to tonight" control. When false, the Tonight section and its controls are hidden (the saved set
+    /// is left untouched, so turning it back on restores it).
+    /// </summary>
+    bool TonightEnabled { get; set; }
+
     /// <summary>When true, the song detail sheet shows the "Find on YouTube" button.</summary>
     bool YouTubeSearchEnabled { get; set; }
 
@@ -29,6 +36,9 @@ public interface IAppSettings
 
     /// <summary>When true, tapping a song's favorite star scrolls the list to reveal that song's new position.</summary>
     bool ScrollToFavorited { get; set; }
+
+    /// <summary>When true, the "Surprise me" random-picker button is shown on My Songs. When false it's hidden.</summary>
+    bool SurpriseEnabled { get; set; }
 
     /// <summary>
     /// When true, the "Surprise me" random picker skips any song already sung today, so it suggests something

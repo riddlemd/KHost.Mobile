@@ -13,7 +13,7 @@
 
 @* "Tonight" on-deck set list — pinned at the top when it has songs; absent when empty (build it from a song's
    detail sheet or the ＋ Add picker). Collapsible; drag the ⠿ handle to reorder; tap ◯ to check a song off. *@
-@if (_tonight.Count > 0)
+@if (Settings.TonightEnabled && _tonight.Count > 0)
 {
     <div class="card tonight @(_tonightCollapsed ? "collapsed" : "")">
         <div class="tonight__head" @onclick="() => _tonightCollapsed = !_tonightCollapsed">
@@ -128,47 +128,80 @@
                 <input id="f-artist" class="input input--sm" placeholder="Any artist"
                        @bind="_filterArtist" @bind:event="oninput" />
             </div>
-            <div class="field filters__field">
-                <label class="field__label" for="f-genre">Genre</label>
-                <select id="f-genre" class="input input--sm" @bind="_filterGenre">
-                    <option value="">Any genre</option>
-                    @foreach (var g in Genres.All)
-                    {
-                        <option value="@g">@g</option>
-                    }
-                </select>
+            @* Multi-select filters use a native <details>/<summary> + checkboxes — no custom popover, so mobile
+               WebViews render them reliably. Multiple picks within a filter are OR'd; filters still AND together. *@
+            <div class="field filters__field filters__field--wide">
+                <label class="field__label">Genre</label>
+                <details class="msf" name="msf-filter">
+                    <summary class="msf__summary">
+                        <span class="msf__val @(_filterGenres.Count == 0 ? "msf__val--placeholder" : "")">@GenreSummary</span>
+                        @if (_filterGenres.Count > 0)
+                        {
+                            <span class="msf__count">@_filterGenres.Count</span>
+                        }
+                        <span class="msf__chev">▾</span>
+                    </summary>
+                    <div class="msf__panel">
+                        @foreach (var g in UsedGenres)
+                        {
+                            <label class="msf__opt">
+                                <input type="checkbox" checked="@_filterGenres.Contains(g)"
+                                       @onchange="e => SetGenreFilter(g, (bool)(e.Value ?? false))" />
+                                <span>@g</span>
+                            </label>
+                        }
+                        @if (UsedGenres.Count == 0)
+                        {
+                            <div class="msf__empty">No genres yet</div>
+                        }
+                    </div>
+                </details>
             </div>
             <div class="field filters__field">
-                <label class="field__label" for="f-rating">How it went</label>
-                <select id="f-rating" class="input input--sm" @bind="_filterRating">
-                    <option value="-1">Any</option>
-                    <option value="0">Not rated</option>
-                    <option value="1">★</option>
-                    <option value="2">★★</option>
-                    <option value="3">★★★</option>
-                    <option value="4">★★★★</option>
-                    <option value="5">★★★★★</option>
-                </select>
+                <label class="field__label">How it went</label>
+                <details class="msf" name="msf-filter">
+                    <summary class="msf__summary">
+                        <span class="msf__val @(_filterRatings.Count == 0 ? "msf__val--placeholder" : "")">@RatingSummary(_filterRatings)</span>
+                        @if (_filterRatings.Count > 0)
+                        {
+                            <span class="msf__count">@_filterRatings.Count</span>
+                        }
+                        <span class="msf__chev">▾</span>
+                    </summary>
+                    <div class="msf__panel msf__panel--tall">
+                        @foreach (var (val, label) in RatingOptions)
+                        {
+                            <label class="msf__opt">
+                                <input type="checkbox" checked="@_filterRatings.Contains(val)"
+                                       @onchange="e => SetRatingFilter(val, (bool)(e.Value ?? false))" />
+                                <span class="@(val >= 1 ? "msf__stars msf__stars--hot" : "msf__notrated")">@label</span>
+                            </label>
+                        }
+                    </div>
+                </details>
             </div>
             <div class="field filters__field">
-                <label class="field__label" for="f-enjoy">Enjoyment</label>
-                <select id="f-enjoy" class="input input--sm" @bind="_filterEnjoyment">
-                    <option value="-1">Any</option>
-                    <option value="0">Not rated</option>
-                    <option value="1">★</option>
-                    <option value="2">★★</option>
-                    <option value="3">★★★</option>
-                    <option value="4">★★★★</option>
-                    <option value="5">★★★★★</option>
-                </select>
-            </div>
-            <div class="field filters__field">
-                <label class="field__label" for="f-tonight">Tonight</label>
-                <select id="f-tonight" class="input input--sm" @bind="_filterTonight">
-                    <option value="-1">Any</option>
-                    <option value="1">In tonight's set</option>
-                    <option value="0">Not in set</option>
-                </select>
+                <label class="field__label">Enjoyment</label>
+                <details class="msf" name="msf-filter">
+                    <summary class="msf__summary">
+                        <span class="msf__val @(_filterEnjoyments.Count == 0 ? "msf__val--placeholder" : "")">@RatingSummary(_filterEnjoyments)</span>
+                        @if (_filterEnjoyments.Count > 0)
+                        {
+                            <span class="msf__count">@_filterEnjoyments.Count</span>
+                        }
+                        <span class="msf__chev">▾</span>
+                    </summary>
+                    <div class="msf__panel msf__panel--tall">
+                        @foreach (var (val, label) in RatingOptions)
+                        {
+                            <label class="msf__opt">
+                                <input type="checkbox" checked="@_filterEnjoyments.Contains(val)"
+                                       @onchange="e => SetEnjoymentFilter(val, (bool)(e.Value ?? false))" />
+                                <span class="@(val >= 1 ? "msf__stars msf__stars--cool" : "msf__notrated")">@label</span>
+                            </label>
+                        }
+                    </div>
+                </details>
             </div>
             @if (ShowYearFilter)
             {
@@ -206,7 +239,7 @@
 
 <div class="section-title section-title--songs">
     <span>My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))</span>
-    @if (visible.Count >= 2)
+    @if (Settings.SurpriseEnabled && visible.Count >= 2)
     {
         <button type="button" class="sort-bar__surprise" aria-label="Pick a random song"
                 @onclick="() => SurpriseMe(visible)">🎲 Surprise me</button>
@@ -247,22 +280,25 @@ else
         @foreach (var item in visible)
         {
             <div class="song-card" @key="item.Id" data-song-id="@item.Id">
-                <button type="button" class="tonight-add-btn song-card__tonight @(IsInTonight(item) ? "is-on" : "")"
-                        title="@(IsInTonight(item) ? "In tonight's set — tap to remove" : "Add to tonight")"
-                        aria-pressed="@IsInTonight(item)"
-                        @onclick="() => QuickToggleTonightAsync(item)">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M3 6h12M3 10h12M3 14h7" />
-                        @if (IsInTonight(item))
-                        {
-                            <path d="M14 17.2l2.2 2.2L20.5 15" />
-                        }
-                        else
-                        {
-                            <path d="M17 14v6M14 17h6" />
-                        }
-                    </svg>
-                </button>
+                @if (Settings.TonightEnabled)
+                {
+                    <button type="button" class="tonight-add-btn song-card__tonight @(IsInTonight(item) ? "is-on" : "")"
+                            title="@(IsInTonight(item) ? "In tonight's set — tap to remove" : "Add to tonight")"
+                            aria-pressed="@IsInTonight(item)"
+                            @onclick="() => QuickToggleTonightAsync(item)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 6h12M3 10h12M3 14h7" />
+                            @if (IsInTonight(item))
+                            {
+                                <path d="M14 17.2l2.2 2.2L20.5 15" />
+                            }
+                            else
+                            {
+                                <path d="M17 14v6M14 17h6" />
+                            }
+                        </svg>
+                    </button>
+                }
                 <button type="button" class="fav-btn song-card__fav @(item.IsFavorite ? "is-fav" : "")"
                         title="@(item.IsFavorite ? "Remove from favorites" : "Add to favorites")"
                         aria-pressed="@item.IsFavorite"
@@ -419,9 +455,12 @@ else
             <button class="btn btn-secondary sheet__sang-btn" @onclick="() => OpenRatingPrompt(_detailItem)">
                 @(_detailItem.Performances.Count > 0 ? "Sang it again" : "Mark sung")
             </button>
-            <button class="btn sheet__tonight @(IsInTonight(_detailItem) ? "is-on" : "")" @onclick="ToggleDetailTonightAsync">
-                @(IsInTonight(_detailItem) ? "🎤 In tonight ✓" : "🎤 Add to tonight")
-            </button>
+            @if (Settings.TonightEnabled)
+            {
+                <button class="btn sheet__tonight @(IsInTonight(_detailItem) ? "is-on" : "")" @onclick="ToggleDetailTonightAsync">
+                    @(IsInTonight(_detailItem) ? "🎤 In tonight ✓" : "🎤 Add to tonight")
+                </button>
+            }
             @if (Settings.YouTubeSearchEnabled)
             {
                 <button class="btn sheet__youtube" @onclick="OpenYouTubeAsync">▶ Find on YouTube</button>
@@ -619,13 +658,16 @@ else
     private string _genre = string.Empty;
     private int? _year;        // release year; null = unset
 
-    // Filters (empty text / -1 rating = no filter). Rating: -1 Any, 0 Unsung, 1-5 stars.
+    // Filters. Genre / rating / enjoyment are multi-select: an empty set = no filter, otherwise the picks are OR'd.
     private string _filterName = string.Empty;
     private string _filterArtist = string.Empty;
-    private string _filterGenre = string.Empty;
-    private int _filterRating = -1;      // "how it went" average, rounded (-1 Any, 0 Not rated, 1-5 stars)
-    private int _filterEnjoyment = -1;   // enjoyment rating (-1 Any, 0 Not rated, 1-5 stars)
-    private int _filterTonight = -1;     // tonight-set membership (-1 Any, 1 In set, 0 Not in set)
+    private readonly HashSet<string> _filterGenres = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<int> _filterRatings = [];      // "how it went" rounded average(s): 0 Not rated, 1-5 stars
+    private readonly HashSet<int> _filterEnjoyments = [];   // enjoyment rating(s): 0 Not rated, 1-5 stars
+
+    // The six rating choices shared by the "how it went" and "enjoyment" multi-selects.
+    private static readonly (int val, string label)[] RatingOptions =
+        [(0, "Not rated"), (1, "★"), (2, "★★"), (3, "★★★"), (4, "★★★★"), (5, "★★★★★")];
     private bool _filtersOpen;   // collapsed by default so the filter bar stays compact
     private bool _addOpen;   // the add-song form; collapsed by default to declutter, expand to add
 
@@ -638,8 +680,8 @@ else
     private int _yearDistinctCount;
 
     private enum SortColumn { Added, Title, Artist, HowItWent, Enjoyment }
-    private SortColumn _sort = SortColumn.Added;
-    private bool _sortDescending = true;   // default: newest added first
+    private SortColumn _sort = SortColumn.Title;
+    private bool _sortDescending = false;   // default: A→Z by song title
 
     // Swipe-to-remove wiring: the JS module is delegated on the stable <tbody> element.
     private ElementReference _swipeRoot;
@@ -792,20 +834,43 @@ else
     private bool AnyFilterActive =>
         !string.IsNullOrWhiteSpace(_filterName) ||
         !string.IsNullOrWhiteSpace(_filterArtist) ||
-        !string.IsNullOrWhiteSpace(_filterGenre) ||
-        _filterRating >= 0 ||
-        _filterEnjoyment >= 0 ||
-        _filterTonight >= 0 ||
+        _filterGenres.Count > 0 ||
+        _filterRatings.Count > 0 ||
+        _filterEnjoyments.Count > 0 ||
         YearFilterActive;
 
     private void ClearFilters()
     {
-        _filterName = _filterArtist = _filterGenre = string.Empty;
-        _filterRating = -1;
-        _filterEnjoyment = -1;
-        _filterTonight = -1;
+        _filterName = _filterArtist = string.Empty;
+        _filterGenres.Clear();
+        _filterRatings.Clear();
+        _filterEnjoyments.Clear();
         _filterYearLo = _filterYearHi = null;
     }
+
+    // ---- Multi-select filter helpers ----
+    private void SetGenreFilter(string genre, bool on) { if (on) _filterGenres.Add(genre); else _filterGenres.Remove(genre); }
+    private void SetRatingFilter(int value, bool on) { if (on) _filterRatings.Add(value); else _filterRatings.Remove(value); }
+    private void SetEnjoymentFilter(int value, bool on) { if (on) _filterEnjoyments.Add(value); else _filterEnjoyments.Remove(value); }
+
+    // Summary shown on a filter's collapsed control: up to two picks, then "+N".
+    // Only genres that at least one song actually uses — no point offering a filter that matches nothing.
+    private IReadOnlyList<string> UsedGenres => _items
+        .Select(i => i.Genre)
+        .Where(g => !string.IsNullOrWhiteSpace(g))
+        .Select(g => g!)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(g => g, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private string GenreSummary => _filterGenres.Count == 0
+        ? "Any genre"
+        : SummaryList(Genres.All.Where(_filterGenres.Contains).ToList());
+    private string RatingSummary(HashSet<int> set) => set.Count == 0
+        ? "Any"
+        : SummaryList(RatingOptions.Where(o => set.Contains(o.val)).Select(o => o.label).ToList());
+    private static string SummaryList(IReadOnlyList<string> labels) =>
+        labels.Count <= 2 ? string.Join(", ", labels) : $"{labels[0]}, {labels[1]} +{labels.Count - 2}";
 
     private IEnumerable<SongListItem> Filtered()
     {
@@ -815,14 +880,12 @@ else
             q = q.Where(i => i.Title.Contains(_filterName.Trim(), StringComparison.OrdinalIgnoreCase));
         if (!string.IsNullOrWhiteSpace(_filterArtist))
             q = q.Where(i => i.Artist.Contains(_filterArtist.Trim(), StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(_filterGenre))
-            q = q.Where(i => (i.Genre ?? string.Empty).Contains(_filterGenre.Trim(), StringComparison.OrdinalIgnoreCase));
-        if (_filterRating >= 0)
-            q = q.Where(i => RoundedAvg(i) == _filterRating);
-        if (_filterEnjoyment >= 0)
-            q = q.Where(i => i.Enjoyment == _filterEnjoyment);
-        if (_filterTonight >= 0)
-            q = q.Where(i => IsInTonight(i) == (_filterTonight == 1));
+        if (_filterGenres.Count > 0)
+            q = q.Where(i => i.Genre is not null && _filterGenres.Contains(i.Genre));
+        if (_filterRatings.Count > 0)
+            q = q.Where(i => _filterRatings.Contains(RoundedAvg(i)));
+        if (_filterEnjoyments.Count > 0)
+            q = q.Where(i => _filterEnjoyments.Contains(i.Enjoyment));
         if (YearFilterActive)
             q = q.Where(i => i.Year.HasValue && i.Year.Value >= YearLo && i.Year.Value <= YearHi);
 

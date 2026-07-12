@@ -1169,12 +1169,72 @@ body.kh-sheet-open { overflow: hidden; }
 
 .filters__grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;   /* two compact columns: Name/Artist, Genre/How-it-went */
+    /* minmax(0,1fr) — columns stay equal regardless of a field's content (a long multi-select summary must
+       not stretch its column). Plain `1fr` sizes to min-content and made the columns uneven. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 0.6rem 0.75rem;
 }
 .filters__field { margin-bottom: 0; }
-.filters__field--wide { grid-column: 1 / -1; }   /* year slider spans the full filter width */
+.filters__field--wide { grid-column: 1 / -1; }   /* year slider + genre multi-select span the full filter width */
 .filters__clear { margin-top: 0.85rem; }
+
+/* ---- Multi-select filter (native <details>/<summary> + checkboxes) ------- */
+/* Native disclosure so mobile WebViews render it reliably. The panel floats over the content below
+   (absolute) instead of pushing the rest of the page down. */
+.msf { width: 100%; position: relative; }
+.msf__summary {
+    list-style: none;   /* hide the default disclosure triangle (Firefox) */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background-color: var(--kh-surface-2);
+    border: 1px solid var(--kh-border);
+    border-radius: 0.55rem;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.85rem;
+    color: var(--kh-text);
+}
+.msf__summary::-webkit-details-marker { display: none; }   /* hide it (Chromium/WebKit) */
+.msf__summary::marker { content: ""; }
+/* min-width:0 lets the text ellipsis instead of forcing the control (and its grid column) wider.
+   Explicit color — the Android WebView doesn't reliably inherit --kh-text onto these, same as the Tonight rows. */
+.msf__val { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--kh-text); }
+.msf__val--placeholder { color: var(--kh-text-muted); }
+.msf__count {
+    flex: 0 0 auto; background: var(--kh-primary); color: var(--kh-primary-contrast);
+    font-size: 0.64rem; font-weight: 700; border-radius: 999px; padding: 0.04rem 0.42rem;
+}
+.msf__chev { flex: 0 0 auto; color: var(--kh-text-muted); font-size: 0.8rem; transition: transform 0.15s ease; }
+.msf[open] .msf__chev { transform: rotate(180deg); }
+.msf__panel {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    z-index: 40;
+    max-height: 13rem;
+    overflow-y: auto;
+    border: 1px solid var(--kh-border);
+    border-radius: 0.55rem;
+    background-color: var(--kh-surface);
+    box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.28);
+    padding: 0.2rem;
+    -webkit-overflow-scrolling: touch;
+}
+.msf__panel--tall { max-height: none; }   /* rating menus are short (6 rows) — show them all, no scroll */
+.msf__empty { padding: 0.5rem 0.6rem; font-size: 0.82rem; color: var(--kh-text-muted); }
+.msf__opt {
+    display: flex; align-items: center; gap: 0.55rem;
+    padding: 0.4rem 0.5rem; border-radius: 0.4rem; cursor: pointer; font-size: 0.85rem;
+    color: var(--kh-text);   /* explicit so genre option labels aren't dark on Android WebView */
+}
+.msf__opt:hover { background-color: var(--kh-surface-2); }
+.msf__opt input { width: 1.05rem; height: 1.05rem; accent-color: var(--kh-primary); flex: 0 0 auto; margin: 0; }
+.msf__stars { letter-spacing: 0.06em; }
+.msf__stars--hot { color: var(--kh-star-hot); }
+.msf__stars--cool { color: var(--kh-star-cool); }
+.msf__notrated { color: var(--kh-text-muted); }
 
 /* ---- Dual-handle range slider (year filter) ----------------------------- */
 /* From/To number inputs (manual entry) sit above the slider; both drive the same range. */
