@@ -12,4 +12,5 @@ namespace KHost.Mobile.Services;
 /// </summary>
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(List<SongListItem>))]
+[JsonSerializable(typeof(Performance))]
 public partial class SongListJsonContext : JsonSerializerContext;

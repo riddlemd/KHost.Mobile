@@ -9,25 +9,42 @@
 // downward pull for its overscroll bounce and fires pointercancel, so the sheet never closed. Mouse
 // (desktop / Windows head) is handled separately via pointer events.
 window.khSheet = {
-    register(sheet, dotNetRef) {
+    register(sheet, dotNetRef, options) {
         if (!sheet || sheet._khSheetBound) return;
         sheet._khSheetBound = true;
 
-        // Lock the page behind the sheet (see .kh-sheet-open in app.css).
-        document.body.classList.add('kh-sheet-open');
+        const opts = options || {};
+        const closeMethod = opts.closeMethod || 'CloseDetailFromSwipe';
 
-        const DECIDE_PX = 4;   // travel before we commit to drag-vs-scroll
-        const CLOSE_PX = 90;   // pull past this (on release) to dismiss
+        // NB: the page-scroll lock (.kh-sheet-open) is driven from Blazor via setLock() below, not added here,
+        // so it can't get stranded when a sheet closes on a path that skips teardown (e.g. a touch swipe-dismiss).
+
+        const DECIDE_PX = 4;                  // travel before we commit to drag-vs-scroll
+        const CLOSE_PX = opts.closePx || 90;  // pull past this (on release) to dismiss; bigger = a stronger swipe
         const SLIDE_MS = 200;
-        const REST = 'translateX(-50%)';   // the sheet's centred resting transform (from CSS)
+        const REST = 'translateX(-50%)';      // the sheet's centred resting transform (from CSS)
 
         let s = null;
 
         const onControl = (t) => t && t.closest && t.closest('button, input, select, textarea, a');
 
+        // The nearest scrollable element between the touch target and the sheet. A sheet can have its own
+        // inner scroller (e.g. the history list); drag-to-dismiss only engages when THIS one is at its top,
+        // so a scrolled-down list keeps scrolling instead of the pull dragging the sheet closed.
+        const scrollerFor = (target) => {
+            let el = target;
+            while (el && el !== sheet.parentElement) {
+                const oy = getComputedStyle(el).overflowY;
+                if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+                if (el === sheet) break;
+                el = el.parentElement;
+            }
+            return sheet;
+        };
+
         const begin = (clientY, target) => {
             if (onControl(target)) return;
-            s = { y: clientY, top: sheet.scrollTop, dy: 0, dragging: false };
+            s = { y: clientY, top: scrollerFor(target).scrollTop, dy: 0, dragging: false };
             sheet.style.transition = 'none';
         };
 
@@ -55,7 +72,7 @@ window.khSheet = {
             if (cur.dy > CLOSE_PX) {
                 sheet.style.transition = `transform ${SLIDE_MS}ms ease`;
                 sheet.style.transform = `${REST} translateY(100%)`;
-                setTimeout(() => dotNetRef.invokeMethodAsync('CloseDetailFromSwipe'), SLIDE_MS - 20);
+                setTimeout(() => dotNetRef.invokeMethodAsync(closeMethod), SLIDE_MS - 20);
             } else {
                 sheet.style.transition = `transform ${SLIDE_MS}ms ease`;
                 sheet.style.transform = REST;   // snap back to rest
@@ -78,8 +95,10 @@ window.khSheet = {
         sheet.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') end(); });
     },
 
-    // Called from .NET when the sheet closes (by any path) so the page scroll unlocks.
-    teardown() {
-        document.body.classList.remove('kh-sheet-open');
+    // Page-scroll lock behind sheets, driven from Blazor by whether ANY sheet is open. Because it's set from
+    // component state on every render (not toggled per open/close), it can never get stranded on a close path
+    // that skips cleanup — the touch swipe-dismiss bug that stuck the lock on and killed scrolling everywhere.
+    setLock(on) {
+        document.body.classList.toggle('kh-sheet-open', !!on);
     },
 };

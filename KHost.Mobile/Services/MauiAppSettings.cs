@@ -14,6 +14,7 @@ public sealed class MauiAppSettings : IAppSettings
     private const string SpotifySearchKey = "settings.spotify_search";
     private const string ScrollToFavoritedKey = "settings.scroll_to_favorited";
     private const string SurpriseSkipSungTodayKey = "settings.surprise_skip_sung_today";
+    private const string RatePerformancesKey = "settings.rate_performances";
 
     public bool AutoFillMetadata
     {
@@ -43,5 +44,11 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(SurpriseSkipSungTodayKey, true);
         set => Preferences.Default.Set(SurpriseSkipSungTodayKey, value);
+    }
+
+    public bool RatePerformances
+    {
+        get => Preferences.Default.Get(RatePerformancesKey, true);
+        set => Preferences.Default.Set(RatePerformancesKey, value);
     }
 }
