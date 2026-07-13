@@ -1249,11 +1249,14 @@ body.kh-sheet-open { overflow: hidden; }
 
 /* Display-only stars in the card meta row. */
 .song-card .stars__star { font-size: 0.9rem; padding: 0.01rem; }
-.song-card__fav { position: absolute; top: 0.55rem; right: 0.7rem; }
+/* z-index 2 keeps the corner buttons above the in-flow content on art cards, where
+   `.song-card--art > *` flattens every child to z-index 1 and the later-painted title
+   would otherwise cover the buttons' hit area and steal their taps. */
+.song-card__fav { position: absolute; top: 0.55rem; right: 0.7rem; z-index: 2; }
 
 /* Quick "add to tonight" — sits just left of the favorite star. Monochrome queue-plus glyph that tints
    faint grey → violet when the song is on tonight's set (mirrors the star's grey → gold). */
-.song-card__tonight { position: absolute; top: 0.5rem; right: 2.35rem; }
+.song-card__tonight { position: absolute; top: 0.5rem; right: 2.35rem; z-index: 2; }
 .tonight-add-btn {
     background: none;
     border: none;
