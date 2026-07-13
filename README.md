@@ -12,15 +12,15 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/my-songs.png" width="200" alt="My Songs — the Tonight set list above the wishlist of sortable cards" />
+  <img src="docs/screenshots/my-songs.png" width="200" alt="My List — your karaoke wishlist as sortable, swipeable cards, with the Tonight tab in the bottom bar" />
+  <img src="docs/screenshots/tonight.png" width="200" alt="Tonight — the on-deck set list on its own tab: drag to reorder and check each song off as you sing it" />
   <img src="docs/screenshots/song-detail.png" width="200" alt="Song detail — per-performance ratings, enjoyment, sung history, and quick links" />
   <img src="docs/screenshots/lyrics.png" width="200" alt="Lyrics — looked up in-app from LRCLIB" />
-  <img src="docs/screenshots/settings.png" width="200" alt="Settings — toggle every extra behavior" />
 </p>
 
 ## ✨ Features
 
-- **Tonight set list** — build an on-deck set for the venue: add songs, drag to reorder, and check each one off as you sing it, with live *“X of Y done”* progress. It's its own list, kept separate from your wishlist.
+- **Tonight set list** — build an on-deck set for the venue on its own tab: add songs, drag to reorder, and check each one off as you sing it, with live *“X of Y done”* progress. It's kept separate from your wishlist, so a song you sang earlier today stays unchecked until you check it off here.
 - **My Songs** — a personal wishlist of songs to sing, as a swipeable card list with sorting and multi-select filters (text, genre, year, how-it-went / enjoyment rating). One tap on a card adds a song straight to tonight's set.
 - **Ratings & history** — rate *every* performance (a "how it went" score that averages over time) plus a separate **enjoyment** rating, jot per-performance notes, and keep a running sung-history for each song.
 - **Lyrics** — look a song's lyrics up in-app from **[LRCLIB](https://lrclib.net/)** (no account needed) and cache them on-device so they open instantly next time.
