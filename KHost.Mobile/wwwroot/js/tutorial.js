@@ -7,7 +7,6 @@ window.khTutorial = {
     _ctx: null,          // last positioned step, so a resize can re-lay-it-out
     _resizeBound: false,
 
-    // Measure `selector` and position hole/caret/tip (all ElementReferences) around it. Returns true if found.
     position(hole, caret, tip, selector) {
         const target = document.querySelector(selector);
         if (!target || target.offsetParent === null) return false;   // not rendered / hidden
@@ -27,7 +26,6 @@ window.khTutorial = {
         hole.style.width = w + 'px';
         hole.style.height = h + 'px';
 
-        // Place the tip below the hole if it fits, otherwise above. Clamp it to the viewport.
         const tipW = tip.offsetWidth || 300, tipH = tip.offsetHeight || 180;
         const tipLeft = Math.min(Math.max(left + w / 2 - tipW / 2, 12), vw - tipW - 12);
         tip.style.left = tipLeft + 'px';
@@ -37,12 +35,9 @@ window.khTutorial = {
         const caretX = Math.min(Math.max(left + w / 2 - 7, tipLeft + 12), tipLeft + tipW - 26);
         caret.style.left = caretX + 'px';
 
-        // Vertical placement: below the hole if it fits, else above, else clamp into the safe band (between the
-        // app header and the viewport bottom) with no caret — never let the tip run off-screen, which on a small
-        // phone would hide the title/badge behind the status bar (or the Next button off the bottom).
-        // The usable band is between the app header's bottom and the app's bottom nav bar (or, when the nav is
-        // hidden, just above the OS gesture area) — so the tip never lands under the status bar, the nav tabs, or
-        // the gesture bar.
+        // Keep the tip within the usable band — below the app header (clear of the status bar) and above the app's
+        // bottom nav / OS gesture area — so it never renders under chrome or off-screen. Below the hole if it fits,
+        // else above; if neither fits, pin it in the band and drop the caret.
         const header = document.querySelector('.app-header');
         const nav = document.querySelector('.app-nav');
         const safeTop = Math.max(12, header ? header.getBoundingClientRect().bottom + 8 : 12);

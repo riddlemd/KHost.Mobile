@@ -66,7 +66,6 @@
             "Add your first song or import a playlist — and you're ready for the mic. 🎤"),
     ];
 
-    // Tonight-only steps drop out when the feature is off.
     private List<Step> Steps => AllSteps.Where(s => !s.NeedsTonight || Settings.TonightEnabled).ToList();
 
     private bool _active;
@@ -137,7 +136,7 @@
             Nav.NavigateTo(step.Route.Length == 0 ? "/" : step.Route);
 
         _center = step.Anchor is null;
-        StateHasChanged();   // render this step's content + center/anchored layout
+        StateHasChanged();
 
         if (step.Anchor is null)
         {
