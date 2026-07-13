@@ -12,7 +12,7 @@
         </span>
     </div>
     <div class="header-menu">
-        <button type="button" class="header-menu__btn" @onclick="ToggleMenu"
+        <button type="button" class="header-menu__btn" data-tut="menu" @onclick="ToggleMenu"
                 aria-haspopup="true" aria-expanded="@_menuOpen" aria-label="Menu">
             ⋮
         </button>
@@ -53,6 +53,8 @@
 {
     <NavMenu />
 }
+
+<TutorialOverlay />
 
 @code {
     private string _theme = "light";

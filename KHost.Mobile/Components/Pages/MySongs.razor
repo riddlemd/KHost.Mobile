@@ -16,7 +16,7 @@
 @* The wishlist. "Tonight" lives on its own tab now (Components/Pages/Tonight.razor); each card here still carries
    the 🎤 quick-add so you can line a song up for tonight from the list. *@
 <div class="card">
-    <button type="button" class="filters-toggle" @onclick="() => _addOpen = !_addOpen" aria-expanded="@_addOpen">
+    <button type="button" class="filters-toggle" data-tut="add" @onclick="() => _addOpen = !_addOpen" aria-expanded="@_addOpen">
         <span class="filters-toggle__label">Add a song you'd like to sing</span>
         <span class="filters-toggle__chevron @(_addOpen ? "is-open" : "")">▾</span>
     </button>

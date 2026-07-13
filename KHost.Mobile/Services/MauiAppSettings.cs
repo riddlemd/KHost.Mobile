@@ -20,6 +20,7 @@ public sealed class MauiAppSettings : IAppSettings
     private const string SurpriseSkipSungTodayKey = "settings.surprise_skip_sung_today";
     private const string RatePerformancesKey = "settings.rate_performances";
     private const string UpdateCheckKey = "settings.update_check";
+    private const string TutorialCompletedKey = "settings.tutorial_completed";
 
     public bool AutoFillMetadata
     {
@@ -85,5 +86,12 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(UpdateCheckKey, true);
         set => Preferences.Default.Set(UpdateCheckKey, value);
+    }
+
+    // Defaults to false (not true like the flags above): a fresh install has NOT seen the tutorial, so it shows.
+    public bool TutorialCompleted
+    {
+        get => Preferences.Default.Get(TutorialCompletedKey, false);
+        set => Preferences.Default.Set(TutorialCompletedKey, value);
     }
 }

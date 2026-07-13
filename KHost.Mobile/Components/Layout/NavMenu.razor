@@ -5,7 +5,7 @@
    bar is only rendered when Tonight is enabled (see MainLayout), so both tabs are always live here. The Tonight
    tab carries a badge counting songs still to sing tonight. *@
 <nav class="app-nav">
-    <NavLink class="app-nav__tab" href="tonight">
+    <NavLink class="app-nav__tab" href="tonight" data-tut="tonight">
         <span class="app-nav__icon">
             🎤
             @if (_remaining > 0)
