@@ -23,8 +23,6 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
   <img src="docs/screenshots/import-export.png" width="200" alt="Import & Export — pull songs from a Spotify or YouTube Music playlist or a KHost Cue file, and export your list back out" />
 </p>
 
-> **Screenshot / mobile-preview target size:** **786 × 1704 px** — a **393 × 852** (iPhone 15/16) viewport at **2× device-pixel-ratio**. Capture screenshots and size the mobile preview to this so everything lines up with the grid above.
-
 ## ✨ Features
 
 - **Tonight set list** — build an on-deck set for the venue on its own tab: add songs, drag to reorder, and check each one off as you sing it, with live *“X of Y done”* progress. It's kept separate from your wishlist, so a song you sang earlier today stays unchecked until you check it off here.
@@ -78,6 +76,10 @@ Need songs to populate the list while testing? This public **YouTube Music** pla
 ```
 https://music.youtube.com/playlist?list=PLrB1lrYJ3YfvS2ZaTJZ_D8vvIv_fowkNM
 ```
+
+## 🧑‍💻 Development
+
+**Screenshot / mobile-preview target size:** **786 × 1704 px** — a **393 × 852** (iPhone 15/16) viewport at **2× device-pixel-ratio**. Capture screenshots and size the mobile preview to this so everything lines up with the screenshot grid.
 
 ## 📁 Project structure
 
