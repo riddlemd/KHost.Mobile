@@ -490,6 +490,44 @@ html, body {
 .empty-state__icon { font-size: 2.5rem; }
 .empty-state__title { font-weight: 700; color: var(--kh-text); margin-top: 0.5rem; }
 
+/* ---- Loading state (initial song-list load) ---------------------------- */
+/* Bouncing equalizer while the on-device list deserializes; shown in place of
+   the "No songs yet" empty state so a full list never briefly reads as empty. */
+.loading-state {
+    text-align: center;
+    color: var(--kh-text-muted);
+    padding: 3rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+}
+.loading-state__title { font-weight: 600; color: var(--kh-text); font-size: 0.95rem; }
+.eq { display: flex; align-items: center; gap: 0.4rem; height: 3.25rem; }
+.eq i {
+    display: block;
+    width: 0.45rem;
+    height: 100%;
+    border-radius: 0.25rem;
+    background: linear-gradient(var(--kh-primary), var(--kh-primary-strong));
+    transform-origin: center;
+    animation: eq-bounce 1s ease-in-out infinite;
+}
+.eq i:nth-child(1) { animation-delay: -0.90s; }
+.eq i:nth-child(2) { animation-delay: -0.30s; }
+.eq i:nth-child(3) { animation-delay: -0.62s; }
+.eq i:nth-child(4) { animation-delay: -0.08s; }
+.eq i:nth-child(5) { animation-delay: -0.75s; }
+@keyframes eq-bounce {
+    0%, 100% { transform: scaleY(0.26); }
+    50%      { transform: scaleY(1); }
+}
+/* Reduced-motion: hold the bars steady and pulse opacity instead of bouncing. */
+@media (prefers-reduced-motion: reduce) {
+    .eq i { animation: eq-pulse 1.4s ease-in-out infinite; transform: scaleY(0.7); }
+    @keyframes eq-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+}
+
 /* ---- Undo snackbar (after swipe-remove) --------------------------------- */
 /* Fixed pill above the nav bar; intentionally dark in both themes (Material convention). */
 .snackbar {

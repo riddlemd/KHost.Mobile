@@ -234,19 +234,29 @@
 
 @{
     var visible = Sorted().ToList();
-    _listRendered = visible.Count > 0;
+    _listRendered = !_loading && visible.Count > 0;
 }
 
-<div class="section-title section-title--songs">
-    <span>My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))</span>
-    @if (Settings.SurpriseEnabled && visible.Count >= 2)
-    {
-        <button type="button" class="sort-bar__surprise" aria-label="Pick a random song"
-                @onclick="() => SurpriseMe(visible)">🎲 Surprise me</button>
-    }
-</div>
+@if (!_loading)
+{
+    <div class="section-title section-title--songs">
+        <span>My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))</span>
+        @if (Settings.SurpriseEnabled && visible.Count >= 2)
+        {
+            <button type="button" class="sort-bar__surprise" aria-label="Pick a random song"
+                    @onclick="() => SurpriseMe(visible)">🎲 Surprise me</button>
+        }
+    </div>
+}
 
-@if (_items.Count == 0)
+@if (_loading)
+{
+    <div class="loading-state" role="status" aria-live="polite">
+        <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="loading-state__title">Loading your songs…</div>
+    </div>
+}
+else if (_items.Count == 0)
 {
     <div class="empty-state">
         <div class="empty-state__icon brand-mark">kH</div>
@@ -652,6 +662,7 @@ else
 
 @code {
     private IReadOnlyList<SongListItem> _items = [];
+    private bool _loading = true;   // true only during the initial device-storage load; drives the equalizer loader
     private string _title = string.Empty;
     private string _artist = string.Empty;
     private string _notes = string.Empty;
@@ -913,7 +924,16 @@ else
     {
         Store.Changed += OnStoreChanged;
         Tonight.Changed += OnTonightChanged;
+
+        // Initial load: show the equalizer loader (not the "No songs yet" empty state) while the on-device
+        // list deserializes. Hold it for a ~250ms minimum so a fast load doesn't flash it, then reveal the list.
+        var startedAt = Environment.TickCount64;
         await RefreshAsync();
+        var elapsed = Environment.TickCount64 - startedAt;
+        if (elapsed < 250)
+            await Task.Delay((int)(250 - elapsed));
+        _loading = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
