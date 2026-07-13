@@ -13,10 +13,10 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 
 <p align="center">
   <img src="docs/screenshots/tutorial.png" width="200" alt="Guided tour — a first-run walkthrough spotlights each key control one step at a time" />
-  <img src="docs/screenshots/my-songs.png" width="200" alt="My List — your karaoke wishlist as sortable, swipeable cards, with the Tonight tab in the bottom bar" />
+  <img src="docs/screenshots/my-songs.png" width="200" alt="My List — your karaoke wishlist as sortable, swipeable cards with album-art covers, and the Tonight tab in the bottom bar" />
   <img src="docs/screenshots/tonight.png" width="200" alt="Tonight — the on-deck set list on its own tab: drag to reorder and check each song off as you sing it" />
   <br />
-  <img src="docs/screenshots/song-detail.png" width="200" alt="Song detail — per-performance ratings, enjoyment, sung history, and quick links" />
+  <img src="docs/screenshots/song-detail.png" width="200" alt="Song detail — the album cover behind the title, per-performance ratings, enjoyment, sung history, and quick links" />
   <img src="docs/screenshots/lyrics.png" width="200" alt="Lyrics — looked up in-app from LRCLIB" />
   <img src="docs/screenshots/settings.png" width="200" alt="Settings — feature toggles grouped by what they affect, in collapsible sections" />
   <br />
