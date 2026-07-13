@@ -23,6 +23,10 @@ public static class MauiProgram
 
         builder.Services.AddMauiBlazorWebView();
 
+        // The private data folder the JSON stores write into. Abstracted behind IAppDataDirectory so the stores stay
+        // MAUI-free and unit-testable; the app binds it to the real FileSystem.AppDataDirectory.
+        builder.Services.AddSingleton<IAppDataDirectory, MauiAppDataDirectory>();
+
         // On-device song list. Singleton so its in-memory cache and Changed event are shared app-wide. The UI binds
         // to ISongListStore; the concrete type is also registered so both resolve to the one instance.
         builder.Services.AddSingleton<JsonFileSongListStore>();
