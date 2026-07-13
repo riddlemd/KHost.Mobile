@@ -33,6 +33,48 @@ public class ITunesResponseParserTests
     }
 
     [Fact]
+    public void Upscales_the_100x100_artwork_thumbnail_to_300x300()
+    {
+        const string json = """
+        {
+          "resultCount": 1,
+          "results": [
+            {
+              "trackName": "Helena",
+              "artistName": "My Chemical Romance",
+              "releaseDate": "2004-06-08T07:00:00Z",
+              "primaryGenreName": "Alternative",
+              "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/abc/source/100x100bb.jpg"
+            }
+          ]
+        }
+        """;
+
+        var meta = ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance");
+
+        Assert.NotNull(meta);
+        Assert.Equal("https://is1-ssl.mzstatic.com/image/thumb/abc/source/300x300bb.jpg", meta!.ArtworkUrl);
+    }
+
+    [Fact]
+    public void Leaves_artwork_null_when_the_result_carries_none()
+    {
+        const string json = """
+        {
+          "resultCount": 1,
+          "results": [
+            { "trackName": "Helena", "artistName": "My Chemical Romance", "primaryGenreName": "Alternative" }
+          ]
+        }
+        """;
+
+        var meta = ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance");
+
+        Assert.NotNull(meta);
+        Assert.Null(meta!.ArtworkUrl);
+    }
+
+    [Fact]
     public void Rejects_a_right_title_wrong_artist_cover()
     {
         // The real "Wow, I Can Get Sexual Too" by Say Anything isn't in the catalog; iTunes returns covers

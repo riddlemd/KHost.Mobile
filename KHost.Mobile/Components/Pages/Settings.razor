@@ -3,6 +3,7 @@
 @inject IAppSettings Prefs
 @inject ISongListStore Store
 @inject ILyricsCache LyricsCache
+@inject IAlbumArtCache AlbumArt
 @inject IAppSession Session
 @inject NavigationManager Nav
 @implements IDisposable
@@ -95,6 +96,21 @@
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.ScrollToFavorited" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Show album art on cards</span>
+                <span class="setting__desc">
+                    Use each song's cover (looked up from iTunes) as its card background, with a dark fade behind
+                    the text. Covers are downloaded once and cached on this device — clear them from the Danger
+                    zone below. Songs get a cover as you add or open them.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.AlbumArtEnabled" />
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
@@ -245,6 +261,13 @@
         </button>
 
         <p class="setting__desc" style="margin:1.1rem 0 0.85rem">
+            Delete the cached album-art images. They'll re-download next time you view those songs — nothing is lost.
+        </p>
+        <button type="button" class="btn btn-danger settings__clear" @onclick="ClearAlbumArtCacheAsync" disabled="@(_albumArtCount == 0)">
+            @(_albumArtCount == 0 ? "Album art cache is empty" : $"Clear album art cache ({_albumArtCount})")
+        </button>
+
+        <p class="setting__desc" style="margin:1.1rem 0 0.85rem">
             Remove every song from your list. This can't be undone.
         </p>
         <button type="button" class="btn btn-danger settings__clear" @onclick="AskClear" disabled="@(_songCount == 0)">
@@ -271,6 +294,7 @@
     // The clear buttons are gated on / labeled with their live counts, so track both and refresh on any change.
     private int _songCount;
     private int _lyricsCacheCount;
+    private int _albumArtCount;
     private bool _confirmClear;
 
     // Collapsible sections. Track the collapsed ones by a short id (default: all expanded, so nothing is hidden
@@ -283,6 +307,7 @@
     {
         Store.Changed += OnStoreChanged;
         LyricsCache.Changed += OnStoreChanged;
+        AlbumArt.Changed += OnStoreChanged;
         await RefreshCountAsync();
     }
 
@@ -299,6 +324,7 @@
     {
         _songCount = (await Store.GetAllAsync()).Count;
         _lyricsCacheCount = await LyricsCache.CountAsync();
+        _albumArtCount = await AlbumArt.CountAsync();
         StateHasChanged();
     }
 
@@ -306,6 +332,12 @@
     private async Task ClearLyricsCacheAsync()
     {
         await LyricsCache.ClearAsync();   // LyricsCache.Changed → RefreshCountAsync updates the count + button
+    }
+
+    // Cached covers re-download on next view, so this also clears straight away — no confirm sheet.
+    private async Task ClearAlbumArtCacheAsync()
+    {
+        await AlbumArt.ClearAsync();   // AlbumArt.Changed → RefreshCountAsync updates the count + button
     }
 
     private void AskClear()
@@ -335,5 +367,6 @@
     {
         Store.Changed -= OnStoreChanged;
         LyricsCache.Changed -= OnStoreChanged;
+        AlbumArt.Changed -= OnStoreChanged;
     }
 }

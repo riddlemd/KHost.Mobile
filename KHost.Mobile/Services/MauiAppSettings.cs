@@ -17,6 +17,7 @@ public sealed class MauiAppSettings : IAppSettings
     private const string LyricsKey = "settings.lyrics";
     private const string LyricsCacheKey = "settings.lyrics_cache";
     private const string ScrollToFavoritedKey = "settings.scroll_to_favorited";
+    private const string AlbumArtKey = "settings.album_art";
     private const string SurpriseSkipSungTodayKey = "settings.surprise_skip_sung_today";
     private const string RatePerformancesKey = "settings.rate_performances";
     private const string UpdateCheckKey = "settings.update_check";
@@ -68,6 +69,13 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(ScrollToFavoritedKey, true);
         set => Preferences.Default.Set(ScrollToFavoritedKey, value);
+    }
+
+    // Defaults to false (not true like most flags above): album-art backgrounds are opt-in — see IAppSettings.
+    public bool AlbumArtEnabled
+    {
+        get => Preferences.Default.Get(AlbumArtKey, false);
+        set => Preferences.Default.Set(AlbumArtKey, value);
     }
 
     public bool SurpriseSkipSungToday

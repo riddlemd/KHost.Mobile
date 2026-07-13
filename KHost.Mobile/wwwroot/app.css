@@ -623,6 +623,7 @@ body.kh-sheet-open { overflow: hidden; }
     position: absolute;
     top: 0.85rem;
     right: 0.85rem;
+    z-index: 3;   /* stay above the art header (which is later in the DOM and would otherwise paint over it) */
     width: 2rem;
     height: 2rem;
     display: flex;
@@ -637,6 +638,37 @@ body.kh-sheet-open { overflow: hidden; }
 }
 .sheet__title { font-size: 1.2rem; font-weight: 700; padding-right: 2.5rem; }
 .sheet__subtitle { color: var(--kh-text-muted); margin-top: 0.15rem; }
+
+/* Album-cover header in the song detail sheet: same bottom-scrim treatment as the cards, bled to the sheet's
+   top edges so the cover sits behind the title + artist. Only applied (via --art) when the cover is cached. */
+.sheet__header--art {
+    position: relative;
+    z-index: 0;                                   /* own stacking context so ::before/::after stay behind the text */
+    overflow: hidden;
+    margin: -1.25rem -1.15rem 0.75rem;            /* cancel the sheet's top + side padding to bleed edge-to-edge */
+    padding: 1.6rem 1.15rem 1rem;
+    border-radius: var(--kh-radius) var(--kh-radius) 0 0;   /* match the sheet's rounded top */
+    color: #fff;
+}
+.sheet__header--art::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-image: var(--kh-card-art);
+    background-size: cover;
+    background-position: center;
+}
+.sheet__header--art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.58) 55%, rgba(0, 0, 0, 0.4) 100%);
+}
+.sheet__header--art > * { position: relative; z-index: 1; }
+.sheet__header--art .sheet__title { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75); }
+.sheet__header--art .sheet__subtitle { color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
 .sheet__muted { color: var(--kh-text-muted); }
 
 .sheet__rows { margin: 1rem 0; border-top: 1px solid var(--kh-border); }
@@ -1075,6 +1107,48 @@ body.kh-sheet-open { overflow: hidden; }
     cursor: pointer;
 }
 .song-row--swiping { cursor: grabbing; }
+
+/* ---- Album-art card background (opt-in: Settings → "Show album art on cards") --------------------
+   Treatment "bottom scrim": the cover fills the card (::before), a dark gradient fades up from the base
+   (::after) so the text sits in the darkest zone, and every text run flips to white. overflow:hidden clips
+   the cover to the card's radius. The cover URL arrives as the --kh-card-art custom property (set inline per
+   card once its image is cached); until then the card renders as a normal surface, so nothing shifts. */
+.song-card--art {
+    overflow: hidden;
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+.song-card--art::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-image: var(--kh-card-art);
+    background-size: cover;
+    background-position: center;
+}
+.song-card--art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    /* Even the top keeps some darkening so the title stays legible over a bright cover; darkest at the base. */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.6) 48%, rgba(0, 0, 0, 0.32) 100%);
+}
+/* Lift the real content above the cover + scrim (pseudo-elements stay at z-index 0). */
+.song-card--art > * { position: relative; z-index: 1; }
+
+.song-card--art .song-card__title,
+.song-card--art .song-card__artist { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75); }
+.song-card--art .song-card__genre { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.song-card--art .song-card__year { color: rgba(255, 255, 255, 0.9); }
+.song-card--art .rating-num { color: #fff; }
+.song-card--art .rating-num--muted { color: rgba(255, 255, 255, 0.7); }
+.song-card--art .song-card__ratings .rating-sep { background: rgba(255, 255, 255, 0.3); }
+/* Corner glyphs: keep an unset favorite / unqueued tonight button visible against the cover (their "on"
+   colors — gold / violet — already read fine). */
+.song-card--art .fav-btn:not(.is-fav) { color: rgba(255, 255, 255, 0.9); }
+.song-card--art .tonight-add-btn:not(.is-on) { color: rgba(255, 255, 255, 0.85); }
 
 /* The revealed action strip that grows in the space a swiped row uncovers. */
 #kh-swipe-label {

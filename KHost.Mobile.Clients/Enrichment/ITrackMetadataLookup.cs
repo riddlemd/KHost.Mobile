@@ -1,7 +1,8 @@
 namespace KHost.Mobile.Clients.Enrichment;
 
 /// <summary>
-/// Looks up release year + genre for a song by title + artist. Keyless; backed by the iTunes Search API.
+/// Looks up release year, genre, and cover-art URL for a song by title + artist. Keyless; backed by the
+/// iTunes Search API.
 /// </summary>
 public interface ITrackMetadataLookup
 {

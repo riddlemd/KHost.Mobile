@@ -7,6 +7,7 @@
 @inject ITrackMetadataLookup Metadata
 @inject ILyricsClient Lyrics
 @inject ILyricsCache LyricsCache
+@inject IAlbumArtCache AlbumArt
 @inject IAppSettings Settings
 @inject IAppSession Session
 @inject NavigationManager Nav
@@ -251,7 +252,8 @@ else
     <div class="song-cards" @ref="_swipeRoot">
         @foreach (var item in visible)
         {
-            <div class="song-card" @key="item.Id" data-song-id="@item.Id">
+            <div class="song-card @(HasArt(item) ? "song-card--art" : "")" @key="item.Id" data-song-id="@item.Id"
+                 style="@ArtStyle(item)">
                 @if (Settings.TonightEnabled)
                 {
                     <button type="button" class="tonight-add-btn song-card__tonight @(IsInTonight(item) ? "is-on" : "")"
@@ -339,11 +341,13 @@ else
 
         @if (!_editing)
         {
-            <div class="sheet__title">@_detailItem.Title</div>
-            @if (!string.IsNullOrWhiteSpace(_detailItem.Artist))
-            {
-                <div class="sheet__subtitle">@_detailItem.Artist</div>
-            }
+            <div class="sheet__header @(HasArt(_detailItem) ? "sheet__header--art" : "")" style="@ArtStyle(_detailItem)">
+                <div class="sheet__title">@_detailItem.Title</div>
+                @if (!string.IsNullOrWhiteSpace(_detailItem.Artist))
+                {
+                    <div class="sheet__subtitle">@_detailItem.Artist</div>
+                }
+            </div>
             <div class="sheet__rows">
                 <div class="sheet__row">
                     <span class="sheet__key">Genre</span>
@@ -661,6 +665,12 @@ else
     private string? _autoFilledNote;
     private CancellationTokenSource? _suggestCts;                // detail-sheet lookup; cancelled when the sheet closes
     private readonly CancellationTokenSource _bgFillCts = new(); // add-time background lookups; cancelled on dispose
+
+    // Album-art card backgrounds (opt-in via Settings.AlbumArtEnabled). Maps a song id to a ready-to-render data
+    // URI once its cover image has been fetched + cached; the card reads it via ArtStyle. Populated lazily in the
+    // background (LoadArtAsync) so the list paints immediately and covers fade in as they arrive.
+    private readonly Dictionary<Guid, string> _artUris = [];
+    private CancellationTokenSource? _artCts;   // cancels the in-flight art load when the list reloads / page disposes
 
     // A release year is optional, but when supplied it must be a real year: 1..this year.
     private static int CurrentYear => DateTime.Now.Year;
@@ -1091,6 +1101,10 @@ else
             filled.Add("Year");
         }
 
+        // The same matched result carries the cover URL — capture it for free so enabling album art later is instant.
+        if (item.ArtworkUrl is null && meta?.ArtworkUrl is string art)
+            item.ArtworkUrl = art;
+        item.ArtworkLookedUp = true;    // we've seen this song's artwork field too — no separate lookup needed
         item.MetadataLookedUp = true;   // record the attempt (hit or miss) so we never look up again
         await Store.UpdateAsync(item);   // persist flag + any fills; Store.Changed → RefreshAsync
 
@@ -1099,27 +1113,82 @@ else
             : null;
     }
 
-    // Detail-sheet entry point: run the lookup for the open song and surface the result as the sheet's note.
-    // The spinner + note are sheet-only UI; the actual fill/persist lives in TryAutoFillMetadataAsync. Skips
-    // the spinner entirely when there's nothing to look up.
+    // A song is eligible for a cover-art lookup when album art is on, we've not looked before, and it has a title
+    // AND artist to match on (iTunes rejects an artist-less match, so there'd be nothing to verify the cover against).
+    private bool ShouldFetchArtwork(SongListItem item) =>
+        Settings.AlbumArtEnabled &&
+        item.ArtworkUrl is null &&
+        !item.ArtworkLookedUp &&
+        !string.IsNullOrWhiteSpace(item.Title) &&
+        !string.IsNullOrWhiteSpace(item.Artist);
+
+    // Fetch just the cover URL for a song that autofill didn't already cover (e.g. it already had year+genre, or
+    // autofill is off). One iTunes call, gated on ArtworkLookedUp so a coverless song is never re-chased. The image
+    // bytes are downloaded later by LoadArtAsync; here we only record where to get them.
+    private async Task TryFetchArtworkUrlAsync(SongListItem item, CancellationToken token)
+    {
+        if (!ShouldFetchArtwork(item))
+            return;
+
+        TrackMetadata? meta;
+        try
+        {
+            meta = await Metadata.LookupAsync(item.Title, item.Artist, token);
+        }
+        catch (MetadataLookupException)
+        {
+            return;   // network/rate-limit failure — leave the flag unset to retry later
+        }
+
+        if (token.IsCancellationRequested)
+            return;
+
+        if (meta?.ArtworkUrl is string art)
+            item.ArtworkUrl = art;
+        item.ArtworkLookedUp = true;    // record the attempt (hit or miss) so we never re-spend on it
+        await Store.UpdateAsync(item);   // Store.Changed → RefreshAsync → LoadArtAsync caches + shows the image
+    }
+
+    // Detail-sheet entry point: enrich the open song and surface the year/genre result as the sheet's note. The
+    // spinner + note are sheet-only UI; the actual fill/persist lives in TryAutoFillMetadataAsync. Also grabs the
+    // cover URL (once) when album art is on, then caches its image so the card fills in. Skips all network when
+    // there's nothing to do.
     private async Task LoadDetailSuggestionAsync(SongListItem? item)
     {
         _suggestCts?.Cancel();
         _autoFilledNote = null;
         _suggestionLoading = false;
 
-        if (item is null || !ShouldAutoFill(item))
+        if (item is null)
+            return;
+
+        var needAutoFill = ShouldAutoFill(item);
+        if (!needAutoFill && !ShouldFetchArtwork(item))
             return;
 
         _suggestCts = new CancellationTokenSource();
         var token = _suggestCts.Token;
-        _suggestionLoading = true;
+        _suggestionLoading = needAutoFill;   // the spinner is for the visible year/genre fill only
         try
         {
-            var note = await TryAutoFillMetadataAsync(item, token);
+            if (needAutoFill)
+            {
+                var note = await TryAutoFillMetadataAsync(item, token);
+                if (token.IsCancellationRequested || _detailItem?.Id != item.Id)
+                    return;
+                _autoFilledNote = note;
+            }
+
+            // Autofill may have captured the cover from the same match; fetch separately only if it's still missing.
+            if (ShouldFetchArtwork(item))
+                await TryFetchArtworkUrlAsync(item, token);
+
             if (token.IsCancellationRequested || _detailItem?.Id != item.Id)
                 return;
-            _autoFilledNote = note;
+
+            // Make sure the (possibly just-discovered) cover image is cached + shown on the card behind the sheet.
+            if (Settings.AlbumArtEnabled && item.ArtworkUrl is not null && !_artUris.ContainsKey(item.Id))
+                _ = LoadArtAsync();
         }
         catch (OperationCanceledException) { return; }
         finally
@@ -1412,6 +1481,10 @@ else
         try
         {
             await TryAutoFillMetadataAsync(item, _bgFillCts.Token);
+            // If album art is on but autofill didn't capture a cover (autofill off, or nothing was blank to look
+            // up), fetch it now so a newly added song gets its card background without waiting to be opened. A
+            // no-op when autofill already grabbed the URL (ShouldFetchArtwork is then false — no duplicate call).
+            await TryFetchArtworkUrlAsync(item, _bgFillCts.Token);
         }
         catch (OperationCanceledException) { }
         catch { /* best-effort background enrichment */ }
@@ -1432,6 +1505,15 @@ else
 
     // Sort key for "how it went": the true average; unrated/unsung songs sort below every rated one.
     private static double AvgSortKey(SongListItem item) => item.AverageHowItWent ?? -1;
+
+    // A card shows its cover only when the feature is on AND the image has finished caching (in _artUris). Until
+    // then the card renders normally, so nothing pops or shifts — the cover just fades in when ready.
+    private bool HasArt(SongListItem item) => Settings.AlbumArtEnabled && _artUris.ContainsKey(item.Id);
+
+    // Feed the cached data URI to the card via a CSS custom property the stylesheet's ::before reads. Single-quoted
+    // url() is safe: a data URI has no single quotes. Null (no inline style) whenever there's no cover to show.
+    private string? ArtStyle(SongListItem item) =>
+        HasArt(item) ? $"--kh-card-art: url('{_artUris[item.Id]}');" : null;
 
     // Edit the per-song enjoyment rating (blue). Independent of sung-state.
     private async Task UpdateEnjoymentAsync(SongListItem item, int rating)
@@ -1466,6 +1548,43 @@ else
         await Tonight.PruneAsync(_items.Select(i => i.Id).ToList());
         _tonight = await Tonight.GetAllAsync();
         await InvokeAsync(StateHasChanged);
+
+        // Kick off (or refresh) the album-art load for any songs that now have a cover but no cached image yet.
+        _ = LoadArtAsync();
+    }
+
+    // Best-effort background pass: for every song that has a cover URL but whose image isn't cached yet, fetch +
+    // cache it (from the artwork CDN, not the rate-limited Search API) and fade it in. Runs after each list load;
+    // a no-op when album art is off or every visible cover is already cached. Cancelled when the list reloads
+    // again or the page is disposed. Only songs that already carry an ArtworkUrl are touched — discovering new
+    // URLs stays on the throttled add / detail-open paths, so this never bulk-hammers iTunes.
+    private async Task LoadArtAsync()
+    {
+        if (!Settings.AlbumArtEnabled)
+            return;
+
+        _artCts?.Cancel();
+        _artCts = new CancellationTokenSource();
+        var token = _artCts.Token;
+
+        var pending = _items.Where(i => i.ArtworkUrl is not null && !_artUris.ContainsKey(i.Id)).ToList();
+        foreach (var item in pending)
+        {
+            if (token.IsCancellationRequested)
+                return;
+
+            try
+            {
+                var uri = await AlbumArt.GetDataUriAsync(item.ArtworkUrl, token);
+                if (uri is null || token.IsCancellationRequested)
+                    continue;
+
+                _artUris[item.Id] = uri;
+                await InvokeAsync(StateHasChanged);   // fade this one cover in without waiting for the rest
+            }
+            catch (OperationCanceledException) { return; }
+            catch { /* best-effort: skip a cover that won't load, keep going */ }
+        }
     }
 
     // Tonight store changed (add/remove/reorder/complete/clear) — reload just the set and re-render.
@@ -1521,5 +1640,7 @@ else
         _lyricsCts?.Dispose();
         _bgFillCts.Cancel();
         _bgFillCts.Dispose();
+        _artCts?.Cancel();
+        _artCts?.Dispose();
     }
 }

@@ -38,6 +38,13 @@ public interface IAppSettings
     /// <summary>When true, tapping a song's favorite star scrolls the list to reveal that song's new position.</summary>
     bool ScrollToFavorited { get; set; }
 
+    /// <summary>
+    /// When true, each song's cover art (fetched from iTunes and cached on-device) is shown as its card background,
+    /// with a scrim behind the text for legibility. Unlike the other flags this defaults to <c>false</c>: it's a
+    /// bold visual change that also spends a little network + storage, so it's opt-in rather than on-by-default.
+    /// </summary>
+    bool AlbumArtEnabled { get; set; }
+
     /// <summary>When true, the "Surprise me" random-picker button is shown on My Songs. When false it's hidden.</summary>
     bool SurpriseEnabled { get; set; }
 

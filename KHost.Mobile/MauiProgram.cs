@@ -45,6 +45,10 @@ public static class MauiProgram
         // On-device lyrics cache (JSON file). Singleton so its in-memory map + Changed event are shared app-wide.
         builder.Services.AddSingleton<ILyricsCache, JsonFileLyricsCache>();
 
+        // On-device album-art cache (image blobs). Singleton so its in-memory memo + Changed event are shared
+        // app-wide; it pulls a pooled HttpClient from the factory per download (see the named client below).
+        builder.Services.AddSingleton<IAlbumArtCache, AlbumArtCache>();
+
         // Opens external links (e.g. a YouTube search) in the OS browser / matching app.
         builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
 
@@ -59,9 +63,13 @@ public static class MauiProgram
         // Token-free import of public Spotify playlists (title + artist) via the embed endpoint.
         builder.Services.AddHttpClient<ISpotifyImportService, SpotifyImportService>();
 
-        // Keyless release-year + genre lookup (iTunes Search API). Re-lookup is avoided per-song via the
-        // SongListItem.MetadataLookedUp flag, so no separate cache layer is needed.
+        // Keyless release-year + genre + cover-art-URL lookup (iTunes Search API). Re-lookup is avoided per-song
+        // via the SongListItem.MetadataLookedUp / ArtworkLookedUp flags, so no separate cache layer is needed.
         builder.Services.AddHttpClient<ITrackMetadataLookup, ITunesTrackMetadataLookup>();
+
+        // Cover-image downloads for IAlbumArtCache. Hits the artwork CDN (not the rate-limited Search API), so a
+        // plain named client is enough; a short timeout keeps a slow image from hanging the best-effort load.
+        builder.Services.AddHttpClient("album-art", http => http.Timeout = TimeSpan.FromSeconds(20));
 
         // Keyless lyrics lookup (LRCLIB). Base address + the descriptive User-Agent LRCLIB's fair-use policy
         // asks for are set here (the client library stays MAUI-free, so the app version is injected at this seam).

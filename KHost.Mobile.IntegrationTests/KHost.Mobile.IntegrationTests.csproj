@@ -13,6 +13,8 @@
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <!-- IHttpClientFactory, needed by the linked-in AlbumArtCache source (see the Compile items below). -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,6 +41,8 @@
     <Compile Include="..\KHost.Mobile\Services\ILyricsCache.cs" Link="Linked\Services\ILyricsCache.cs" />
     <Compile Include="..\KHost.Mobile\Services\JsonFileLyricsCache.cs" Link="Linked\Services\JsonFileLyricsCache.cs" />
     <Compile Include="..\KHost.Mobile\Services\LyricsCacheJsonContext.cs" Link="Linked\Services\LyricsCacheJsonContext.cs" />
+    <Compile Include="..\KHost.Mobile\Services\IAlbumArtCache.cs" Link="Linked\Services\IAlbumArtCache.cs" />
+    <Compile Include="..\KHost.Mobile\Services\AlbumArtCache.cs" Link="Linked\Services\AlbumArtCache.cs" />
   </ItemGroup>
 
 </Project>

@@ -105,4 +105,14 @@ public sealed class SongListItem
     /// re-spend a rate-limited call on it. Replaces the old title+artist metadata cache. Defaults to false;
     /// entries persisted before this field existed deserialize to false and get looked up on next open.</summary>
     public bool MetadataLookedUp { get; set; }
+
+    /// <summary>Absolute URL of the song's cover art (from the iTunes match), used as the card background when
+    /// album art is enabled. Null when unknown or the song had no artwork match. The image bytes themselves are
+    /// downloaded + cached separately (see IAlbumArtCache); this only stores where to fetch them.</summary>
+    public string? ArtworkUrl { get; set; }
+
+    /// <summary>True once we've run the artwork lookup for this song (hit OR miss), so we never re-spend a
+    /// rate-limited iTunes call chasing a cover that isn't there. Separate from <see cref="MetadataLookedUp"/>
+    /// because a song enriched before album art existed has year/genre but no <see cref="ArtworkUrl"/>.</summary>
+    public bool ArtworkLookedUp { get; set; }
 }

@@ -53,12 +53,18 @@ public static class ITunesResponseParser
 
                 var genre = Str(result, "primaryGenreName");
                 var year = YearFromIsoDate(Str(result, "releaseDate"));
-                return new TrackMetadata(title, artist, year, genre);
+                var artwork = UpscaleArtwork(Str(result, "artworkUrl100"));
+                return new TrackMetadata(title, artist, year, genre, artwork);
             }
 
             return null;
         }
     }
+
+    // iTunes returns a 100×100 thumbnail URL like ".../source/100x100bb.jpg". Swap the dimensions for a
+    // crisper 300×300 that still covers a card background without bloating the cached/base64-encoded image.
+    private static string? UpscaleArtwork(string? url)
+        => string.IsNullOrEmpty(url) ? url : url.Replace("100x100", "300x300", StringComparison.Ordinal);
 
     // releaseDate looks like "2004-06-08T07:00:00Z"; take the leading 4-digit year if present.
     private static int? YearFromIsoDate(string? isoDate)
