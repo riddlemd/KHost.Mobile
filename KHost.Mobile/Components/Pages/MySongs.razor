@@ -666,7 +666,7 @@ else
     private CancellationTokenSource? _suggestCts;                // detail-sheet lookup; cancelled when the sheet closes
     private readonly CancellationTokenSource _bgFillCts = new(); // add-time background lookups; cancelled on dispose
 
-    // Album-art card backgrounds (opt-in via Settings.AlbumArtEnabled). Maps a song id to a ready-to-render data
+    // Album-art card backgrounds (gated by Settings.AlbumArtEnabled, on by default). Maps a song id to a data
     // URI once its cover image has been fetched + cached; the card reads it via ArtStyle. Populated lazily in the
     // background (LoadArtAsync) so the list paints immediately and covers fade in as they arrive.
     private readonly Dictionary<Guid, string> _artUris = [];

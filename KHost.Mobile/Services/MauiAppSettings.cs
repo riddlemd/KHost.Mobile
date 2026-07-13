@@ -71,10 +71,9 @@ public sealed class MauiAppSettings : IAppSettings
         set => Preferences.Default.Set(ScrollToFavoritedKey, value);
     }
 
-    // Defaults to false (not true like most flags above): album-art backgrounds are opt-in — see IAppSettings.
     public bool AlbumArtEnabled
     {
-        get => Preferences.Default.Get(AlbumArtKey, false);
+        get => Preferences.Default.Get(AlbumArtKey, true);
         set => Preferences.Default.Set(AlbumArtKey, value);
     }
 
