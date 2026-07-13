@@ -1,7 +1,6 @@
 using System.Text.Json;
 using KHost.Mobile.Client.Lyrics;
 using KHost.Mobile.Models;
-using Microsoft.Maui.Storage;
 
 namespace KHost.Mobile.Services;
 
@@ -11,9 +10,9 @@ namespace KHost.Mobile.Services;
 /// once loaded; every mutation rewrites the file. A <see cref="SemaphoreSlim"/> guards both against concurrent
 /// UI actions. A corrupt file is treated as an empty cache rather than crashing the app.
 /// </summary>
-public sealed class JsonFileLyricsCache : ILyricsCache
+public sealed class JsonFileLyricsCache(IAppDataDirectory paths) : ILyricsCache
 {
-    private readonly string _filePath = Path.Combine(FileSystem.AppDataDirectory, "lyrics-cache.json");
+    private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "lyrics-cache.json");
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     private Dictionary<string, LyricsCacheEntry>? _entries;

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using KHost.Mobile.Models;
-using Microsoft.Maui.Storage;
 
 namespace KHost.Mobile.Services;
 
@@ -10,9 +9,9 @@ namespace KHost.Mobile.Services;
 /// truth once loaded; every mutation rewrites the file. Guarded by a <see cref="SemaphoreSlim"/> so concurrent UI
 /// actions can't corrupt the file or the cache.
 /// </summary>
-public sealed class JsonFileSongListStore : ISongListStore
+public sealed class JsonFileSongListStore(IAppDataDirectory paths) : ISongListStore
 {
-    private readonly string _filePath = Path.Combine(FileSystem.AppDataDirectory, "song-list.json");
+    private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "song-list.json");
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     private List<SongListItem>? _items;

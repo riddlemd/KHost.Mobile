@@ -1,6 +1,5 @@
 using System.Text.Json;
 using KHost.Mobile.Models;
-using Microsoft.Maui.Storage;
 
 namespace KHost.Mobile.Services;
 
@@ -10,9 +9,9 @@ namespace KHost.Mobile.Services;
 /// loaded; every mutation renumbers <see cref="TonightEntry.Order"/> to stay contiguous and rewrites the file. A
 /// <see cref="SemaphoreSlim"/> guards against concurrent UI actions. A corrupt file is treated as an empty set.
 /// </summary>
-public sealed class JsonFileTonightStore : ITonightStore
+public sealed class JsonFileTonightStore(IAppDataDirectory paths) : ITonightStore
 {
-    private readonly string _filePath = Path.Combine(FileSystem.AppDataDirectory, "tonight.json");
+    private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "tonight.json");
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     private List<TonightEntry>? _entries;
