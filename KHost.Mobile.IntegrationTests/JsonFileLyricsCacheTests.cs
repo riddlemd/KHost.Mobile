@@ -4,7 +4,7 @@ using KHost.Mobile.Models;
 using KHost.Mobile.Services;
 using Xunit;
 
-namespace KHost.Mobile.UnitTests;
+namespace KHost.Mobile.IntegrationTests;
 
 public sealed class JsonFileLyricsCacheTests : IDisposable
 {

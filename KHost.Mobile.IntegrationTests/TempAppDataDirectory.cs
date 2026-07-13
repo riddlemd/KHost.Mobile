@@ -1,6 +1,6 @@
 using KHost.Mobile.Services;
 
-namespace KHost.Mobile.UnitTests;
+namespace KHost.Mobile.IntegrationTests;
 
 /// <summary>
 /// A throwaway <see cref="IAppDataDirectory"/> backed by a fresh, unique temp folder — the "fake FileSystem" the
