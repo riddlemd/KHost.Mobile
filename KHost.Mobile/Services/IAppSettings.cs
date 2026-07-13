@@ -59,4 +59,11 @@ public interface IAppSettings
     /// available. When false, no update check runs (no network request) and the banner never appears.
     /// </summary>
     bool UpdateCheckEnabled { get; set; }
+
+    /// <summary>
+    /// Whether the first-run tutorial has been completed or skipped. Unlike the feature flags above this defaults
+    /// to <c>false</c> (opposite semantics), so the coach-marks overlay shows once on a fresh install and never
+    /// again after. Set back to <c>false</c> (from Settings → "Replay tutorial") to see the tour again.
+    /// </summary>
+    bool TutorialCompleted { get; set; }
 }

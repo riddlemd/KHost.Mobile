@@ -12,4 +12,12 @@ public interface IAppSession
     /// alone (so tapping "My List" doesn't bounce back to Tonight). Set once, then never re-evaluated this launch.
     /// </summary>
     bool LandingResolved { get; set; }
+
+    /// <summary>
+    /// Whether the first-run tutorial's show/skip decision has been made this launch. The durable "has completed
+    /// it" flag lives in <see cref="IAppSettings.TutorialCompleted"/>; this transient guard stops the overlay from
+    /// re-triggering on every navigation within a single launch (it's set true the moment the tour starts, and the
+    /// "Replay tutorial" action clears it to re-arm the check).
+    /// </summary>
+    bool TutorialResolved { get; set; }
 }

@@ -3,6 +3,8 @@
 @inject IAppSettings Prefs
 @inject ISongListStore Store
 @inject ILyricsCache LyricsCache
+@inject IAppSession Session
+@inject NavigationManager Nav
 @implements IDisposable
 
 <section class="settings">
@@ -36,7 +38,7 @@
         }
     </div>
 
-    <div class="card">
+    <div class="card" data-tut="settings-features">
         <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("mylist")' aria-expanded="@IsOpen("mylist")">
             <span class="filters-toggle__label">My List</span>
             <span class="filters-toggle__chevron @(IsOpen("mylist") ? "is-open" : "")">▾</span>
@@ -209,6 +211,26 @@
     </div>
 
     <div class="card">
+        <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("help")' aria-expanded="@IsOpen("help")">
+            <span class="filters-toggle__label">Help</span>
+            <span class="filters-toggle__chevron @(IsOpen("help") ? "is-open" : "")">▾</span>
+        </button>
+        @if (IsOpen("help"))
+        {
+        <div class="setting" data-tut="settings-replay">
+            <span class="setting__text">
+                <span class="setting__title">Replay the tutorial</span>
+                <span class="setting__desc">
+                    Show the first-run walkthrough again — the guided tour of adding songs, tonight's set,
+                    importing a playlist, and these settings.
+                </span>
+            </span>
+            <button type="button" class="btn btn-secondary" @onclick="ReplayTutorial">Replay</button>
+        </div>
+        }
+    </div>
+
+    <div class="card">
         <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("danger")' aria-expanded="@IsOpen("danger")">
             <span class="filters-toggle__label">Danger zone</span>
             <span class="filters-toggle__chevron @(IsOpen("danger") ? "is-open" : "")">▾</span>
@@ -293,6 +315,15 @@
     }
 
     private void CancelClear() => _confirmClear = false;
+
+    // Re-arm the first-run tour: clear the durable "done" flag and the per-launch guard, then land on My List
+    // where the tour starts (TutorialOverlay picks the navigation up via LocationChanged and kicks off).
+    private void ReplayTutorial()
+    {
+        Prefs.TutorialCompleted = false;
+        Session.TutorialResolved = false;
+        Nav.NavigateTo("/");
+    }
 
     private async Task ConfirmClearAsync()
     {

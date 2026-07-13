@@ -5,4 +5,7 @@ public sealed class AppSession : IAppSession
 {
     /// <inheritdoc />
     public bool LandingResolved { get; set; }
+
+    /// <inheritdoc />
+    public bool TutorialResolved { get; set; }
 }

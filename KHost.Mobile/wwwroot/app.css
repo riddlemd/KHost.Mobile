@@ -1485,3 +1485,83 @@ body.kh-sheet-open { overflow: hidden; }
 }
 
     .blazor-error-boundary::after { content: "An error has occurred."; }
+
+/* ============================================================================
+   First-run tutorial overlay (coach-marks). A dimmed spotlight tour that points
+   at one always-present control per step. Sits above every sheet/snackbar (≤50)
+   but below the framework error UI (1000). See Components/TutorialOverlay.razor
+   + wwwroot/js/tutorial.js. The dim is the hole's huge box-shadow; a transparent
+   catch layer blocks page taps so the tour advances only via the tip buttons.
+   ============================================================================ */
+.tutorial { position: fixed; inset: 0; z-index: 100; }
+
+/* Transparent full-screen tap-catcher (blocks the page behind). Becomes the dim
+   backdrop itself on centered steps, where there's no spotlight hole. */
+.tutorial__catch { position: absolute; inset: 0; background: transparent; }
+.tutorial--center .tutorial__catch { background: rgba(0, 0, 0, 0.62); animation: sheet-fade 0.18s ease; }
+
+/* The spotlight cutout: the box-shadow paints the dim everywhere EXCEPT this
+   rectangle, so the real control shows through. JS sets top/left/width/height. */
+.tutorial__hole {
+    position: absolute;
+    border-radius: 12px;
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.62);
+    outline: 2px solid var(--kh-primary);
+    outline-offset: 3px;
+    pointer-events: none;
+    transition: top 0.28s cubic-bezier(0.2, 0.7, 0.2, 1), left 0.28s cubic-bezier(0.2, 0.7, 0.2, 1),
+                width 0.28s cubic-bezier(0.2, 0.7, 0.2, 1), height 0.28s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.tutorial--center .tutorial__hole { display: none; }
+
+/* Little pointer from the tip toward the hole. JS sets top/left + rotation. */
+.tutorial__caret {
+    position: absolute;
+    width: 14px; height: 14px;
+    background: var(--kh-surface);
+    border: 1px solid var(--kh-border);
+    border-right: none; border-bottom: none;
+    pointer-events: none;
+}
+.tutorial--center .tutorial__caret { display: none; }
+
+/* The coach-mark card. JS positions it near the hole on anchored steps; on
+   centered steps it's centered via the modifier below. */
+.tutorial__tip {
+    position: absolute;
+    width: 300px; max-width: calc(100vw - 32px);
+    background: var(--kh-surface); color: var(--kh-text);
+    border: 1px solid var(--kh-border);
+    border-radius: var(--kh-radius);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    padding: 1rem 1rem 0.85rem;
+    animation: sheet-fade 0.16s ease;
+}
+.tutorial--center .tutorial__tip {
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.tutorial__badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2.6rem; height: 2.6rem; border-radius: 0.8rem; font-size: 1.35rem; margin-bottom: 0.5rem;
+    background: color-mix(in srgb, var(--kh-primary) 16%, var(--kh-surface));
+}
+.tutorial__title { font-size: 1.05rem; font-weight: 800; margin: 0 0 0.3rem; }
+.tutorial__body { font-size: 0.9rem; line-height: 1.5; color: var(--kh-text-muted); margin: 0 0 0.8rem; }
+
+.tutorial__dots { display: flex; gap: 0.35rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.tutorial__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--kh-border); }
+.tutorial__dot.is-on { background: var(--kh-primary); }
+
+.tutorial__row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.tutorial--center .tutorial__row { justify-content: center; }
+.tutorial__skip { border: none; background: none; color: var(--kh-text-muted); font-size: 0.85rem; cursor: pointer; padding: 0.4rem 0.15rem; }
+.tutorial__nav { display: flex; gap: 0.5rem; }
+
+/* Respect reduced-motion: no sliding spotlight, no fade-in. */
+@media (prefers-reduced-motion: reduce) {
+    .tutorial__hole { transition: none; }
+    .tutorial__tip, .tutorial--center .tutorial__catch { animation: none; }
+}

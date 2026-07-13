@@ -1,0 +1,184 @@
+@inject IJSRuntime JS
+@inject IAppSettings Settings
+@inject IAppSession Session
+@inject NavigationManager Nav
+@implements IDisposable
+
+@* First-run coach-marks. Lives in MainLayout so it overlays every page and survives the navigations it drives
+   between My List, Import and Settings. Shows once on a fresh install (IAppSettings.TutorialCompleted defaults
+   false); a per-launch guard (IAppSession.TutorialResolved) stops it re-triggering on every navigation. Each step
+   dims the screen and cuts a spotlight hole over one always-present control — never per-song content — so an empty
+   first-run list is fine; a step whose target isn't on-screen degrades to a centered card. Positioning is done in
+   wwwroot/js/tutorial.js; this component owns the step list, content, and navigation. *@
+@if (_active)
+{
+    <div class="tutorial @(_center ? "tutorial--center" : "")">
+        <div class="tutorial__catch"></div>
+        <div class="tutorial__hole" @ref="_hole"></div>
+        <div class="tutorial__caret" @ref="_caret"></div>
+        <div class="tutorial__tip" role="dialog" aria-modal="true" aria-label="App tour" @ref="_tip">
+            <div class="tutorial__badge" aria-hidden="true">@Current.Badge</div>
+            <div class="tutorial__title">@Current.Title</div>
+            <p class="tutorial__body">@Current.Body</p>
+            <div class="tutorial__dots">
+                @for (var d = 0; d < Steps.Count; d++)
+                {
+                    <span class="tutorial__dot @(d == _index ? "is-on" : "")"></span>
+                }
+            </div>
+            <div class="tutorial__row">
+                <button type="button" class="tutorial__skip" @onclick="FinishAsync">@(IsLast ? "" : "Skip")</button>
+                <div class="tutorial__nav">
+                    @if (_index > 0)
+                    {
+                        <button type="button" class="btn btn-secondary" @onclick="BackAsync">Back</button>
+                    }
+                    <button type="button" class="btn btn-primary" @onclick="NextAsync">@(IsLast ? "Done" : "Next")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // One tour step. Route is the target page's base-relative path ("" = My List). Anchor is the data-tut value of
+    // the control to spotlight, or null for a centered explain-only card. NeedsTonight steps drop out when the
+    // Tonight feature is off (their target — the Tonight tab — wouldn't be rendered).
+    private sealed record Step(string Route, string? Anchor, string Badge, string Title, string Body, bool NeedsTonight = false);
+
+    private static readonly Step[] AllSteps =
+    [
+        new("", null, "🎤", "Welcome to KHost Cue",
+            "Your karaoke wishlist and tonight's set — all on your phone. Here's the quick tour."),
+        new("", "add", "➕", "Build your list",
+            "Tap here to add any song you'd like to sing. We'll auto-fill the year and genre for you."),
+        new("", "tonight", "🎤", "Line up tonight",
+            "Queue songs into tonight's set from your list, then check them off as you perform.", NeedsTonight: true),
+        new("", "menu", "⋮", "More lives here",
+            "Import, Settings, themes and About all live in this menu. Let's peek at the big one."),
+        new("import-export", "import", "📥", "Import a whole playlist",
+            "Already have a playlist? Pick a source, paste a public link, and every track lands in your list — no retyping."),
+        new("settings", "settings-features", "⚙️", "Make it yours",
+            "Every feature is a toggle — auto-fill, Tonight, lyrics, update checks and more. Turn off anything you don't want."),
+        new("settings", "settings-replay", "↺", "Replay anytime",
+            "Want this tour again later? It's right here under Settings."),
+        new("", null, "✅", "You're all set!",
+            "Add your first song or import a playlist — and you're ready for the mic. 🎤"),
+    ];
+
+    // Tonight-only steps drop out when the feature is off.
+    private List<Step> Steps => AllSteps.Where(s => !s.NeedsTonight || Settings.TonightEnabled).ToList();
+
+    private bool _active;
+    private bool _started;
+    private bool _center = true;
+    private int _index;
+
+    private ElementReference _hole;
+    private ElementReference _caret;
+    private ElementReference _tip;
+
+    private Step Current => Steps[Math.Clamp(_index, 0, Steps.Count - 1)];
+    private bool IsLast => _index >= Steps.Count - 1;
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        TryActivate();
+    }
+
+    // Re-arm on navigation too, so the "Replay tutorial" action (clears both flags, then navigates to "/") kicks
+    // the tour off again. During the tour's own navigations TutorialResolved is already set, so this is a no-op.
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (TryActivate())
+            StateHasChanged();
+    }
+
+    // Decide whether to run the tour. Durable "already done" wins; otherwise claim the per-launch guard and arm it.
+    private bool TryActivate()
+    {
+        if (_active || Settings.TutorialCompleted || Session.TutorialResolved)
+            return false;
+
+        Session.TutorialResolved = true;
+        _active = true;
+        _started = false;
+        _index = 0;
+        _center = true;
+        return true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Start once the overlay's own elements (hole/tip refs) are in the DOM.
+        if (_active && !_started)
+        {
+            _started = true;
+            await GoToAsync(0);
+        }
+    }
+
+    private async Task GoToAsync(int index)
+    {
+        var steps = Steps;
+        if (steps.Count == 0)
+        {
+            await FinishAsync();
+            return;
+        }
+
+        _index = Math.Clamp(index, 0, steps.Count - 1);
+        var step = steps[_index];
+
+        // Navigate to the step's page if we're not already there (the overlay persists across the nav).
+        var currentPath = Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].TrimEnd('/');
+        if (!string.Equals(currentPath, step.Route.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+            Nav.NavigateTo(step.Route.Length == 0 ? "/" : step.Route);
+
+        _center = step.Anchor is null;
+        StateHasChanged();   // render this step's content + center/anchored layout
+
+        if (step.Anchor is null)
+        {
+            await JS.InvokeVoidAsync("khTutorial.reset", _hole, _caret, _tip);
+            return;
+        }
+
+        // The target may still be rendering (right after a navigation), so poll a few times before giving up.
+        var selector = $"[data-tut=\"{step.Anchor}\"]";
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            await Task.Delay(attempt == 0 ? 30 : 60);
+            if (!_active || _index != steps.IndexOf(step))
+                return;   // superseded by another step / dismissed while we waited
+            if (await JS.InvokeAsync<bool>("khTutorial.position", _hole, _caret, _tip, selector))
+                return;
+        }
+
+        // Target never appeared (feature off / not on this page) → fall back to a centered explain card.
+        _center = true;
+        StateHasChanged();
+        await JS.InvokeVoidAsync("khTutorial.reset", _hole, _caret, _tip);
+    }
+
+    private Task NextAsync() => IsLast ? FinishAsync() : GoToAsync(_index + 1);
+
+    private Task BackAsync() => GoToAsync(_index - 1);
+
+    private async Task FinishAsync()
+    {
+        _active = false;
+        Settings.TutorialCompleted = true;
+        StateHasChanged();
+
+        // Elements are gone now; just drop the stored resize context (safe — takes no element refs).
+        try { await JS.InvokeVoidAsync("khTutorial.clear"); } catch { /* JS not ready — nothing to clean up */ }
+
+        // Land back on My List where the tour began, if we ended on another page.
+        if (Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].TrimEnd('/').Length > 0)
+            Nav.NavigateTo("/");
+    }
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}
