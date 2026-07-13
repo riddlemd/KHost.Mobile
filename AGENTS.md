@@ -130,6 +130,7 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
 
 ### Housekeeping
 - **Do NOT commit or push unless explicitly asked.**
+- **Always update `README.md` when a feature is added or its behavior changes** — keep the feature list, and the screenshot grid where relevant, in sync so the README never lags the app.
 - **`/research/` is gitignored and must never be committed** — it holds local planning/research notes and scratch data. Don't stage it, don't offer to commit it, and don't propose removing it from `.gitignore`.
 - Secrets via user-secrets/config — never hard-coded or committed.
 

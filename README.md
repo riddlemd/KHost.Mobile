@@ -12,14 +12,18 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 ## 📸 Screenshots
 
 <p align="center">
+  <img src="docs/screenshots/tutorial.png" width="200" alt="Guided tour — a first-run walkthrough spotlights each key control one step at a time" />
   <img src="docs/screenshots/my-songs.png" width="200" alt="My List — your karaoke wishlist as sortable, swipeable cards, with the Tonight tab in the bottom bar" />
   <img src="docs/screenshots/tonight.png" width="200" alt="Tonight — the on-deck set list on its own tab: drag to reorder and check each song off as you sing it" />
-  <img src="docs/screenshots/song-detail.png" width="200" alt="Song detail — per-performance ratings, enjoyment, sung history, and quick links" />
   <br />
+  <img src="docs/screenshots/song-detail.png" width="200" alt="Song detail — per-performance ratings, enjoyment, sung history, and quick links" />
   <img src="docs/screenshots/lyrics.png" width="200" alt="Lyrics — looked up in-app from LRCLIB" />
   <img src="docs/screenshots/settings.png" width="200" alt="Settings — feature toggles grouped by what they affect, in collapsible sections" />
+  <br />
   <img src="docs/screenshots/import-export.png" width="200" alt="Import & Export — pull songs from a Spotify or YouTube Music playlist or a KHost Cue file, and export your list back out" />
 </p>
+
+> **Screenshot / mobile-preview target size:** **786 × 1704 px** — a **393 × 852** (iPhone 15/16) viewport at **2× device-pixel-ratio**. Capture screenshots and size the mobile preview to this so everything lines up with the grid above.
 
 ## ✨ Features
 
@@ -33,6 +37,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 - **Import & export** — pull songs from a public **Spotify** or **YouTube Music** playlist link, or a KHost Cue `.json` file, and export your whole list back out.
 - **Auto-fill** — looks up a song's release year and genre automatically (via the iTunes Search API) so you don't have to type them.
 - **Update alerts** — tells you when a newer version is available (from the app's GitHub Releases) with a one-tap link to grab it.
+- **Guided tour** — a first-run walkthrough spotlights the essentials one at a time — adding songs, tonight's set, importing a playlist, and Settings — so you're up and running fast. Replay it anytime from Settings.
 - **Made to feel at home** — mobile-first layout, light & dark themes, and a tidy Settings screen where every extra behavior can be toggled off.
 
 ## 🛠️ Tech stack
