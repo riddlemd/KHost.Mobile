@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="KHost.Mobile.Client/KHost.Mobile.Client.csproj" />
+  <Project Path="KHost.Mobile.Clients/KHost.Mobile.Clients.csproj" />
   <Project Path="KHost.Mobile/KHost.Mobile.csproj" />
   <Project Path="KHost.Mobile.UnitTests/KHost.Mobile.UnitTests.csproj" />
   <Project Path="KHost.Mobile.IntegrationTests/KHost.Mobile.IntegrationTests.csproj" />

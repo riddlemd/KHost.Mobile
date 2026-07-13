@@ -102,7 +102,7 @@ Neither test project needs the MAUI workload: they target plain `net10.0`. The M
 | Project | Role |
 |---|---|
 | `KHost.Mobile` | The MAUI Blazor Hybrid app — a thin native shell hosting the Razor UI in `Components/`. |
-| `KHost.Mobile.Client` | Client library: playlist import (Spotify / YouTube Music), iTunes metadata lookup, and LRCLIB lyrics lookup. |
+| `KHost.Mobile.Clients` | Client library: playlist import (Spotify / YouTube Music), iTunes metadata lookup, and LRCLIB lyrics lookup. |
 | `KHost.Mobile.UnitTests` | xUnit unit tests for the pure, no-I/O logic (parsers, `Genres`, `SongListItem`). |
 | `KHost.Mobile.IntegrationTests` | xUnit integration tests for the JSON stores against a real temp folder, via a fake `IAppDataDirectory`. |
 

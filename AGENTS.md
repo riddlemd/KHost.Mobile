@@ -28,7 +28,7 @@ repos/
 | Project | Role |
 |---|---|
 | `KHost.Mobile` | MAUI Blazor Hybrid host. Thin shell; UI is Razor components (`Components/`), local stores under `Services/`, models under `Models/`. |
-| `KHost.Mobile.Client` | Standalone client library — the outward-facing lookups: playlist import (`Spotify/`, `YouTubeMusic/`), iTunes metadata (`Enrichment/`), LRCLIB lyrics (`Lyrics/`), and the GitHub-Releases update check (`Updates/`). No MAUI dependency. |
+| `KHost.Mobile.Clients` | Standalone client library — the outward-facing lookups: playlist import (`Spotify/`, `YouTubeMusic/`), iTunes metadata (`Enrichment/`), LRCLIB lyrics (`Lyrics/`), and the GitHub-Releases update check (`Updates/`). No MAUI dependency. |
 
 > Razor UI lives in `KHost.Mobile/Components/` for now. If a PWA build is ever wanted, extract components into a Razor Class Library (`KHost.Mobile.UI`) — the Hybrid design keeps that door open with no rewrite.
 
@@ -43,7 +43,7 @@ dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-windows10.0.19041.0 "-p
 dotnet run   --project KHost.Mobile -f net10.0-windows10.0.19041.0   # launch the UI on the desktop
 
 # Client library on its own
-dotnet build KHost.Mobile.Client/KHost.Mobile.Client.csproj
+dotnet build KHost.Mobile.Clients/KHost.Mobile.Clients.csproj
 ```
 
 `-p:BaseOutputPath=./obj/_build` mirrors the KHost repo convention (redirects output so it doesn't lock VS's `bin/`).
@@ -66,15 +66,15 @@ The app ships **offline/local UI only**. All local data sits behind an interface
 
 **Ratings & history** — `Performance` (per-sing "how it went" 1–5 + optional note + date) lives inside `SongListItem.Performances`; editable after the fact from the history sheet. Separate per-song `Enjoyment` rating.
 
-**Lyrics** — `Services/ILyricsCache.cs` + `JsonFileLyricsCache.cs` cache lyrics on device; lookups go through `KHost.Mobile.Client/Lyrics/` (LRCLIB, keyless).
+**Lyrics** — `Services/ILyricsCache.cs` + `JsonFileLyricsCache.cs` cache lyrics on device; lookups go through `KHost.Mobile.Clients/Lyrics/` (LRCLIB, keyless).
 
 **Quick links & search** — `Services/YouTubeSearch.cs`, `SpotifySearch.cs`, and `ILinkLauncher`/`MauiLinkLauncher` open a song on YouTube/Spotify.
 
-**Auto-fill** — `KHost.Mobile.Client/Enrichment/ITunesTrackMetadataLookup.cs` fills release year + genre (keyless iTunes Search API). `SongListItem.MetadataLookedUp` guards against re-spending a rate-limited call.
+**Auto-fill** — `KHost.Mobile.Clients/Enrichment/ITunesTrackMetadataLookup.cs` fills release year + genre (keyless iTunes Search API). `SongListItem.MetadataLookedUp` guards against re-spending a rate-limited call.
 
-**Import / export** — `ImportExport.razor` pulls songs from a public Spotify or YouTube Music playlist link, or a KHost Cue `.json` file, and exports the whole list back out (`KHost.Mobile.Client/Spotify/`, `YouTubeMusic/`).
+**Import / export** — `ImportExport.razor` pulls songs from a public Spotify or YouTube Music playlist link, or a KHost Cue `.json` file, and exports the whole list back out (`KHost.Mobile.Clients/Spotify/`, `YouTubeMusic/`).
 
-**Update alert** — `Services/IAppUpdateService.cs` + `MauiAppUpdateService.cs` check the app's public GitHub Releases (`KHost.Mobile.Client/Updates/`, anonymous) once per session; if a newer version exists, `UpdateBanner` offers a one-tap link. Disable-able in Settings; failures are swallowed (treated as "nothing new").
+**Update alert** — `Services/IAppUpdateService.cs` + `MauiAppUpdateService.cs` check the app's public GitHub Releases (`KHost.Mobile.Clients/Updates/`, anonymous) once per session; if a newer version exists, `UpdateBanner` offers a one-tap link. Disable-able in Settings; failures are swallowed (treated as "nothing new").
 
 **Settings** — `Services/IAppSettings.cs` + `MauiAppSettings.cs` back a Settings screen where every extra behavior (auto-fill, YouTube/Spotify links, lyrics, lyrics caching, Tonight, scroll-to-favorited, Surprise me + skip-today, per-performance rating, update checks) can be toggled, plus a danger zone (clear lyrics cache / clear song list).
 
@@ -103,7 +103,7 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
 ### Async
 - `Async` suffix on every Task-returning method.
 - Library / network methods take a trailing `CancellationToken cancellationToken = default` and thread it through every await.
-- `ConfigureAwait(false)` in `KHost.Mobile.Client` and other non-UI/background code. **Intentional exception:** the UI-thread JSON stores omit it — they rely on the Blazor sync context.
+- `ConfigureAwait(false)` in `KHost.Mobile.Clients` and other non-UI/background code. **Intentional exception:** the UI-thread JSON stores omit it — they rely on the Blazor sync context.
 - Network calls use the filter idiom `catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)`, calling `cancellationToken.ThrowIfCancellationRequested()` first, then rethrowing a domain exception. Guard args with `ArgumentNullException.ThrowIfNull`.
 
 ### Errors, logging & docs
@@ -116,7 +116,7 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
 - Fire `Changed?.Invoke(this, EventArgs.Empty)` **after** releasing the gate, and only when something actually changed.
 - One JSON file per store under `FileSystem.AppDataDirectory`; serialize with a **System.Text.Json source-gen** `JsonSerializerContext`. Swallow a corrupt file (`catch (JsonException)`) → empty state rather than crash.
 
-### Pattern: client backend (`KHost.Mobile.Client`)
+### Pattern: client backend (`KHost.Mobile.Clients`)
 - Stays **MAUI-free with zero package references** (pure BCL). One feature per folder/namespace.
 - `HttpClient` is **injected** via primary constructor (never `new`); base address/headers are configured at DI registration, not in the library. Registered as a typed client (`AddHttpClient<IFace, Impl>`).
 - Isolate parsing in a `static` "pure — no network" parser class; the service does HTTP + error mapping only.
@@ -139,7 +139,7 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
 
 ## Roadmap (server integration — deferred)
 
-Eventual slice: **join venue → search library → request song → live queue** against KHost.Online. When it lands, `KHost.Mobile.Client` gains the typed HTTP + `HubConnection` server client and re-takes a `KHost.Contracts` reference (removed for now so this repo builds standalone). `KHost.Online`'s REST slice is scaffolded and runtime-verified in its own repo.
+Eventual slice: **join venue → search library → request song → live queue** against KHost.Online. When it lands, `KHost.Mobile.Clients` gains the typed HTTP + `HubConnection` server client and re-takes a `KHost.Contracts` reference (removed for now so this repo builds standalone). `KHost.Online`'s REST slice is scaffolded and runtime-verified in its own repo.
 
 Server repo: `../KHost.Online` (see its own `CLAUDE.md`). Planned first-slice REST + SignalR surface, all route strings in `KHost.Contracts/Routes.cs`:
 

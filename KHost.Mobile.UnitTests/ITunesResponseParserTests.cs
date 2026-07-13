@@ -1,4 +1,4 @@
-using KHost.Mobile.Client.Enrichment;
+using KHost.Mobile.Clients.Enrichment;
 using Xunit;
 
 namespace KHost.Mobile.UnitTests;

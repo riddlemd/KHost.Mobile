@@ -1,4 +1,4 @@
-using KHost.Mobile.Client.Lyrics;
+using KHost.Mobile.Clients.Lyrics;
 using Xunit;
 
 namespace KHost.Mobile.UnitTests;

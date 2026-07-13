@@ -1,4 +1,4 @@
-using KHost.Mobile.Client.YouTubeMusic;
+using KHost.Mobile.Clients.YouTubeMusic;
 using Xunit;
 
 namespace KHost.Mobile.UnitTests;

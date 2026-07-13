@@ -1,4 +1,4 @@
-using KHost.Mobile.Client.Updates;
+using KHost.Mobile.Clients.Updates;
 using Xunit;
 
 namespace KHost.Mobile.UnitTests;

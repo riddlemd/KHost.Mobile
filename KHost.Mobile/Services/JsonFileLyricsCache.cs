@@ -1,5 +1,5 @@
 using System.Text.Json;
-using KHost.Mobile.Client.Lyrics;
+using KHost.Mobile.Clients.Lyrics;
 using KHost.Mobile.Models;
 
 namespace KHost.Mobile.Services;

@@ -1,6 +1,6 @@
 <Project>
 
-  <!-- Applies to every project in the repo (KHost.Mobile, KHost.Mobile.Client, tests).
+  <!-- Applies to every project in the repo (KHost.Mobile, KHost.Mobile.Clients, tests).
        Warnings are errors so the build stays clean; see AGENTS.md for the conventions. -->
   <PropertyGroup>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

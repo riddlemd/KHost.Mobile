@@ -1,4 +1,4 @@
-using KHost.Mobile.Client.Lyrics;
+using KHost.Mobile.Clients.Lyrics;
 
 namespace KHost.Mobile.Services;
 

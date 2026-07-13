@@ -1,8 +1,8 @@
-using KHost.Mobile.Client.Enrichment;
-using KHost.Mobile.Client.Lyrics;
-using KHost.Mobile.Client.Spotify;
-using KHost.Mobile.Client.Updates;
-using KHost.Mobile.Client.YouTubeMusic;
+using KHost.Mobile.Clients.Enrichment;
+using KHost.Mobile.Clients.Lyrics;
+using KHost.Mobile.Clients.Spotify;
+using KHost.Mobile.Clients.Updates;
+using KHost.Mobile.Clients.YouTubeMusic;
 using KHost.Mobile.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;

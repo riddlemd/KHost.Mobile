@@ -1,4 +1,4 @@
-using KHost.Mobile.Client.Updates;
+using KHost.Mobile.Clients.Updates;
 using Microsoft.Maui.ApplicationModel;
 
 namespace KHost.Mobile.Services;

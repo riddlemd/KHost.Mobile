@@ -1,4 +1,4 @@
-using KHost.Mobile.Client.Spotify;
+using KHost.Mobile.Clients.Spotify;
 using Xunit;
 
 namespace KHost.Mobile.UnitTests;

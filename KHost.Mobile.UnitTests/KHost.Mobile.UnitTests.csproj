@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\KHost.Mobile.Client\KHost.Mobile.Client.csproj" />
+    <ProjectReference Include="..\KHost.Mobile.Clients\KHost.Mobile.Clients.csproj" />
   </ItemGroup>
 
   <!-- The app's pure domain models live in the MAUI head (KHost.Mobile), which a net10.0 test project can't
