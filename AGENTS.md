@@ -130,7 +130,9 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
 
 ### Housekeeping
 - **Do NOT commit or push unless explicitly asked.**
-- **`KHost.Mobile.UnitTests` must pass before any commit or push.** Run `dotnet test KHost.Mobile.UnitTests/KHost.Mobile.UnitTests.csproj "-p:BaseOutputPath=./obj/_build"` and only proceed once it's green — never commit or push with a failing (or unrun) suite.
+- **Both test suites (`KHost.Mobile.UnitTests` + `KHost.Mobile.IntegrationTests`) must pass before any commit or push.** Run them and only proceed once green — never commit or push with a failing (or unrun) suite:
+  - `dotnet test KHost.Mobile.UnitTests/KHost.Mobile.UnitTests.csproj "-p:BaseOutputPath=./obj/_build"` — pure, no-I/O logic (parsers, `Genres`, `SongListItem`).
+  - `dotnet test KHost.Mobile.IntegrationTests/KHost.Mobile.IntegrationTests.csproj "-p:BaseOutputPath=./obj/_build"` — the JSON stores against a real temp folder (real file I/O + serialization) via a fake `IAppDataDirectory`.
 - **Always update `README.md` when a feature is added or its behavior changes** — keep the feature list, and the screenshot grid where relevant, in sync so the README never lags the app.
 - **`/research/` is gitignored and must never be committed** — it holds local planning/research notes and scratch data. Don't stage it, don't offer to commit it, and don't propose removing it from `.gitignore`.
 - Secrets via user-secrets/config — never hard-coded or committed.

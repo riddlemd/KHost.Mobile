@@ -19,26 +19,13 @@
     <ProjectReference Include="..\KHost.Mobile.Client\KHost.Mobile.Client.csproj" />
   </ItemGroup>
 
-  <!-- The app's pure domain models and JSON stores live in the MAUI head (KHost.Mobile), which a net10.0 test
-       project can't reference directly. Compile the MAUI-free source in so their logic (Genres.Map, the SongListItem
-       computed properties, the SemaphoreSlim-guarded JSON stores) is unit-testable without pulling the MAUI workload.
-       The stores' only MAUI dependency — the app-data path — is injected via IAppDataDirectory, faked in tests. -->
+  <!-- The app's pure domain models live in the MAUI head (KHost.Mobile), which a net10.0 test project can't
+       reference directly. Compile the MAUI-free source in so their no-I/O logic (Genres.Map, the SongListItem
+       computed properties) is unit-testable without pulling the MAUI workload. The JSON stores — which do real
+       filesystem I/O — are exercised in KHost.Mobile.IntegrationTests instead. -->
   <ItemGroup>
     <Compile Include="..\KHost.Mobile\Models\Genres.cs" Link="Linked\Models\Genres.cs" />
     <Compile Include="..\KHost.Mobile\Models\SongListItem.cs" Link="Linked\Models\SongListItem.cs" />
-    <Compile Include="..\KHost.Mobile\Models\TonightEntry.cs" Link="Linked\Models\TonightEntry.cs" />
-    <Compile Include="..\KHost.Mobile\Models\LyricsCacheEntry.cs" Link="Linked\Models\LyricsCacheEntry.cs" />
-
-    <Compile Include="..\KHost.Mobile\Services\IAppDataDirectory.cs" Link="Linked\Services\IAppDataDirectory.cs" />
-    <Compile Include="..\KHost.Mobile\Services\ISongListStore.cs" Link="Linked\Services\ISongListStore.cs" />
-    <Compile Include="..\KHost.Mobile\Services\JsonFileSongListStore.cs" Link="Linked\Services\JsonFileSongListStore.cs" />
-    <Compile Include="..\KHost.Mobile\Services\SongListJsonContext.cs" Link="Linked\Services\SongListJsonContext.cs" />
-    <Compile Include="..\KHost.Mobile\Services\ITonightStore.cs" Link="Linked\Services\ITonightStore.cs" />
-    <Compile Include="..\KHost.Mobile\Services\JsonFileTonightStore.cs" Link="Linked\Services\JsonFileTonightStore.cs" />
-    <Compile Include="..\KHost.Mobile\Services\TonightJsonContext.cs" Link="Linked\Services\TonightJsonContext.cs" />
-    <Compile Include="..\KHost.Mobile\Services\ILyricsCache.cs" Link="Linked\Services\ILyricsCache.cs" />
-    <Compile Include="..\KHost.Mobile\Services\JsonFileLyricsCache.cs" Link="Linked\Services\JsonFileLyricsCache.cs" />
-    <Compile Include="..\KHost.Mobile\Services\LyricsCacheJsonContext.cs" Link="Linked\Services\LyricsCacheJsonContext.cs" />
   </ItemGroup>
 
 </Project>
