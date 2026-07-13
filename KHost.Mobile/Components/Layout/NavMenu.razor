@@ -1,15 +1,49 @@
-@* Bottom tab bar. "My List" is live; Browse (online library) and History (sang songs) are roadmap placeholders. *@
+@inject ITonightStore Tonight
+@implements IDisposable
+
+@* Bottom tab bar. Tonight leads (the set you're about to sing), then My List (the wishlist you keep). The whole
+   bar is only rendered when Tonight is enabled (see MainLayout), so both tabs are always live here. The Tonight
+   tab carries a badge counting songs still to sing tonight. *@
 <nav class="app-nav">
+    <NavLink class="app-nav__tab" href="tonight">
+        <span class="app-nav__icon">
+            🎤
+            @if (_remaining > 0)
+            {
+                <span class="app-nav__badge">@_remaining</span>
+            }
+        </span>
+        Tonight
+    </NavLink>
     <NavLink class="app-nav__tab" href="" Match="NavLinkMatch.All">
         <span class="app-nav__icon">⭐</span>
         My List
     </NavLink>
-    <span class="app-nav__tab is-disabled">
-        <span class="app-nav__icon">🔎</span>
-        Browse
-    </span>
-    <span class="app-nav__tab is-disabled">
-        <span class="app-nav__icon">🎶</span>
-        History
-    </span>
 </nav>
+
+@code {
+    private int _remaining;   // songs queued for tonight that haven't been checked off yet
+
+    protected override async Task OnInitializedAsync()
+    {
+        Tonight.Changed += OnTonightChanged;
+        await RefreshAsync();
+    }
+
+    private void OnTonightChanged(object? sender, EventArgs e) => _ = RefreshOnUiAsync();
+
+    private async Task RefreshOnUiAsync()
+    {
+        try { await InvokeAsync(RefreshAsync); }
+        catch { /* best-effort: a stale badge is harmless */ }
+    }
+
+    private async Task RefreshAsync()
+    {
+        var set = await Tonight.GetAllAsync();
+        _remaining = set.Count(e => !e.Completed);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Tonight.Changed -= OnTonightChanged;
+}

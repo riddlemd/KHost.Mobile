@@ -1,5 +1,8 @@
 @inherits LayoutComponentBase
 @inject IJSRuntime JS
+@inject IAppSettings Settings
+@inject NavigationManager Nav
+@implements IDisposable
 
 <header class="app-header">
     <div class="app-header__title">
@@ -38,18 +41,28 @@
     </div>
 </header>
 
-<main class="app-content app-content--no-nav">
+<main class="app-content @(Settings.TonightEnabled ? "" : "app-content--no-nav")">
     <UpdateBanner />
     @Body
 </main>
 
-@* Bottom tab bar hidden until the online features (Browse / History) land; navigation is via the
-   header menu for now. Restore <NavMenu /> and drop the app-content--no-nav modifier to bring it back. *@
-@*<NavMenu />*@
+@* Bottom tab bar (Tonight + My List). Only shown when Tonight is enabled — with it off there's a single
+   destination, so the whole bar is hidden and navigation runs through the header menu. Settings has no Changed
+   event, so re-read it on every navigation (LocationChanged → StateHasChanged) to reflect a live toggle. *@
+@if (Settings.TonightEnabled)
+{
+    <NavMenu />
+}
 
 @code {
     private string _theme = "light";
     private bool _menuOpen;
+
+    protected override void OnInitialized() => Nav.LocationChanged += OnLocationChanged;
+
+    // Re-render on navigation so the bottom bar reflects the current Tonight setting (e.g. right after it's
+    // toggled on the Settings page). The layout persists across pages, so nothing else re-reads the flag.
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => StateHasChanged();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -70,4 +83,6 @@
     {
         _theme = await JS.InvokeAsync<string>("khTheme.toggle");
     }
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
 }

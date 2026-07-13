@@ -12,8 +12,37 @@
     </div>
 
     <div class="card">
-        <div class="section-title">Song details</div>
+        <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("tabs")' aria-expanded="@IsOpen("tabs")">
+            <span class="filters-toggle__label">Tabs</span>
+            <span class="filters-toggle__chevron @(IsOpen("tabs") ? "is-open" : "")">▾</span>
+        </button>
+        @if (IsOpen("tabs"))
+        {
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">“Tonight” tab</span>
+                <span class="setting__desc">
+                    Show the Tonight tab in the bottom bar — an on-deck set you build from your list, reorder, and
+                    check off as you sing. Turn off to hide the tab; with only My List left there's nothing to tab
+                    between, so the whole bottom bar goes too. Your saved set is kept and comes back when you
+                    re-enable it.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.TonightEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+        }
+    </div>
 
+    <div class="card">
+        <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("mylist")' aria-expanded="@IsOpen("mylist")">
+            <span class="filters-toggle__label">My List</span>
+            <span class="filters-toggle__chevron @(IsOpen("mylist") ? "is-open" : "")">▾</span>
+        </button>
+        @if (IsOpen("mylist"))
+        {
         <label class="setting">
             <span class="setting__text">
                 <span class="setting__title">Auto-fill year &amp; genre</span>
@@ -24,90 +53,6 @@
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.AutoFillMetadata" />
-                <span class="switch__track"><span class="switch__thumb"></span></span>
-            </span>
-        </label>
-
-        <label class="setting">
-            <span class="setting__text">
-                <span class="setting__title">“Find on YouTube” button</span>
-                <span class="setting__desc">
-                    Show a button on each song that opens a YouTube search in your browser or the YouTube app.
-                </span>
-            </span>
-            <span class="switch">
-                <input class="switch__input" type="checkbox" @bind="Prefs.YouTubeSearchEnabled" />
-                <span class="switch__track"><span class="switch__thumb"></span></span>
-            </span>
-        </label>
-
-        <label class="setting">
-            <span class="setting__text">
-                <span class="setting__title">“Find on Spotify” button</span>
-                <span class="setting__desc">
-                    Show a button on each song that opens a Spotify search in your browser or the Spotify app.
-                </span>
-            </span>
-            <span class="switch">
-                <input class="switch__input" type="checkbox" @bind="Prefs.SpotifySearchEnabled" />
-                <span class="switch__track"><span class="switch__thumb"></span></span>
-            </span>
-        </label>
-
-        <label class="setting">
-            <span class="setting__text">
-                <span class="setting__title">“Lyrics” button</span>
-                <span class="setting__desc">
-                    Show a button on each song that looks up its lyrics from LRCLIB and shows them in the app.
-                </span>
-            </span>
-            <span class="switch">
-                <input class="switch__input" type="checkbox" @bind="Prefs.LyricsEnabled" />
-                <span class="switch__track"><span class="switch__thumb"></span></span>
-            </span>
-        </label>
-
-        <label class="setting">
-            <span class="setting__text">
-                <span class="setting__title">Cache lyrics on this device</span>
-                <span class="setting__desc">
-                    Save looked-up lyrics so re-opening a song shows them instantly, without going back online.
-                    Turn off to always fetch fresh. Clear the saved copies from the Danger zone below.
-                </span>
-            </span>
-            <span class="switch">
-                <input class="switch__input" type="checkbox" @bind="Prefs.LyricsCacheEnabled" />
-                <span class="switch__track"><span class="switch__thumb"></span></span>
-            </span>
-        </label>
-    </div>
-
-    <div class="card">
-        <div class="section-title">Song list</div>
-
-        <label class="setting">
-            <span class="setting__text">
-                <span class="setting__title">“Tonight” set list</span>
-                <span class="setting__desc">
-                    Pin an on-deck set to the top of My Songs — add songs, reorder them, and check each off as you
-                    sing it. Turn off to hide it; your saved set is kept and comes back when you re-enable it.
-                </span>
-            </span>
-            <span class="switch">
-                <input class="switch__input" type="checkbox" @bind="Prefs.TonightEnabled" />
-                <span class="switch__track"><span class="switch__thumb"></span></span>
-            </span>
-        </label>
-
-        <label class="setting">
-            <span class="setting__text">
-                <span class="setting__title">Scroll to song when favorited</span>
-                <span class="setting__desc">
-                    Tapping a song's star scrolls the list to reveal its new position (favorites move to the top).
-                </span>
-            </span>
-            <span class="switch">
-                <input class="switch__input" type="checkbox" @bind="Prefs.ScrollToFavorited" />
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
@@ -141,10 +86,95 @@
 
         <label class="setting">
             <span class="setting__text">
+                <span class="setting__title">Scroll to song when favorited</span>
+                <span class="setting__desc">
+                    Tapping a song's star scrolls the list to reveal its new position (favorites move to the top).
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.ScrollToFavorited" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+        }
+    </div>
+
+    <div class="card">
+        <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("song")' aria-expanded="@IsOpen("song")">
+            <span class="filters-toggle__label">On a song</span>
+            <span class="filters-toggle__chevron @(IsOpen("song") ? "is-open" : "")">▾</span>
+        </button>
+        @if (IsOpen("song"))
+        {
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">“Find on YouTube” button</span>
+                <span class="setting__desc">
+                    Show a button on a song's detail sheet that opens a YouTube search in your browser or the YouTube app.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.YouTubeSearchEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">“Find on Spotify” button</span>
+                <span class="setting__desc">
+                    Show a button on a song's detail sheet that opens a Spotify search in your browser or the Spotify app.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.SpotifySearchEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">“Lyrics” button</span>
+                <span class="setting__desc">
+                    Show a button on a song's detail sheet that looks up its lyrics from LRCLIB and shows them in the app.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.LyricsEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Cache lyrics on this device</span>
+                <span class="setting__desc">
+                    Save looked-up lyrics so re-opening a song shows them instantly, without going back online.
+                    Turn off to always fetch fresh. Clear the saved copies from the Danger zone below.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.LyricsCacheEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+        }
+    </div>
+
+    <div class="card">
+        <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("singing")' aria-expanded="@IsOpen("singing")">
+            <span class="filters-toggle__label">Singing &amp; ratings</span>
+            <span class="filters-toggle__chevron @(IsOpen("singing") ? "is-open" : "")">▾</span>
+        </button>
+        @if (IsOpen("singing"))
+        {
+        <label class="setting">
+            <span class="setting__text">
                 <span class="setting__title">Rate each performance</span>
                 <span class="setting__desc">
-                    Ask “how did it go?” with a star rating when you mark a song sung. Turn off if you'd rather just
-                    log it (and jot a note) without judging the performance.
+                    Ask “how did it go?” with a star rating whenever you mark a song sung — from My List (“Mark sung”)
+                    and from the Tonight tab (checking a song off). Turn off if you'd rather just log it (and jot a
+                    note) without judging the performance.
                 </span>
             </span>
             <span class="switch">
@@ -152,11 +182,16 @@
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
+        }
     </div>
 
     <div class="card">
-        <div class="section-title">Updates</div>
-
+        <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("app")' aria-expanded="@IsOpen("app")">
+            <span class="filters-toggle__label">App</span>
+            <span class="filters-toggle__chevron @(IsOpen("app") ? "is-open" : "")">▾</span>
+        </button>
+        @if (IsOpen("app"))
+        {
         <label class="setting">
             <span class="setting__text">
                 <span class="setting__title">Notify me about new versions</span>
@@ -170,11 +205,17 @@
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
+        }
     </div>
 
     <div class="card">
-        <div class="section-title">Danger zone</div>
-        <p class="setting__desc" style="margin:0 0 0.85rem">
+        <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("danger")' aria-expanded="@IsOpen("danger")">
+            <span class="filters-toggle__label">Danger zone</span>
+            <span class="filters-toggle__chevron @(IsOpen("danger") ? "is-open" : "")">▾</span>
+        </button>
+        @if (IsOpen("danger"))
+        {
+        <p class="setting__desc" style="margin:0.6rem 0 0.85rem">
             Empty the saved lyrics. They'll be looked up again next time you open them — nothing is lost for good.
         </p>
         <button type="button" class="btn btn-danger settings__clear" @onclick="ClearLyricsCacheAsync" disabled="@(_lyricsCacheCount == 0)">
@@ -187,6 +228,7 @@
         <button type="button" class="btn btn-danger settings__clear" @onclick="AskClear" disabled="@(_songCount == 0)">
             @(_songCount == 0 ? "Song list is empty" : $"Clear song list ({_songCount})")
         </button>
+        }
     </div>
 </section>
 
@@ -208,6 +250,12 @@
     private int _songCount;
     private int _lyricsCacheCount;
     private bool _confirmClear;
+
+    // Collapsible sections. Track the collapsed ones by a short id (default: all expanded, so nothing is hidden
+    // on first visit); the header chevron toggles membership.
+    private readonly HashSet<string> _collapsed = [];
+    private bool IsOpen(string id) => !_collapsed.Contains(id);
+    private void Toggle(string id) { if (!_collapsed.Add(id)) _collapsed.Remove(id); }
 
     protected override async Task OnInitializedAsync()
     {

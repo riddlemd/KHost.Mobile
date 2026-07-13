@@ -1,0 +1,317 @@
+@page "/tonight"
+@inject ISongListStore Store
+@inject ITonightStore TonightStore
+@inject IAppSettings Settings
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IDisposable
+
+@* The "Tonight" on-deck set — its own tab. Drag the ⠿ handle to reorder, tap ✓ to check a song off (which logs
+   a performance, prompting for a rating when that's enabled), ✕ to drop it, "End night" to clear the set. When
+   Tonight is switched off in Settings this route has no tab, so it bounces back to My List. *@
+
+@if (_loading)
+{
+    <div class="loading-state" role="status" aria-live="polite">
+        <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="loading-state__title">Loading tonight's set…</div>
+    </div>
+}
+else if (_tonight.Count == 0)
+{
+    <div class="empty-state tonight-empty">
+        <div class="empty-state__icon">🎤</div>
+        <div class="empty-state__title">Nothing queued yet</div>
+        <div>Pick songs from My List and tap the 🎤 button to line up your set for tonight.</div>
+        <button class="btn btn-primary tonight-empty__cta" @onclick="GoToMyList">Browse My List</button>
+    </div>
+}
+else
+{
+    <div class="card tonight">
+        <div class="tonight__head tonight__head--static">
+            <span class="tonight__mic">🎤</span>
+            <span class="tonight__title">Tonight</span>
+            <span class="tonight__progress">@ProgressLabel</span>
+        </div>
+        <div class="tonight__progressbar"><span style="width:@Pct%"></span></div>
+        <div class="tonight__body" @ref="_list">
+            @foreach (var (entry, song) in Rows())
+            {
+                <div class="setrow @(entry.Completed ? "done" : "")" @key="entry.SongId" data-song-id="@entry.SongId">
+                    <span class="setrow__handle" title="Drag to reorder">⠿</span>
+                    <span class="setrow__pos">@(entry.Order + 1)</span>
+                    <div class="setrow__main">
+                        <div class="setrow__title">@song.Title</div>
+                        @if (!string.IsNullOrWhiteSpace(song.Artist))
+                        {
+                            <div class="setrow__artist">@song.Artist</div>
+                        }
+                    </div>
+                    <button type="button" class="setrow__check" aria-pressed="@entry.Completed"
+                            title="@(entry.Completed ? "Undo — mark not sung" : "Mark sung")"
+                            @onclick="() => ToggleDoneAsync(entry, song)">✓</button>
+                    <button type="button" class="setrow__remove" title="Remove from tonight"
+                            @onclick="() => ArmRemove(song)">✕</button>
+                </div>
+            }
+        </div>
+        <div class="tonight__foot">
+            <button type="button" class="btn tonight__end" @onclick="AskEndNight">End night</button>
+        </div>
+    </div>
+}
+
+<RatingPromptSheet Item="_ratingPromptItem" RatePerformances="Settings.RatePerformances"
+                   OnCommit="OnRatingCommitAsync" OnCancel="OnRatingCancel" />
+
+@if (_removeSong is not null)
+{
+    <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelRemove"></div>
+    <div class="confirm-pop" role="alertdialog" aria-modal="true">
+        <div class="confirm-pop__title">Remove from tonight?</div>
+        <div class="confirm-pop__date">“@_removeSong.Title” drops off tonight's set. It stays in your song list.</div>
+        <div class="confirm-pop__actions">
+            <button class="btn btn-secondary" @onclick="CancelRemove">Cancel</button>
+            <button class="btn confirm-pop__delete" @onclick="ConfirmRemoveAsync">Remove</button>
+        </div>
+    </div>
+}
+
+@if (_confirmEndNight)
+{
+    <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelEndNight"></div>
+    <div class="confirm-pop" role="alertdialog" aria-modal="true">
+        <div class="confirm-pop__title">End the night?</div>
+        <div class="confirm-pop__date">Clears tonight's @_tonight.Count-song set. Songs you sang stay in your history.</div>
+        <div class="confirm-pop__actions">
+            <button class="btn btn-secondary" @onclick="CancelEndNight">Cancel</button>
+            <button class="btn confirm-pop__delete" @onclick="EndNightAsync">End night</button>
+        </div>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<SongListItem> _items = [];
+    private IReadOnlyList<TonightEntry> _tonight = [];
+    private bool _loading = true;
+
+    private ElementReference _list;
+    private DotNetObjectReference<Tonight>? _selfRef;
+    private bool _dragBound;
+
+    private SongListItem? _removeSong;   // the song whose ✕ (remove) confirm is armed
+    private bool _confirmEndNight;
+
+    // Check-off → rating-prompt bridge. The prompt logs a performance; when it commits we flip the matching
+    // Tonight row to done (remembering the performance id so an undo removes exactly the one this logged).
+    private SongListItem? _ratingPromptItem;
+    private Guid? _completingSongId;
+    private Guid? _toggling;             // in-flight guard so a double-tap can't double-log a check-off
+
+    private bool _locked;                // mirrors body scroll-lock while the rating prompt is open
+
+    protected override async Task OnInitializedAsync()
+    {
+        // No Tonight tab when the feature is off — this route shouldn't be reachable, so bounce to My List.
+        if (!Settings.TonightEnabled)
+        {
+            Nav.NavigateTo("", replace: true);
+            return;
+        }
+
+        Store.Changed += OnStoreChanged;
+        TonightStore.Changed += OnTonightChanged;
+        await RefreshAsync();
+        _loading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Bind drag-to-reorder on the list body while it's shown; the body remounts when the set empties/refills,
+        // so reset the flag when it's gone and re-bind on return.
+        if (_tonight.Count > 0 && !_dragBound)
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khTonight.register", _list, _selfRef);
+            _dragBound = true;
+        }
+        else if (_tonight.Count == 0)
+        {
+            _dragBound = false;
+        }
+
+        // Lock the page behind the rating prompt; reconcile straight from state so a swipe-dismiss can't strand it.
+        var open = _ratingPromptItem is not null;
+        if (open != _locked)
+        {
+            _locked = open;
+            await JS.InvokeVoidAsync("khSheet.setLock", open);
+        }
+    }
+
+    private void GoToMyList() => Nav.NavigateTo("");
+
+    // ---- Set list -----------------------------------------------------------------------------
+
+    private int Done => _tonight.Count(e => e.Completed);
+    private int Pct => _tonight.Count == 0 ? 0 : (int)Math.Round(Done * 100.0 / _tonight.Count);
+    private string ProgressLabel =>
+        _tonight.Count == 0 ? "empty"
+        : Done == _tonight.Count ? $"all {_tonight.Count} done 🎉"
+        : $"{Done} of {_tonight.Count} done";
+
+    // Join the tonight entries (ordered) to their songs; skip any whose song is momentarily missing.
+    private IEnumerable<(TonightEntry entry, SongListItem song)> Rows()
+    {
+        var byId = _items.ToDictionary(i => i.Id);
+        foreach (var entry in _tonight.OrderBy(e => e.Order))
+            if (byId.TryGetValue(entry.SongId, out var song))
+                yield return (entry, song);
+    }
+
+    private void ArmRemove(SongListItem song) => _removeSong = song;
+    private void CancelRemove() => _removeSong = null;
+
+    private async Task ConfirmRemoveAsync()
+    {
+        var song = _removeSong;
+        _removeSong = null;
+        if (song is not null)
+            await TonightStore.RemoveAsync(song.Id);
+    }
+
+    private void AskEndNight() => _confirmEndNight = true;
+    private void CancelEndNight() => _confirmEndNight = false;
+
+    private async Task EndNightAsync()
+    {
+        _confirmEndNight = false;
+        await TonightStore.ClearAsync();
+    }
+
+    // Check a tonight song off (or undo it). Checking off logs a performance via the shared "mark sung" prompt —
+    // honoring the Rate-each-performance toggle — and flips the entry's completed flag. Undo clears the flag and
+    // removes the performance this check-off logged.
+    private async Task ToggleDoneAsync(TonightEntry entry, SongListItem song)
+    {
+        if (_toggling == entry.SongId)
+            return;   // a check-off for this row is already running — ignore the double-tap
+        _toggling = entry.SongId;
+        try
+        {
+            if (entry.Completed)
+            {
+                // Undo: remove the exact performance this check-off logged (matched by persisted id, so it works
+                // even across an app restart), then clear the flag.
+                if (entry.CompletedPerformanceId is { } perfId &&
+                    song.Performances.FirstOrDefault(p => p.Id == perfId) is { } perf &&
+                    song.Performances.Remove(perf))
+                {
+                    if (song.Performances.Count == 0)
+                        song.Status = SongListItemStatus.WantToSing;
+                    await Store.UpdateAsync(song);
+                }
+                await TonightStore.SetCompletedAsync(entry.SongId, false);
+                return;
+            }
+
+            if (Settings.RatePerformances)
+            {
+                // Defer completion to OnRatingCommitAsync (fires when the prompt is saved/skipped/swiped away).
+                _completingSongId = entry.SongId;
+                _ratingPromptItem = song;
+            }
+            else
+            {
+                // Log an unrated performance and complete immediately, no prompt.
+                var perf = new Performance { Date = DateTimeOffset.Now, HowItWent = 0 };
+                song.Performances.Add(perf);
+                song.Status = SongListItemStatus.Sang;
+                await Store.UpdateAsync(song);
+                await TonightStore.SetCompletedAsync(entry.SongId, true, perf.Id);
+            }
+        }
+        finally
+        {
+            _toggling = null;
+        }
+    }
+
+    // ---- Rating prompt (shared component) -----------------------------------------------------
+
+    // The prompt committed (Save / Skip / swipe): append the performance, mark the song sung, then check the row off.
+    private async Task OnRatingCommitAsync((int howItWent, string? note) result)
+    {
+        var item = _ratingPromptItem;
+        _ratingPromptItem = null;
+        if (item is null)
+            return;
+
+        var performance = new Performance
+        {
+            Date = DateTimeOffset.Now,
+            HowItWent = Math.Clamp(result.howItWent, 0, 5),
+            Note = string.IsNullOrWhiteSpace(result.note) ? null : result.note.Trim(),
+        };
+        item.Performances.Add(performance);
+        item.Status = SongListItemStatus.Sang;
+        await Store.UpdateAsync(item);
+
+        if (_completingSongId == item.Id)
+        {
+            await TonightStore.SetCompletedAsync(item.Id, true, performance.Id);
+            _completingSongId = null;
+        }
+    }
+
+    // Dismissed without logging (✕ / backdrop): leave the row unchecked.
+    private void OnRatingCancel()
+    {
+        _ratingPromptItem = null;
+        _completingSongId = null;
+    }
+
+    // Drag-to-reorder callback from khTonight: the new top-to-bottom order of song ids.
+    [JSInvokable]
+    public async Task ReorderTonight(string[] orderedIds)
+    {
+        var guids = orderedIds
+            .Select(s => Guid.TryParse(s, out var g) ? g : (Guid?)null)
+            .Where(g => g.HasValue)
+            .Select(g => g!.Value)
+            .ToList();
+        await TonightStore.ReorderAsync(guids);
+    }
+
+    // ---- Store wiring -------------------------------------------------------------------------
+
+    private void OnStoreChanged(object? sender, EventArgs e) => _ = RefreshOnUiAsync();
+    private void OnTonightChanged(object? sender, EventArgs e) => _ = RefreshOnUiAsync();
+
+    private async Task RefreshOnUiAsync()
+    {
+        try { await InvokeAsync(RefreshAsync); }
+        catch { /* best-effort: keep the last-known set on screen if a reload fails */ }
+    }
+
+    private async Task RefreshAsync()
+    {
+        _items = await Store.GetAllAsync();
+        // Drop any tonight entries whose song was deleted (orphan pruning), then reload the joined set.
+        await TonightStore.PruneAsync(_items.Select(i => i.Id).ToList());
+        _tonight = await TonightStore.GetAllAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Store.Changed -= OnStoreChanged;
+        TonightStore.Changed -= OnTonightChanged;
+        // Never leave the page-scroll lock on if this page is torn down with the prompt open.
+        if (_locked)
+            _ = JS.InvokeVoidAsync("khSheet.setLock", false);
+        _selfRef?.Dispose();
+    }
+}

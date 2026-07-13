@@ -13,9 +13,10 @@ public interface IAppSettings
     bool AutoFillMetadata { get; set; }
 
     /// <summary>
-    /// When true, the "Tonight" on-deck set list is available: it's pinned atop My Songs and every song gets a
-    /// quick "add to tonight" control. When false, the Tonight section and its controls are hidden (the saved set
-    /// is left untouched, so turning it back on restores it).
+    /// When true, the "Tonight" on-deck set list is available: it gets its own tab in the bottom bar and every
+    /// song gets a quick "add to tonight" control. When false, the Tonight tab (and with it the whole bottom bar,
+    /// since it's then the only extra destination) and the per-song controls are hidden — the saved set is left
+    /// untouched, so turning it back on restores it.
     /// </summary>
     bool TonightEnabled { get; set; }
 

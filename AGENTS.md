@@ -52,15 +52,15 @@ dotnet build KHost.Mobile.Client/KHost.Mobile.Client.csproj
 
 The app ships **offline/local UI only**. All local data sits behind an interface with a device-backed JSON implementation, so a server-sync implementation can drop in later without UI changes. Every store is registered as a singleton in `MauiProgram`, is `SemaphoreSlim`-guarded with an in-memory cache, raises a `Changed` event to drive UI refresh, and swallows a corrupt file rather than crashing.
 
-**Mobile shell** (`Components/Layout/`): mobile-first — sticky top app bar, scrolling content, fixed bottom tab bar (`NavMenu`). "My List" is live; "Browse" (online library) and "History" (sang songs) are disabled roadmap placeholders. `UpdateBanner` sits at the top when a newer release is available. Theme in `wwwroot/app.css`: design tokens + light/dark via `prefers-color-scheme`; brand accent violet `#7c3aed`.
+**Mobile shell** (`Components/Layout/`): mobile-first — sticky top app bar, scrolling content, fixed bottom tab bar (`NavMenu`) with two tabs — **Tonight** (the on-deck set) then **My List** (the wishlist). The bar is only rendered when the Tonight feature is enabled (`MainLayout` gates it on `IAppSettings.TonightEnabled`); with it off there's a single destination, so the whole bar is hidden and nav runs through the header ⋮ menu. On launch, `MySongs` does a one-time "smart landing" (via `IAppSession`): open onto Tonight when a set is queued, else stay on My List. `UpdateBanner` sits at the top when a newer release is available. Theme in `wwwroot/app.css`: design tokens + light/dark via `prefers-color-scheme`; brand accent violet `#7c3aed`.
 
-**Pages** (`Components/Pages/`): `MySongs.razor` (route `/`), `Settings.razor`, `ImportExport.razor`, `About.razor`, `NotFound.razor`.
+**Pages** (`Components/Pages/`): `MySongs.razor` (route `/`), `Tonight.razor` (route `/tonight`), `Settings.razor`, `ImportExport.razor`, `About.razor`, `NotFound.razor`.
 
 **My Songs wishlist** — a patron's on-device list of songs to sing.
 - `Models/SongListItem.cs` — mutable, JSON-persisted entity: free-text title/artist, `Genre`/`Year`, per-song `Enjoyment` (1–5), `IsFavorite` (favorites float to top), `Performances` (the sung-history + per-sing "how it went" ratings; `AverageHowItWent`/`LastSungAt` derived from it), `SongListItemStatus` (`WantToSing` → `Sang`), and reserved `LibrarySongId` for future online-library links. Legacy fields (`SungDates`, `Confidence`) are read/migrate-only.
 - `Services/ISongListStore.cs` + `JsonFileSongListStore.cs` — the wishlist store (UI binds to the interface only).
 
-**Tonight set list** — an on-deck set for the venue, kept separate from the wishlist so a song sung earlier today stays un-checked until checked off here.
+**Tonight set list** — an on-deck set for the venue, on its own tab (`Tonight.razor`), kept separate from the wishlist so a song sung earlier today stays un-checked until checked off here. Checking a row off logs a performance through the shared `RatingPromptSheet` component (also used by My Songs' "Mark sung"); the wishlist cards keep a 🎤 quick-add to line songs up for the set.
 - `Models/TonightEntry.cs` — references a `SongListItem` by id; owns `Order`, `Completed`/`CompletedAt`, and `CompletedPerformanceId` (so an undo removes exactly the performance the check-off logged, even after restart).
 - `Services/ITonightStore.cs` + `JsonFileTonightStore.cs`.
 

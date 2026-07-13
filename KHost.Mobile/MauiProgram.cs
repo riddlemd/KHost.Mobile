@@ -35,6 +35,9 @@ public static class MauiProgram
         // User preferences (feature toggles) persisted via MAUI Preferences. Singleton: one view of the flags app-wide.
         builder.Services.AddSingleton<IAppSettings, MauiAppSettings>();
 
+        // Ephemeral per-launch state (e.g. the one-time smart-landing decision). Singleton; not persisted.
+        builder.Services.AddSingleton<IAppSession, AppSession>();
+
         // On-device lyrics cache (JSON file). Singleton so its in-memory map + Changed event are shared app-wide.
         builder.Services.AddSingleton<ILyricsCache, JsonFileLyricsCache>();
 

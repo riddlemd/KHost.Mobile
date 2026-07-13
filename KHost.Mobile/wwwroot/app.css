@@ -238,6 +238,9 @@ html, body {
     cursor: pointer;
 }
 .setting + .setting { border-top: 1px solid var(--kh-border); }
+/* Collapsible section header inside a settings card: a full-width tap target; the first setting's own top
+   padding gives the gap below it when the section is open. */
+.settings-section { padding: 0.2rem 0; }
 .setting__text { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
 .setting__title { font-size: 0.95rem; font-weight: 600; color: var(--kh-text); }
 .setting__desc { font-size: 0.8rem; line-height: 1.4; color: var(--kh-text-muted); }
@@ -362,8 +365,26 @@ html, body {
 }
 
 .app-nav__tab.active { color: var(--kh-primary); }
-.app-nav__tab .app-nav__icon { font-size: 1.35rem; line-height: 1; }
+.app-nav__tab .app-nav__icon { position: relative; font-size: 1.35rem; line-height: 1; }
 .app-nav__tab.is-disabled { opacity: 0.4; pointer-events: none; }
+
+/* Count of songs still to sing tonight, pinned to the Tonight tab's icon. */
+.app-nav__badge {
+    position: absolute;
+    top: -0.35rem;
+    left: 58%;
+    min-width: 1.05rem;
+    height: 1.05rem;
+    padding: 0 0.25rem;
+    border-radius: 0.55rem;
+    background: var(--kh-primary);
+    color: var(--kh-primary-contrast);
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 1.05rem;
+    text-align: center;
+}
+.app-nav__tab.active .app-nav__badge { background: var(--kh-primary-strong); }
 
 /* ---- Cards / list ------------------------------------------------------- */
 
@@ -701,12 +722,16 @@ body.kh-sheet-open { overflow: hidden; }
 .lyrics__attribution { margin-top: 0.85rem; font-size: 0.75rem; color: var(--kh-text-muted); }
 
 /* ---- "Tonight" on-deck set list ---------------------------------------- */
-/* Pinned card at the top of My Songs. Violet-accented so it reads as the active in-venue mode. */
+/* The Tonight tab's set-list card. Violet-accented so it reads as the active in-venue mode. */
 .card.tonight { border: 1px solid var(--kh-primary); box-shadow: 0 2px 14px rgba(124, 58, 237, 0.18); padding: 0; overflow: hidden; }
 .tonight__head {
     display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 0.9rem; cursor: pointer;
     background: linear-gradient(135deg, rgba(124, 58, 237, 0.10), rgba(124, 58, 237, 0.02));
 }
+/* The tab's header isn't a collapse toggle (there's no card to fold on a dedicated page). */
+.tonight__head--static { cursor: default; }
+/* Empty Tonight tab: the mic prompt + a button back to the wishlist to build a set. */
+.tonight-empty__cta { width: auto; margin-top: 1.1rem; padding-left: 1.4rem; padding-right: 1.4rem; }
 .tonight__mic { font-size: 1.15rem; }
 .tonight__title { font-weight: 700; font-size: 1.02rem; color: var(--kh-text); }
 .tonight__progress {
