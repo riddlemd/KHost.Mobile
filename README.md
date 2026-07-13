@@ -1,6 +1,6 @@
 # 🎤 KHost Cue
 
-> **You're on cue.** — the singer & patron companion app for [KHost](../KHost), open-source karaoke host software.
+> **You're on cue.** — the singer & patron companion app for [KHost](https://github.com/riddlemd/KHost), open-source karaoke host software.
 
 [![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-blueviolet)](#)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
