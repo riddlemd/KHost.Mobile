@@ -1,7 +1,7 @@
 using KHost.Mobile.Client.Enrichment;
 using Xunit;
 
-namespace KHost.Mobile.Client.Tests;
+namespace KHost.Mobile.UnitTests;
 
 public class ITunesResponseParserTests
 {

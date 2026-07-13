@@ -12,10 +12,19 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\KHost.Mobile.Client\KHost.Mobile.Client.csproj" />
+  </ItemGroup>
+
+  <!-- The app's pure domain models live in the MAUI head (KHost.Mobile), which a net10.0 test project can't
+       reference directly. Compile the MAUI-free source in so their logic (Genres.Map, the SongListItem computed
+       properties) is unit-testable without pulling the MAUI workload. -->
+  <ItemGroup>
+    <Compile Include="..\KHost.Mobile\Models\Genres.cs" Link="Linked\Genres.cs" />
+    <Compile Include="..\KHost.Mobile\Models\SongListItem.cs" Link="Linked\SongListItem.cs" />
   </ItemGroup>
 
 </Project>

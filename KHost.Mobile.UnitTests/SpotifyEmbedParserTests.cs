@@ -2,7 +2,7 @@ using System.Text;
 using KHost.Mobile.Client.Spotify;
 using Xunit;
 
-namespace KHost.Mobile.Client.Tests;
+namespace KHost.Mobile.UnitTests;
 
 public class SpotifyEmbedParserTests
 {
