@@ -11,4 +11,7 @@ public sealed class AppSession : IAppSession
 
     /// <inheritdoc />
     public MySongsViewState MySongsView { get; } = new();
+
+    /// <inheritdoc />
+    public TonightViewState TonightView { get; } = new();
 }

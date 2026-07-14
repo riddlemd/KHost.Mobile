@@ -915,16 +915,16 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Start remembering this page's scroll position (survives a tab change via scroll.js module state).
-        if (firstRender)
-            await JS.InvokeVoidAsync("khScroll.track", ScrollKey);
-
         // Restore the saved scroll once the list has actually painted (so the page has its full height to scroll
-        // to). A no-op on the first-ever visit (nothing saved yet) or when returning to an empty list.
+        // to), THEN start tracking. Attaching the listener only after restoring is deliberate: on a tab change the
+        // incoming page fires a mount-time scroll-to-0, and a listener attached earlier would record that 0 (during
+        // the loading delay) and clobber the saved position before we restore it. A no-op on the first-ever visit
+        // (nothing saved) or an empty list.
         if (!_scrollRestored && !_loading)
         {
             _scrollRestored = true;
             await JS.InvokeVoidAsync("khScroll.restore", ScrollKey);
+            await JS.InvokeVoidAsync("khScroll.track", ScrollKey);
         }
 
         // Add-form year input needs the digit-only guard. The form is collapsible, so re-bind whenever it's
