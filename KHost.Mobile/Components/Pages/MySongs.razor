@@ -647,9 +647,8 @@ else
     private bool _rangeBound;   // anti-cross clamp bound to the current year-slider inputs
     private string? _scrollToSongId;   // set on favorite-toggle; the next render scrolls this card into view
 
-    // Persisted list view: filter + sort are restored from / saved to IAppSession so they survive a tab change
-    // (the page is disposed on navigation). Scroll position lives in scroll.js (khScroll.track/restore). Keyed
-    // "mysongs" there. _scrollRestored guards the one-shot restore after the list first paints.
+    // Filter + sort are held on IAppSession, and scroll on scroll.js, so they survive a tab change — the page
+    // component is disposed on navigation and its own fields would otherwise reset.
     private const string ScrollKey = "mysongs";
     private bool _scrollRestored;
 
@@ -772,8 +771,8 @@ else
 
     // ---- View-state persistence (filter + sort survive a tab change; held on IAppSession) ----
 
-    // Copy the saved filter/sort back into our fields. Skipped on the first-ever visit (nothing saved yet), which
-    // leaves the page's own defaults in place — SaveViewState then seeds the holder on dispose.
+    // Skipped on the first-ever visit (nothing saved yet), which leaves the page's own defaults in place —
+    // SaveViewState then seeds the holder on dispose, so the holder never has to know the default sort column.
     private void RestoreViewState()
     {
         var s = Session.MySongsView;
@@ -795,7 +794,6 @@ else
         _filtersOpen = s.FiltersOpen;
     }
 
-    // Snapshot our current filter/sort into the shared holder so the next visit this launch can restore it.
     private void SaveViewState()
     {
         var s = Session.MySongsView;
@@ -884,7 +882,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        RestoreViewState();   // re-apply the filter/sort left from a prior visit this launch (before the first render)
+        RestoreViewState();   // before the first render, so restored filters/sort show immediately
         Store.Changed += OnStoreChanged;
         Tonight.Changed += OnTonightChanged;
 
@@ -915,11 +913,10 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Restore the saved scroll once the list has actually painted (so the page has its full height to scroll
-        // to), THEN start tracking. Attaching the listener only after restoring is deliberate: on a tab change the
-        // incoming page fires a mount-time scroll-to-0, and a listener attached earlier would record that 0 (during
-        // the loading delay) and clobber the saved position before we restore it. A no-op on the first-ever visit
-        // (nothing saved) or an empty list.
+        // Attaching the listener only AFTER restoring is deliberate: on a tab change the incoming page fires a
+        // mount-time scroll-to-0, and a listener attached earlier would record that 0 (during the loading delay)
+        // and clobber the saved position before we restore it. Waiting for !_loading means the list has painted,
+        // so the page has its full height to scroll to.
         if (!_scrollRestored && !_loading)
         {
             _scrollRestored = true;
@@ -1687,8 +1684,8 @@ else
 
     public void Dispose()
     {
-        SaveViewState();   // remember filter/sort for the next visit this launch
-        _ = JS.InvokeVoidAsync("khScroll.untrack", ScrollKey);   // stop the scroll listener (position is already saved)
+        SaveViewState();
+        _ = JS.InvokeVoidAsync("khScroll.untrack", ScrollKey);
         Store.Changed -= OnStoreChanged;
         Tonight.Changed -= OnTonightChanged;
         // Safety net: never leave the page-scroll lock on if this page is torn down with a sheet open.

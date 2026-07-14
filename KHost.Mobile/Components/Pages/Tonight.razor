@@ -111,9 +111,9 @@ else
 
     private bool _locked;                // mirrors body scroll-lock while the rating prompt is open
 
-    // Scroll position is remembered across a tab change via scroll.js module state (keyed "tonight"), the same as
-    // My Songs — it can't be C#-owned because MAUI's Android WebView has no synchronous JS interop. _scrollRestored
-    // guards the one-shot restore after the set first paints.
+    // Scroll is kept on scroll.js so it survives a tab change (the page component is disposed on navigation). It
+    // can't be C#-owned, the way My Songs' filter/sort are, because MAUI's Android WebView has no synchronous JS
+    // interop to snapshot the offset on dispose.
     private const string ScrollKey = "tonight";
     private bool _scrollRestored;
 
@@ -135,11 +135,10 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Restore the saved scroll once the set has painted (so the page has its full height), THEN start tracking.
-        // Attaching the listener only after restoring is deliberate: on a tab change the incoming page fires a
-        // mount-time scroll-to-0, and a listener attached earlier would push that 0 into Session.TonightView (during
-        // the loading delay) and clobber the saved offset before we restore it. A no-op on the first-ever visit
-        // (offset 0) or an empty set.
+        // Attaching the listener only AFTER restoring is deliberate: on a tab change the incoming page fires a
+        // mount-time scroll-to-0, and a listener attached earlier would record that 0 (during the loading delay)
+        // and clobber the saved offset before we restore it. Waiting for !_loading means the set has painted, so
+        // the page has its full height to scroll to.
         if (!_scrollRestored && !_loading)
         {
             _scrollRestored = true;
@@ -325,8 +324,6 @@ else
 
     public void Dispose()
     {
-        // Stop the scroll listener and drop any pending commit (incl. the navigation reset-to-0); the tracked
-        // position lives on in scroll.js's module map for the next visit to restore.
         _ = JS.InvokeVoidAsync("khScroll.untrack", ScrollKey);
         Store.Changed -= OnStoreChanged;
         TonightStore.Changed -= OnTonightChanged;

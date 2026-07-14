@@ -1,16 +1,12 @@
-// Scroll helpers for the song list.
-//  - toSong: smoothly reveals a card by id (used after a favorite toggle re-sorts the list).
-//  - track/untrack/restore: remember the page's scroll position across SPA navigation. Tab changes don't reload
-//    the WebView, so this module-level map outlives the page component being disposed — no interop-on-dispose
-//    needed (which matters: MAUI's Android WebView has no synchronous JS interop and its async JS→C# callbacks are
-//    unreliable, so the scroll value has to live here in JS, not in a C# view-state object). A scroll listener
-//    records the settled window.scrollY (debounced) into _pos while the page is mounted; restore jumps back to it
-//    (instant, so it doesn't animate) once the list has rendered its full height.
+// Scroll position is remembered here in JS, not in a C# view state, because MAUI's Android WebView has no
+// synchronous JS interop and its async JS→C# callbacks don't land reliably — so a page can't pull its scroll
+// offset into C# as it's disposed. This module-level map, by contrast, outlives the page (a tab change is SPA
+// navigation, not a WebView reload), so the remounted page reads its old position back.
 //
-// The commit is DEBOUNCED, not per scroll event. That matters for correctness: on a tab change the browser resets
-// window.scrollY to 0 for the incoming page, firing a 'scroll' event while the outgoing page's listener may still
-// be attached. A per-event write would record that 0 and clobber the saved position; a debounced write is still
-// pending when the page's untrack cancels it, so the last real position survives.
+// Commits are debounced, not per scroll event, for correctness: a tab change resets window.scrollY to 0 for the
+// incoming page, firing a 'scroll' event while the outgoing page's listener may still be attached. A per-event
+// write would record that 0 and clobber the saved position; a debounced write is still pending when untrack
+// cancels it, so the last real position survives.
 window.khScroll = {
     _pos: {},
     _handlers: {},
@@ -22,7 +18,7 @@ window.khScroll = {
     },
 
     track(key) {
-        if (this._handlers[key]) return;   // already tracking
+        if (this._handlers[key]) return;
         const commit = () => { this._pos[key] = window.scrollY; };
         const handler = () => {
             clearTimeout(this._timers[key]);
