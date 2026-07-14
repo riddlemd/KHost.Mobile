@@ -27,10 +27,4 @@ public interface IAppSession
     /// instance for the process; the page restores from it on init and writes back on dispose.
     /// </summary>
     MySongsViewState MySongsView { get; }
-
-    /// <summary>
-    /// The Tonight tab's view state (scroll offset today; the home for future persisted Tonight state). Kept here
-    /// for the same reason as <see cref="MySongsView"/> — it outlives the page component being disposed on nav.
-    /// </summary>
-    TonightViewState TonightView { get; }
 }

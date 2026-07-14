@@ -2,14 +2,15 @@
 //  - toSong: smoothly reveals a card by id (used after a favorite toggle re-sorts the list).
 //  - track/untrack/restore: remember the page's scroll position across SPA navigation. Tab changes don't reload
 //    the WebView, so this module-level map outlives the page component being disposed — no interop-on-dispose
-//    needed. restore jumps back (instant, so it doesn't animate) once the list has rendered its full height.
-//  - track can also report the settled offset to a .NET method, so a page can keep it in its own C# view-state
-//    object instead of this module's map; scrollToY restores from such a value.
+//    needed (which matters: MAUI's Android WebView has no synchronous JS interop and its async JS→C# callbacks are
+//    unreliable, so the scroll value has to live here in JS, not in a C# view-state object). A scroll listener
+//    records the settled window.scrollY (debounced) into _pos while the page is mounted; restore jumps back to it
+//    (instant, so it doesn't animate) once the list has rendered its full height.
 //
-// The commit is DEBOUNCED, not fired per scroll event. That matters for correctness, not just chatter: when a tab
-// changes, the browser resets window.scrollY to 0 for the incoming page, firing a 'scroll' event while the old
-// page's listener may still be attached. A per-event write would record that 0 and clobber the saved position; a
-// debounced write is still pending when the page's untrack cancels it, so the last real position survives.
+// The commit is DEBOUNCED, not per scroll event. That matters for correctness: on a tab change the browser resets
+// window.scrollY to 0 for the incoming page, firing a 'scroll' event while the outgoing page's listener may still
+// be attached. A per-event write would record that 0 and clobber the saved position; a debounced write is still
+// pending when the page's untrack cancels it, so the last real position survives.
 window.khScroll = {
     _pos: {},
     _handlers: {},
@@ -20,14 +21,9 @@ window.khScroll = {
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     },
 
-    track(key, dotnetRef, method) {
+    track(key) {
         if (this._handlers[key]) return;   // already tracking
-        const commit = () => {
-            this._pos[key] = window.scrollY;
-            if (dotnetRef && method) {
-                try { dotnetRef.invokeMethodAsync(method, window.scrollY); } catch (e) { /* ref gone — ignore */ }
-            }
-        };
+        const commit = () => { this._pos[key] = window.scrollY; };
         const handler = () => {
             clearTimeout(this._timers[key]);
             this._timers[key] = setTimeout(commit, 120);
@@ -49,10 +45,5 @@ window.khScroll = {
     restore(key) {
         const y = this._pos[key];
         if (y != null) window.scrollTo({ top: y, behavior: 'instant' });
-    },
-
-    // Restore to an explicit offset a page kept in its own C# view state (no-op at/above the top).
-    scrollToY(y) {
-        if (y != null && y > 0) window.scrollTo({ top: y, behavior: 'instant' });
     },
 };

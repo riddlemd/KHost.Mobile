@@ -2,7 +2,6 @@
 @inject ISongListStore Store
 @inject ITonightStore TonightStore
 @inject IAppSettings Settings
-@inject IAppSession Session
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @implements IDisposable
@@ -112,9 +111,9 @@ else
 
     private bool _locked;                // mirrors body scroll-lock while the rating prompt is open
 
-    // Scroll position is remembered across a tab change on IAppSession (Session.TonightView.ScrollTop): scroll.js
-    // pushes the settled offset in via SaveScrollTop while we're mounted, and we restore it once the set repaints.
-    // Keyed "tonight" in scroll.js. _scrollRestored guards the one-shot restore after the set first paints.
+    // Scroll position is remembered across a tab change via scroll.js module state (keyed "tonight"), the same as
+    // My Songs — it can't be C#-owned because MAUI's Android WebView has no synchronous JS interop. _scrollRestored
+    // guards the one-shot restore after the set first paints.
     private const string ScrollKey = "tonight";
     private bool _scrollRestored;
 
@@ -144,9 +143,8 @@ else
         if (!_scrollRestored && !_loading)
         {
             _scrollRestored = true;
-            await JS.InvokeVoidAsync("khScroll.scrollToY", Session.TonightView.ScrollTop);
-            _selfRef ??= DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("khScroll.track", ScrollKey, _selfRef, nameof(SaveScrollTop));
+            await JS.InvokeVoidAsync("khScroll.restore", ScrollKey);
+            await JS.InvokeVoidAsync("khScroll.track", ScrollKey);
         }
 
         // Bind drag-to-reorder on the list body while it's shown; the body remounts when the set empties/refills,
@@ -170,11 +168,6 @@ else
             await JS.InvokeVoidAsync("khSheet.setLock", open);
         }
     }
-
-    // Pushed from scroll.js (debounced) with the settled window scroll offset; stash it on the session so the
-    // next visit can restore it. Not a render trigger — it only records state for later.
-    [JSInvokable]
-    public void SaveScrollTop(double y) => Session.TonightView.ScrollTop = y;
 
     private void GoToMyList() => Nav.NavigateTo("");
 
@@ -332,8 +325,8 @@ else
 
     public void Dispose()
     {
-        // Stop the scroll listener and drop any pending commit (incl. the navigation reset-to-0). The debounced
-        // pushes during scroll already kept Session.TonightView.ScrollTop current, so nothing to flush here.
+        // Stop the scroll listener and drop any pending commit (incl. the navigation reset-to-0); the tracked
+        // position lives on in scroll.js's module map for the next visit to restore.
         _ = JS.InvokeVoidAsync("khScroll.untrack", ScrollKey);
         Store.Changed -= OnStoreChanged;
         TonightStore.Changed -= OnTonightChanged;
