@@ -14,6 +14,8 @@ public sealed class MauiAppSettings : IAppSettings
     private const string SurpriseKey = "settings.surprise";
     private const string YouTubeSearchKey = "settings.youtube_search";
     private const string SpotifySearchKey = "settings.spotify_search";
+    private const string KaraFunKey = "settings.karafun";
+    private const string KaraFunVenueIdKey = "settings.karafun_venue_id";
     private const string LyricsKey = "settings.lyrics";
     private const string LyricsCacheKey = "settings.lyrics_cache";
     private const string ScrollToFavoritedKey = "settings.scroll_to_favorited";
@@ -51,6 +53,19 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(SpotifySearchKey, true);
         set => Preferences.Default.Set(SpotifySearchKey, value);
+    }
+
+    public bool KaraFunEnabled
+    {
+        get => Preferences.Default.Get(KaraFunKey, true);
+        set => Preferences.Default.Set(KaraFunKey, value);
+    }
+
+    // The first string-valued setting; empty string default means "no venue set yet".
+    public string KaraFunVenueId
+    {
+        get => Preferences.Default.Get(KaraFunVenueIdKey, string.Empty);
+        set => Preferences.Default.Set(KaraFunVenueIdKey, value);
     }
 
     public bool LyricsEnabled

@@ -1,0 +1,67 @@
+@* Shared "set your KaraFun venue" prompt. Shown when @Show is true; the user pastes a venue link (or the bare ID),
+   we parse it live and raise OnSave with the venue ID, or OnClose on cancel/backdrop. Presentational only — the
+   host owns the @Show state and persists the saved ID. Reused by Settings and the My Songs detail sheet. Uses the
+   --history stacking so it sits above the song detail sheet when opened from there. *@
+@if (Show)
+{
+    <div class="sheet-backdrop sheet-backdrop--history" @onclick="OnClose"></div>
+    <div class="sheet sheet--history" role="dialog" aria-modal="true">
+        <button type="button" class="sheet__close" @onclick="OnClose" aria-label="Close">✕</button>
+        <div class="sheet__title">Set your KaraFun venue</div>
+        <div class="sheet__subtitle">Paste a link from your venue's KaraFun page — we'll pull out the venue ID.</div>
+
+        <div class="field" style="margin-top:0.85rem">
+            <label class="field__label" for="kf-venue-url">KaraFun link <span class="field__hint">— or the ID itself</span></label>
+            <input id="kf-venue-url" class="input" placeholder="https://www.karafun.com/076217/…"
+                   @bind="_input" @bind:event="oninput" />
+        </div>
+
+        @if (Parsed is { } id)
+        {
+            <div class="kf-venue__ok">✓ Venue ID <b>@id</b></div>
+        }
+        else if (!string.IsNullOrWhiteSpace(_input))
+        {
+            <div class="field__error">That doesn't look like a KaraFun venue link or ID.</div>
+        }
+
+        <div class="sheet__actions" style="margin-top:1rem">
+            <button class="btn btn-secondary" @onclick="OnClose">Cancel</button>
+            <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(Parsed is null)">Save venue</button>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>Whether the prompt is shown. Setting it true (re)opens the sheet seeded with <see cref="CurrentId"/>.</summary>
+    [Parameter] public bool Show { get; set; }
+
+    /// <summary>The venue ID already saved, used to pre-fill the field when the sheet opens. Null/empty = blank.</summary>
+    [Parameter] public string? CurrentId { get; set; }
+
+    /// <summary>Raised with the parsed venue ID when the user saves.</summary>
+    [Parameter] public EventCallback<string> OnSave { get; set; }
+
+    /// <summary>Raised when the sheet is dismissed without saving (✕ / Cancel / backdrop).</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string _input = string.Empty;
+    private bool _wasShown;
+
+    // Gates Save and the live preview — non-null only when the input parses to a venue ID.
+    private string? Parsed => KaraFunVenueUrlParser.TryParseId(_input, out var id) ? id : null;
+
+    // Seed the field with the current ID each time the sheet (re)opens, so it's a fresh, sensible starting point.
+    protected override void OnParametersSet()
+    {
+        if (Show && !_wasShown)
+            _input = CurrentId ?? string.Empty;
+        _wasShown = Show;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (Parsed is { } id)
+            await OnSave.InvokeAsync(id);
+    }
+}

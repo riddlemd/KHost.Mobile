@@ -26,6 +26,15 @@ public interface IAppSettings
     /// <summary>When true, the song detail sheet shows the "Find on Spotify" button.</summary>
     bool SpotifySearchEnabled { get; set; }
 
+    /// <summary>When true, the song detail sheet shows the "Find on KaraFun" button (needs <see cref="KaraFunVenueId"/>).</summary>
+    bool KaraFunEnabled { get; set; }
+
+    /// <summary>
+    /// The KaraFun venue ID that "Find on KaraFun" links search under, or empty if not set yet. KaraFun search is
+    /// per-venue, so the button prompts for this the first time it's tapped without one.
+    /// </summary>
+    string KaraFunVenueId { get; set; }
+
     /// <summary>When true, the song detail sheet shows the "Lyrics" button (looks lyrics up from LRCLIB).</summary>
     bool LyricsEnabled { get; set; }
 

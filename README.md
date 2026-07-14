@@ -30,7 +30,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 - **Ratings & history** — rate *every* performance (a "how it went" score that averages over time) plus a separate **enjoyment** rating, jot per-performance notes, and keep a running sung-history for each song.
 - **Lyrics** — look a song's lyrics up in-app from **[LRCLIB](https://lrclib.net/)** (no account needed) and cache them on-device so they open instantly next time.
 - **Surprise me** — can't decide what to sing? One tap picks a random song for you — and it can skip anything you've already sung today.
-- **Quick links** — jump straight to any song on **YouTube** or **Spotify**.
+- **Quick links** — jump straight to any song on **YouTube** or **Spotify**, or search your venue on **KaraFun**. KaraFun search is per-venue, so paste a link from your venue's KaraFun page once (Settings → *KaraFun*, or the first time you tap the button) and it remembers the venue ID.
 - **Favorites** — star the songs you love; they float to the top of the list.
 - **Import & export** — pull songs from a public **Spotify** or **YouTube Music** playlist link, or a KHost Cue `.json` file, and export your whole list back out.
 - **Auto-fill** — looks up a song's release year and genre automatically (via the iTunes Search API) so you don't have to type them.
