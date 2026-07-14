@@ -20,4 +20,11 @@ public interface IAppSession
     /// "Replay tutorial" action clears it to re-arm the check).
     /// </summary>
     bool TutorialResolved { get; set; }
+
+    /// <summary>
+    /// The My Songs list's filter + sort state, kept here so it survives leaving and returning to the tab within a
+    /// launch (the page component is disposed on navigation, so its own fields would otherwise reset). One shared
+    /// instance for the process; the page restores from it on init and writes back on dispose.
+    /// </summary>
+    MySongsViewState MySongsView { get; }
 }

@@ -8,4 +8,7 @@ public sealed class AppSession : IAppSession
 
     /// <inheritdoc />
     public bool TutorialResolved { get; set; }
+
+    /// <inheritdoc />
+    public MySongsViewState MySongsView { get; } = new();
 }

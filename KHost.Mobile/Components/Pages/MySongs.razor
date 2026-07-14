@@ -647,6 +647,12 @@ else
     private bool _rangeBound;   // anti-cross clamp bound to the current year-slider inputs
     private string? _scrollToSongId;   // set on favorite-toggle; the next render scrolls this card into view
 
+    // Persisted list view: filter + sort are restored from / saved to IAppSession so they survive a tab change
+    // (the page is disposed on navigation). Scroll position lives in scroll.js (khScroll.track/restore). Keyed
+    // "mysongs" there. _scrollRestored guards the one-shot restore after the list first paints.
+    private const string ScrollKey = "mysongs";
+    private bool _scrollRestored;
+
     // Song detail / edit sheet (opened by tapping a card).
     private SongListItem? _detailItem;
     private bool _editing;
@@ -764,6 +770,48 @@ else
         _filterEnjoyments.Count > 0 ||
         YearFilterActive;
 
+    // ---- View-state persistence (filter + sort survive a tab change; held on IAppSession) ----
+
+    // Copy the saved filter/sort back into our fields. Skipped on the first-ever visit (nothing saved yet), which
+    // leaves the page's own defaults in place — SaveViewState then seeds the holder on dispose.
+    private void RestoreViewState()
+    {
+        var s = Session.MySongsView;
+        if (!s.Initialized)
+            return;
+
+        _filterName = s.FilterName;
+        _filterArtist = s.FilterArtist;
+        _filterGenres.Clear();
+        foreach (var g in s.FilterGenres) _filterGenres.Add(g);
+        _filterRatings.Clear();
+        foreach (var r in s.FilterRatings) _filterRatings.Add(r);
+        _filterEnjoyments.Clear();
+        foreach (var en in s.FilterEnjoyments) _filterEnjoyments.Add(en);
+        _filterYearLo = s.FilterYearLo;
+        _filterYearHi = s.FilterYearHi;
+        _sort = (SortColumn)s.Sort;
+        _sortDescending = s.SortDescending;
+        _filtersOpen = s.FiltersOpen;
+    }
+
+    // Snapshot our current filter/sort into the shared holder so the next visit this launch can restore it.
+    private void SaveViewState()
+    {
+        var s = Session.MySongsView;
+        s.FilterName = _filterName;
+        s.FilterArtist = _filterArtist;
+        s.FilterGenres = new HashSet<string>(_filterGenres, StringComparer.OrdinalIgnoreCase);
+        s.FilterRatings = [.. _filterRatings];
+        s.FilterEnjoyments = [.. _filterEnjoyments];
+        s.FilterYearLo = _filterYearLo;
+        s.FilterYearHi = _filterYearHi;
+        s.Sort = (int)_sort;
+        s.SortDescending = _sortDescending;
+        s.FiltersOpen = _filtersOpen;
+        s.Initialized = true;
+    }
+
     private void ClearFilters()
     {
         _filterName = _filterArtist = string.Empty;
@@ -836,6 +884,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        RestoreViewState();   // re-apply the filter/sort left from a prior visit this launch (before the first render)
         Store.Changed += OnStoreChanged;
         Tonight.Changed += OnTonightChanged;
 
@@ -866,6 +915,18 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Start remembering this page's scroll position (survives a tab change via scroll.js module state).
+        if (firstRender)
+            await JS.InvokeVoidAsync("khScroll.track", ScrollKey);
+
+        // Restore the saved scroll once the list has actually painted (so the page has its full height to scroll
+        // to). A no-op on the first-ever visit (nothing saved yet) or when returning to an empty list.
+        if (!_scrollRestored && !_loading)
+        {
+            _scrollRestored = true;
+            await JS.InvokeVoidAsync("khScroll.restore", ScrollKey);
+        }
+
         // Add-form year input needs the digit-only guard. The form is collapsible, so re-bind whenever it's
         // (re)shown — collapsing remounts a fresh input that has lost the guard.
         if (_addOpen && !_addFieldsBound)
@@ -1626,6 +1687,8 @@ else
 
     public void Dispose()
     {
+        SaveViewState();   // remember filter/sort for the next visit this launch
+        _ = JS.InvokeVoidAsync("khScroll.untrack", ScrollKey);   // stop the scroll listener (position is already saved)
         Store.Changed -= OnStoreChanged;
         Tonight.Changed -= OnTonightChanged;
         // Safety net: never leave the page-scroll lock on if this page is torn down with a sheet open.
