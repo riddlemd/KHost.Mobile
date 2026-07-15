@@ -28,7 +28,7 @@ repos/
 | Project | Role |
 |---|---|
 | `KHost.Mobile` | MAUI Blazor Hybrid host. Thin shell; UI is Razor components (`Components/`), local stores under `Services/`, models under `Models/`. |
-| `KHost.Mobile.Clients` | Standalone client library — the outward-facing lookups: playlist import (`Spotify/`, `YouTubeMusic/`), iTunes metadata (`Enrichment/`), LRCLIB lyrics (`Lyrics/`), and the GitHub-Releases update check (`Updates/`). No MAUI dependency. |
+| `KHost.Mobile.Clients` | Standalone client library — the outward-facing lookups: playlist import (`Spotify/`, `YouTubeMusic/`), iTunes metadata (`Enrichment/`), Deezer cover-art fallback (`Deezer/`), LRCLIB lyrics (`Lyrics/`), and the GitHub-Releases update check (`Updates/`). No MAUI dependency. |
 
 > Razor UI lives in `KHost.Mobile/Components/` for now. If a PWA build is ever wanted, extract components into a Razor Class Library (`KHost.Mobile.UI`) — the Hybrid design keeps that door open with no rewrite.
 
@@ -70,7 +70,9 @@ The app ships **offline/local UI only**. All local data sits behind an interface
 
 **Quick links & search** — `Services/YouTubeSearch.cs`, `SpotifySearch.cs`, and `ILinkLauncher`/`MauiLinkLauncher` open a song on YouTube/Spotify.
 
-**Auto-fill** — `KHost.Mobile.Clients/Enrichment/ITunesTrackMetadataLookup.cs` fills release year + genre (keyless iTunes Search API). `SongListItem.MetadataLookedUp` guards against re-spending a rate-limited call.
+**Auto-fill** — `KHost.Mobile.Clients/Enrichment/ITunesTrackMetadataLookup.cs` fills release year + genre + cover-art URL (keyless iTunes Search API). `SongListItem.MetadataLookedUp` guards against re-spending a rate-limited call.
+
+**Cover-art fallback** — `KHost.Mobile.Clients/Deezer/DeezerCoverArtLookup.cs` (keyless Deezer public API, `ICoverArtLookup`) is consulted **only when iTunes returns no cover** — iTunes' popularity-ranked search misses album deep cuts (e.g. "Aeroplane" by RHCP) that Deezer's field-scoped `artist:"…" track:"…"` search finds. **Art only** — Deezer's `release_date` is the digital-availability date, not the original release, so year/genre stay with iTunes. Wired into `MySongs.razor`'s `TryFetchArtworkUrlAsync` / `TryAutoFillMetadataAsync`; `SongListItem.ArtworkLookedUp` gates re-lookup. Parser loosens the artist match to accept name variants ("White Stripes" ↔ "The White Stripes", "Ben Folds" ↔ "Ben Folds Five") while still rejecting a wrong artist.
 
 **Import / export** — `ImportExport.razor` pulls songs from a public Spotify or YouTube Music playlist link, or a KHost Cue `.json` file, and exports the whole list back out (`KHost.Mobile.Clients/Spotify/`, `YouTubeMusic/`).
 
@@ -107,7 +109,8 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
 - Network calls use the filter idiom `catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)`, calling `cancellationToken.ThrowIfCancellationRequested()` first, then rethrowing a domain exception. Guard args with `ArgumentNullException.ThrowIfNull`.
 
 ### Errors, logging & docs
-- Best-effort external ops (link launch, update check) swallow all exceptions and degrade gracefully; a "no result found" returns `null`, never throws — only genuine network/HTTP failures throw a domain exception. No `ILogger` in the services layer today.
+- Best-effort external ops (link launch, update check) swallow all exceptions and degrade gracefully; a "no result found" returns `null`, never throws — only genuine network/HTTP failures throw a domain exception.
+- **Logging** lives in the MAUI head (`KHost.Mobile`), never in `KHost.Mobile.Clients` (which stays pure BCL — see the client-backend pattern). Inject `ILogger<T>` via the primary constructor; on the JSON stores make it an **optional, defaulted** parameter (`ILogger<T>? logger = null`) with a `NullLogger<T>.Instance` fallback field so the integration tests can `new` them without a logging stack. Use **structured** messages (named placeholders, not interpolation): `_log.LogDebug("… {Count} … {Path}", count, path)`. Levels: `Debug` for routine flow (store load/save, a lookup's start/outcome), `Information` for notable one-offs (an import count, every outbound HTTP request/response), `Warning` for a swallowed/degraded failure (corrupt file, failed cover download, a lookup that will retry). All network goes through `LoggingHttpMessageHandler` (`Diagnostics/`), chained onto every typed client in `MauiProgram` — the one seam that captures what the **native** platform HTTP stack actually sent/received on-device. Providers + filters are `#if DEBUG`-gated in `MauiProgram` (Debug build → logcat; Release stays quiet).
 - Interfaces carry the substantive `<summary>`; implementations use `/// <inheritdoc />` plus a `<remarks>` for operational notes (rate limits, backends). Document positional record params and enum members. Inline `//` comments explain **why**, not what.
 
 ### Pattern: local store
