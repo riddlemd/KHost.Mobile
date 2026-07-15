@@ -1,5 +1,7 @@
 using System.Text.Json;
 using KHost.Mobile.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KHost.Mobile.Services;
 
@@ -9,10 +11,12 @@ namespace KHost.Mobile.Services;
 /// loaded; every mutation renumbers <see cref="TonightEntry.Order"/> to stay contiguous and rewrites the file. A
 /// <see cref="SemaphoreSlim"/> guards against concurrent UI actions. A corrupt file is treated as an empty set.
 /// </summary>
-public sealed class JsonFileTonightStore(IAppDataDirectory paths) : ITonightStore
+public sealed class JsonFileTonightStore(IAppDataDirectory paths, ILogger<JsonFileTonightStore>? logger = null) : ITonightStore
 {
     private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "tonight.json");
     private readonly SemaphoreSlim _gate = new(1, 1);
+    // Optional so the integration tests can `new` the store without a logging stack; DI supplies the real logger.
+    private readonly ILogger _log = logger ?? NullLogger<JsonFileTonightStore>.Instance;
 
     private List<TonightEntry>? _entries;
 
@@ -203,16 +207,21 @@ public sealed class JsonFileTonightStore(IAppDataDirectory paths) : ITonightStor
             return _entries;
 
         if (!File.Exists(_filePath))
+        {
+            _log.LogDebug("Tonight file not found at {Path}; starting with an empty set", _filePath);
             return _entries = [];
+        }
 
         try
         {
             await using var stream = File.OpenRead(_filePath);
             _entries = await JsonSerializer.DeserializeAsync(stream, TonightJsonContext.Default.ListTonightEntry) ?? [];
+            _log.LogDebug("Tonight set loaded: {Count} entries from {Path}", _entries.Count, _filePath);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
             // Corrupt file (e.g. an interrupted write) — start clean rather than crash the app.
+            _log.LogWarning(ex, "Tonight file at {Path} is corrupt; starting with an empty set", _filePath);
             _entries = [];
         }
 
@@ -225,5 +234,6 @@ public sealed class JsonFileTonightStore(IAppDataDirectory paths) : ITonightStor
         _entries = entries;
         await using var stream = File.Create(_filePath);
         await JsonSerializer.SerializeAsync(stream, entries, TonightJsonContext.Default.ListTonightEntry);
+        _log.LogDebug("Tonight set saved: {Count} entries to {Path}", entries.Count, _filePath);
     }
 }
