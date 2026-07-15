@@ -109,6 +109,11 @@ public static class MauiProgram
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Logging.AddDebug();
+#if ANDROID
+        // AddDebug() alone goes nowhere on a debugger-less `-t:Run` deploy; this routes ILogger to logcat under the
+        // "KHostCue" tag (adb logcat -s KHostCue) so the app's own diagnostics are actually visible on-device.
+        builder.Logging.AddProvider(new AndroidLogcatLoggerProvider());
+#endif
         // Surface the app's own diagnostics (HTTP + stores + the artwork/metadata flow) at Debug in logcat while
         // keeping the framework's own chatter down so those lines stand out. Debug-build only — Release stays quiet.
         builder.Logging.SetMinimumLevel(LogLevel.Debug);
