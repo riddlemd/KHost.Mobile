@@ -1,6 +1,8 @@
 using System.Text.Json;
 using KHost.Mobile.Clients.Lyrics;
 using KHost.Mobile.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KHost.Mobile.Services;
 
@@ -10,10 +12,12 @@ namespace KHost.Mobile.Services;
 /// once loaded; every mutation rewrites the file. A <see cref="SemaphoreSlim"/> guards both against concurrent
 /// UI actions. A corrupt file is treated as an empty cache rather than crashing the app.
 /// </summary>
-public sealed class JsonFileLyricsCache(IAppDataDirectory paths) : ILyricsCache
+public sealed class JsonFileLyricsCache(IAppDataDirectory paths, ILogger<JsonFileLyricsCache>? logger = null) : ILyricsCache
 {
     private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "lyrics-cache.json");
     private readonly SemaphoreSlim _gate = new(1, 1);
+    // Optional so the integration tests can `new` the cache without a logging stack; DI supplies the real logger.
+    private readonly ILogger _log = logger ?? NullLogger<JsonFileLyricsCache>.Instance;
 
     private Dictionary<string, LyricsCacheEntry>? _entries;
 
@@ -124,7 +128,10 @@ public sealed class JsonFileLyricsCache(IAppDataDirectory paths) : ILyricsCache
             return _entries;
 
         if (!File.Exists(_filePath))
+        {
+            _log.LogDebug("Lyrics cache file not found at {Path}; starting empty", _filePath);
             return _entries = new Dictionary<string, LyricsCacheEntry>(StringComparer.Ordinal);
+        }
 
         try
         {
@@ -135,10 +142,12 @@ public sealed class JsonFileLyricsCache(IAppDataDirectory paths) : ILyricsCache
                 .Where(e => !string.IsNullOrEmpty(e.Key))
                 .GroupBy(e => e.Key, StringComparer.Ordinal)
                 .ToDictionary(g => g.Key, g => g.Last(), StringComparer.Ordinal);
+            _log.LogDebug("Lyrics cache loaded: {Count} entries from {Path}", _entries.Count, _filePath);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
             // Corrupt file (e.g. an interrupted write) — start clean rather than crash the app.
+            _log.LogWarning(ex, "Lyrics cache file at {Path} is corrupt; starting empty", _filePath);
             _entries = new Dictionary<string, LyricsCacheEntry>(StringComparer.Ordinal);
         }
 
@@ -151,5 +160,6 @@ public sealed class JsonFileLyricsCache(IAppDataDirectory paths) : ILyricsCache
         _entries = entries;
         await using var stream = File.Create(_filePath);
         await JsonSerializer.SerializeAsync(stream, entries.Values.ToList(), LyricsCacheJsonContext.Default.ListLyricsCacheEntry);
+        _log.LogDebug("Lyrics cache saved: {Count} entries to {Path}", entries.Count, _filePath);
     }
 }

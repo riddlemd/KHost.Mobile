@@ -1,5 +1,7 @@
 using System.Text.Json;
 using KHost.Mobile.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KHost.Mobile.Services;
 
@@ -9,10 +11,12 @@ namespace KHost.Mobile.Services;
 /// truth once loaded; every mutation rewrites the file. Guarded by a <see cref="SemaphoreSlim"/> so concurrent UI
 /// actions can't corrupt the file or the cache.
 /// </summary>
-public sealed class JsonFileSongListStore(IAppDataDirectory paths) : ISongListStore
+public sealed class JsonFileSongListStore(IAppDataDirectory paths, ILogger<JsonFileSongListStore>? logger = null) : ISongListStore
 {
     private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "song-list.json");
     private readonly SemaphoreSlim _gate = new(1, 1);
+    // Optional so the integration tests can `new` the store without a logging stack; DI supplies the real logger.
+    private readonly ILogger _log = logger ?? NullLogger<JsonFileSongListStore>.Instance;
 
     private List<SongListItem>? _items;
 
@@ -217,6 +221,7 @@ public sealed class JsonFileSongListStore(IAppDataDirectory paths) : ISongListSt
             _gate.Release();
         }
 
+        _log.LogInformation("Song list import: added {Added} songs (skipDuplicates={SkipDuplicates})", added, skipDuplicates);
         if (added > 0)
             Changed?.Invoke(this, EventArgs.Empty);
 
@@ -235,16 +240,21 @@ public sealed class JsonFileSongListStore(IAppDataDirectory paths) : ISongListSt
             return _items;
 
         if (!File.Exists(_filePath))
+        {
+            _log.LogDebug("Song list file not found at {Path}; starting with an empty list", _filePath);
             return _items = [];
+        }
 
         try
         {
             await using var stream = File.OpenRead(_filePath);
             _items = await JsonSerializer.DeserializeAsync(stream, SongListJsonContext.Default.ListSongListItem) ?? [];
+            _log.LogDebug("Song list loaded: {Count} songs from {Path}", _items.Count, _filePath);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
             // Corrupt file (e.g. interrupted write on a prior version) — start clean rather than crash the app.
+            _log.LogWarning(ex, "Song list file at {Path} is corrupt; starting with an empty list", _filePath);
             _items = [];
         }
 
@@ -294,5 +304,6 @@ public sealed class JsonFileSongListStore(IAppDataDirectory paths) : ISongListSt
         _items = items;
         await using var stream = File.Create(_filePath);
         await JsonSerializer.SerializeAsync(stream, items, SongListJsonContext.Default.ListSongListItem);
+        _log.LogDebug("Song list saved: {Count} songs to {Path}", items.Count, _filePath);
     }
 }

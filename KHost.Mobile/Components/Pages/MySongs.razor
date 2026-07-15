@@ -2,6 +2,8 @@
 @using KHost.Mobile.Clients.Deezer
 @using KHost.Mobile.Clients.Enrichment
 @using KHost.Mobile.Clients.Lyrics
+@using Microsoft.Extensions.Logging
+@inject ILogger<MySongs> Log
 @inject ISongListStore Store
 @inject ITonightStore Tonight
 @inject ILinkLauncher Links
@@ -1255,18 +1257,26 @@ else
         if (!ShouldAutoFill(item))
             return null;
 
+        Log.LogDebug("Auto-fill lookup start: “{Title}” — “{Artist}”", item.Title, item.Artist);
         TrackMetadata? meta;
         try
         {
             meta = await Metadata.LookupAsync(item.Title, item.Artist, token);
         }
-        catch (MetadataLookupException)
+        catch (MetadataLookupException ex)
         {
-            return null;   // network/rate-limit failure — leave the flag unset to retry later
+            // network/rate-limit failure — leave the flag unset to retry later
+            Log.LogWarning(ex, "Auto-fill lookup failed for “{Title}” — “{Artist}”; will retry later", item.Title, item.Artist);
+            return null;
         }
 
         if (token.IsCancellationRequested)
             return null;
+
+        Log.LogDebug("Auto-fill lookup done: “{Title}” — “{Artist}” → matched {Matched}, year={Year}, genre={Genre}, cover={HasCover}",
+            item.Title, item.Artist,
+            meta is null ? "(no match)" : $"“{meta.MatchedTitle} — {meta.MatchedArtist}”",
+            meta?.Year, meta?.Genre, meta?.ArtworkUrl is not null);
 
         var filled = new List<string>();
         if (string.IsNullOrWhiteSpace(item.Genre) && Genres.Map(meta?.Genre) is string g)
@@ -1289,10 +1299,13 @@ else
             try
             {
                 artUrl = await ArtFallback.FindCoverArtUrlAsync(item.Title, item.Artist, token);
+                Log.LogDebug("iTunes had no cover for “{Title}” — “{Artist}”; Deezer fallback → {Result}",
+                    item.Title, item.Artist, artUrl is null ? "no cover found" : "cover found");
             }
-            catch (DeezerCoverArtException)
+            catch (DeezerCoverArtException ex)
             {
                 artLookedUp = false;   // transient Deezer failure — leave art unflagged so it retries later
+                Log.LogWarning(ex, "Deezer cover fallback failed for “{Title}” — “{Artist}”; will retry later", item.Title, item.Artist);
             }
         }
         if (item.ArtworkUrl is null && artUrl is not null)
@@ -1323,16 +1336,30 @@ else
         if (!ShouldFetchArtwork(item))
             return;
 
+        Log.LogDebug("Artwork lookup start: “{Title}” — “{Artist}”", item.Title, item.Artist);
         string? art;
         try
         {
             var meta = await Metadata.LookupAsync(item.Title, item.Artist, token);
-            // iTunes is primary; fall back to Deezer only when iTunes carries no cover.
-            art = meta?.ArtworkUrl ?? await ArtFallback.FindCoverArtUrlAsync(item.Title, item.Artist, token);
+            // iTunes is primary; fall back to Deezer only when iTunes carries no cover. Logged as two branches so
+            // the diagnostics say whether Deezer was even consulted and what it returned (the on-device mystery).
+            if (meta?.ArtworkUrl is string itunesArt)
+            {
+                art = itunesArt;
+                Log.LogDebug("Artwork from iTunes for “{Title}” — “{Artist}”", item.Title, item.Artist);
+            }
+            else
+            {
+                art = await ArtFallback.FindCoverArtUrlAsync(item.Title, item.Artist, token);
+                Log.LogDebug("iTunes had no cover for “{Title}” — “{Artist}”; Deezer fallback → {Result}",
+                    item.Title, item.Artist, art is null ? "no cover found" : "cover found");
+            }
         }
         catch (Exception ex) when (ex is MetadataLookupException or DeezerCoverArtException)
         {
-            return;   // network/rate-limit failure on either source — leave the flag unset to retry later
+            // network/rate-limit failure on either source — leave the flag unset to retry later
+            Log.LogWarning(ex, "Artwork lookup failed for “{Title}” — “{Artist}”; will retry later", item.Title, item.Artist);
+            return;
         }
 
         if (token.IsCancellationRequested)
@@ -1341,6 +1368,8 @@ else
         if (art is not null)
             item.ArtworkUrl = art;
         item.ArtworkLookedUp = true;    // record the attempt (hit or miss) so we never re-spend on it
+        Log.LogDebug("Artwork lookup done: “{Title}” — “{Artist}” → {Result}",
+            item.Title, item.Artist, item.ArtworkUrl is null ? "no cover found" : "cover found");
         await Store.UpdateAsync(item);   // Store.Changed → RefreshAsync → LoadArtAsync caches + shows the image
     }
 

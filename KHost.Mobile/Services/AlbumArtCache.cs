@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KHost.Mobile.Services;
 
@@ -14,11 +16,13 @@ namespace KHost.Mobile.Services;
 /// the rate-limited iTunes Search API), so caching the whole visible list is fine. An in-memory memo avoids
 /// re-reading + re-encoding a cover that's already been served this launch.
 /// </remarks>
-public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory httpFactory) : IAlbumArtCache
+public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory httpFactory, ILogger<AlbumArtCache>? logger = null) : IAlbumArtCache
 {
     private readonly string _dir = Path.Combine(paths.AppDataDirectory, "album-art");
     private readonly SemaphoreSlim _gate = new(1, 1);                       // guards count/clear against the folder
     private readonly Dictionary<string, string> _memo = new(StringComparer.Ordinal);   // url -> data URI
+    // Optional so the integration tests can `new` the cache without a logging stack; DI supplies the real logger.
+    private readonly ILogger _log = logger ?? NullLogger<AlbumArtCache>.Instance;
 
     public event EventHandler? Changed;
 
@@ -42,6 +46,7 @@ public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory ht
             if (File.Exists(path))
             {
                 bytes = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
+                _log.LogDebug("Album art served from disk cache ({Bytes} bytes) for {Url}", bytes.Length, url);
             }
             else
             {
@@ -50,16 +55,21 @@ public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory ht
                 Directory.CreateDirectory(_dir);
                 await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
                 wroteNew = true;
+                _log.LogDebug("Album art downloaded + cached ({Bytes} bytes) for {Url}", bytes.Length, url);
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Best-effort: a failed download/read just means no art for this card. Cancellation propagates.
+            _log.LogWarning(ex, "Album art download/read failed for {Url}; the card stays blank", url);
             return null;
         }
 
         if (bytes.Length == 0)
+        {
+            _log.LogWarning("Album art for {Url} was empty (0 bytes); the card stays blank", url);
             return null;
+        }
 
         // iTunes covers are JPEG; the mime only needs to be image/* for the WebView to render it.
         var dataUri = $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}";

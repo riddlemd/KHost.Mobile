@@ -4,6 +4,7 @@ using KHost.Mobile.Clients.Lyrics;
 using KHost.Mobile.Clients.Spotify;
 using KHost.Mobile.Clients.Updates;
 using KHost.Mobile.Clients.YouTubeMusic;
+using KHost.Mobile.Diagnostics;
 using KHost.Mobile.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
@@ -57,25 +58,32 @@ public static class MauiProgram
         // pooled and rotated — a plain long-lived `new HttpClient()` never picks up DNS changes. Each service
         // is stateless (only const fields) and consumed via @inject, so the typed client's transient lifetime
         // is fine. The two that need a browser User-Agent set it per-request, so no config lambda is needed.
+        // Every client below chains LoggingHttpMessageHandler so its requests/responses are logged at one seam.
+        builder.Services.AddTransient<LoggingHttpMessageHandler>();
 
         // Token-free import of public YouTube Music playlists (title + artist) via the playlist page.
-        builder.Services.AddHttpClient<IYouTubeMusicImportService, YouTubeMusicImportService>();
+        builder.Services.AddHttpClient<IYouTubeMusicImportService, YouTubeMusicImportService>()
+            .AddHttpMessageHandler<LoggingHttpMessageHandler>();
 
         // Token-free import of public Spotify playlists (title + artist) via the embed endpoint.
-        builder.Services.AddHttpClient<ISpotifyImportService, SpotifyImportService>();
+        builder.Services.AddHttpClient<ISpotifyImportService, SpotifyImportService>()
+            .AddHttpMessageHandler<LoggingHttpMessageHandler>();
 
         // Keyless release-year + genre + cover-art-URL lookup (iTunes Search API). Re-lookup is avoided per-song
         // via the SongListItem.MetadataLookedUp / ArtworkLookedUp flags, so no separate cache layer is needed.
-        builder.Services.AddHttpClient<ITrackMetadataLookup, ITunesTrackMetadataLookup>();
+        builder.Services.AddHttpClient<ITrackMetadataLookup, ITunesTrackMetadataLookup>()
+            .AddHttpMessageHandler<LoggingHttpMessageHandler>();
 
         // Keyless cover-art FALLBACK (Deezer). Consulted only when iTunes finds no cover — Deezer's field-scoped
         // search surfaces tracks iTunes' popularity-ranked search misses (e.g. album deep cuts). Art only; its
         // release dates are unreliable, so year/genre stay with iTunes.
-        builder.Services.AddHttpClient<ICoverArtLookup, DeezerCoverArtLookup>();
+        builder.Services.AddHttpClient<ICoverArtLookup, DeezerCoverArtLookup>()
+            .AddHttpMessageHandler<LoggingHttpMessageHandler>();
 
         // Cover-image downloads for IAlbumArtCache. Hits the artwork CDN (not the rate-limited Search API), so a
         // plain named client is enough; a short timeout keeps a slow image from hanging the best-effort load.
-        builder.Services.AddHttpClient("album-art", http => http.Timeout = TimeSpan.FromSeconds(20));
+        builder.Services.AddHttpClient("album-art", http => http.Timeout = TimeSpan.FromSeconds(20))
+            .AddHttpMessageHandler<LoggingHttpMessageHandler>();
 
         // Keyless lyrics lookup (LRCLIB). Base address + the descriptive User-Agent LRCLIB's fair-use policy
         // asks for are set here (the client library stays MAUI-free, so the app version is injected at this seam).
@@ -84,7 +92,7 @@ public static class MauiProgram
             http.BaseAddress = new Uri("https://lrclib.net/");
             http.DefaultRequestHeaders.UserAgent.ParseAdd(
                 $"KHost.Mobile/{AppInfo.Current.VersionString} (+https://github.com/riddlemd/KHost.Mobile)");
-        });
+        }).AddHttpMessageHandler<LoggingHttpMessageHandler>();
 
         // "Update available" check — reads this repo's GitHub Releases feed. GitHub's REST API requires a
         // User-Agent; the Accept header pins the v3 media type. Orchestrated by IAppUpdateService (which owns
@@ -95,12 +103,17 @@ public static class MauiProgram
             http.DefaultRequestHeaders.UserAgent.ParseAdd(
                 $"KHost.Mobile/{AppInfo.Current.VersionString} (+https://github.com/riddlemd/KHost.Mobile)");
             http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
-        });
+        }).AddHttpMessageHandler<LoggingHttpMessageHandler>();
         builder.Services.AddSingleton<IAppUpdateService, MauiAppUpdateService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Logging.AddDebug();
+        // Surface the app's own diagnostics (HTTP + stores + the artwork/metadata flow) at Debug in logcat while
+        // keeping the framework's own chatter down so those lines stand out. Debug-build only — Release stays quiet.
+        builder.Logging.SetMinimumLevel(LogLevel.Debug);
+        builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
+        builder.Logging.AddFilter("KHost.Mobile", LogLevel.Debug);
 #endif
 
         return builder.Build();
