@@ -54,6 +54,12 @@ public sealed class SongListItem
     /// <summary>Music genre (from <see cref="Genres.All"/> or free text). Null when unset.</summary>
     public string? Genre { get; set; }
 
+    /// <summary>Free-form personal tags the singer attaches to a song ("closer", "duet", "needs practice").
+    /// Distinct from <see cref="Genre"/> (a single fixed-list value describing the music); tags are many,
+    /// arbitrary, and cross-cutting. Normalized on write via <see cref="SongTags.Normalize"/>. Empty by
+    /// default; entries persisted before this field existed deserialize to an empty list.</summary>
+    public List<string> Tags { get; set; } = [];
+
     /// <summary>Release year of the song. Null when unset.</summary>
     public int? Year { get; set; }
 

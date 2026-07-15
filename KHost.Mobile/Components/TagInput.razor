@@ -1,0 +1,106 @@
+@* Reusable chip-input for a song's free-form tags. Controlled component: it renders the given Tags as removable
+   chips plus a text entry, and raises TagsChanged with a fresh, normalized list on every add/remove. Enter or a
+   comma commits the typed text; Backspace on an empty entry removes the last chip. Suggestions offers existing tags
+   to reuse so casing/near-duplicates don't proliferate. All CSS lives in wwwroot/app.css (house rule). *@
+<div class="chip-input" @onclick="FocusEntryAsync">
+    @foreach (var tag in Tags)
+    {
+        <span class="chip-input__chip" @key="tag">
+            @tag
+            <button type="button" class="chip-input__x" aria-label="@($"Remove tag {tag}")"
+                    @onclick="() => RemoveAsync(tag)" @onclick:stopPropagation="true">✕</button>
+        </span>
+    }
+    <input @ref="_entryRef" class="chip-input__entry" type="text"
+           placeholder="@(Tags.Count == 0 ? Placeholder : string.Empty)"
+           @bind="_entry" @bind:event="oninput" @bind:after="OnEntryChangedAsync"
+           @onkeydown="OnKeyDownAsync" @onclick:stopPropagation="true" />
+</div>
+<div class="chip-input__hint">Press <b>Enter</b> or <b>,</b> to add@(Tags.Count >= SongTags.MaxCount ? $" · max {SongTags.MaxCount} reached" : string.Empty)</div>
+
+@{
+    var suggestions = VisibleSuggestions.ToList();
+}
+@if (suggestions.Count > 0)
+{
+    <div class="chip-suggest__label">Reuse an existing tag</div>
+    <div class="chip-suggest">
+        @foreach (var s in suggestions)
+        {
+            <button type="button" class="chip-suggest__chip" @key="s" @onclick="() => CommitAsync(s)">+ @s</button>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The song's current tags (already normalized by the parent). Rendered as removable chips.</summary>
+    [Parameter] public IReadOnlyList<string> Tags { get; set; } = [];
+
+    /// <summary>Raised with a fresh, de-duplicated list whenever a tag is added or removed.</summary>
+    [Parameter] public EventCallback<List<string>> TagsChanged { get; set; }
+
+    /// <summary>Existing tags across the whole list, offered as reuse-suggestions (filtered by what's typed).</summary>
+    [Parameter] public IReadOnlyList<string>? Suggestions { get; set; }
+
+    /// <summary>Placeholder shown in the empty entry when there are no chips yet.</summary>
+    [Parameter] public string Placeholder { get; set; } = "Add a tag…";
+
+    private ElementReference _entryRef;
+    private string _entry = string.Empty;
+
+    // Up to 8 not-yet-added suggestions matching what's been typed (case-insensitive substring).
+    private IEnumerable<string> VisibleSuggestions
+    {
+        get
+        {
+            var typed = _entry.Trim();
+            return (Suggestions ?? [])
+                .Where(s => !Tags.Any(t => string.Equals(t, s, StringComparison.OrdinalIgnoreCase)))
+                .Where(s => typed.Length == 0 || s.Contains(typed, StringComparison.OrdinalIgnoreCase))
+                .Take(8);
+        }
+    }
+
+    private Task FocusEntryAsync() => _entryRef.FocusAsync().AsTask();
+
+    // A pasted or typed comma commits every complete token, leaving the trailing fragment in the entry.
+    private async Task OnEntryChangedAsync()
+    {
+        if (!_entry.Contains(','))
+            return;
+
+        var parts = _entry.Split(',');
+        for (var i = 0; i < parts.Length - 1; i++)
+            await CommitAsync(parts[i]);
+        _entry = parts[^1];
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await CommitAsync(_entry);
+        else if (e.Key == "Backspace" && _entry.Length == 0 && Tags.Count > 0)
+            await RemoveAsync(Tags[^1]);
+    }
+
+    // Add one cleaned tag if it fits and isn't a case-insensitive duplicate; always clear the entry buffer.
+    private async Task CommitAsync(string candidate)
+    {
+        _entry = string.Empty;
+
+        if (SongTags.Clean(candidate) is not { } tag)
+            return;
+        if (Tags.Count >= SongTags.MaxCount)
+            return;
+        if (Tags.Any(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        await TagsChanged.InvokeAsync([.. Tags, tag]);
+    }
+
+    private async Task RemoveAsync(string tag)
+    {
+        var next = Tags.Where(t => !string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)).ToList();
+        await TagsChanged.InvokeAsync(next);
+    }
+}

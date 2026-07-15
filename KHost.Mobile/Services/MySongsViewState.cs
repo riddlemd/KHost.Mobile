@@ -20,6 +20,11 @@ public sealed class MySongsViewState
     public HashSet<string> FilterGenres { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<int> FilterRatings { get; set; } = [];
     public HashSet<int> FilterEnjoyments { get; set; } = [];
+    public HashSet<string> FilterTags { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Tag filter combine mode: false = match ANY selected tag (OR, the default), true = match ALL (AND).</summary>
+    public bool FilterTagsAll { get; set; }
+
     public int? FilterYearLo { get; set; }
     public int? FilterYearHi { get; set; }
 

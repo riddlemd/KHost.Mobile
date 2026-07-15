@@ -52,6 +52,13 @@
             <div class="field__error">Enter a year between 1 and @CurrentYear.</div>
         }
     </div>
+    @if (Settings.TagsEnabled)
+    {
+        <div class="field">
+            <label class="field__label">Tags <span class="field__hint">— your own labels, optional</span></label>
+            <TagInput Tags="_tags" TagsChanged="v => _tags = v" Suggestions="UsedTags" />
+        </div>
+    }
     <p class="autofill-note">✨ Leave a starred field blank and we'll look it up online when you add the song.</p>
 
     @if (IsDuplicate)
@@ -166,6 +173,40 @@
                     </div>
                 </details>
             </div>
+            @if (Settings.TagsEnabled && UsedTags.Count > 0)
+            {
+                <div class="field filters__field filters__field--wide">
+                    <label class="field__label filters__tag-label">
+                        <span>Tags</span>
+                        <span class="andor" role="group" aria-label="Match any or all of the selected tags">
+                            <button type="button" class="andor__btn @(_tagFilterAll ? "" : "is-on")"
+                                    @onclick="() => _tagFilterAll = false">Any</button>
+                            <button type="button" class="andor__btn @(_tagFilterAll ? "is-on" : "")"
+                                    @onclick="() => _tagFilterAll = true">All</button>
+                        </span>
+                    </label>
+                    <details class="msf" name="msf-filter">
+                        <summary class="msf__summary">
+                            <span class="msf__val @(_filterTags.Count == 0 ? "msf__val--placeholder" : "")">@TagSummary</span>
+                            @if (_filterTags.Count > 0)
+                            {
+                                <span class="msf__count">@_filterTags.Count</span>
+                            }
+                            <span class="msf__chev">▾</span>
+                        </summary>
+                        <div class="msf__panel">
+                            @foreach (var t in UsedTags)
+                            {
+                                <label class="msf__opt">
+                                    <input type="checkbox" checked="@_filterTags.Contains(t)"
+                                           @onchange="e => SetTagFilter(t, (bool)(e.Value ?? false))" />
+                                    <span>@t</span>
+                                </label>
+                            }
+                        </div>
+                    </details>
+                </div>
+            }
             @if (ShowYearFilter)
             {
                 <div class="field filters__field filters__field--wide">
@@ -292,6 +333,17 @@ else
                         {
                             <span class="song-card__year">@item.Year</span>
                         }
+                        @if (Settings.TagsEnabled && item.Tags.Count > 0)
+                        {
+                            @foreach (var tag in item.Tags.Take(CardTagLimit))
+                            {
+                                <span class="tag-chip">@tag</span>
+                            }
+                            @if (item.Tags.Count > CardTagLimit)
+                            {
+                                <span class="tags-more">+@(item.Tags.Count - CardTagLimit)</span>
+                            }
+                        }
                     </span>
                 </div>
                 <div class="song-card__ratings-row">
@@ -375,6 +427,27 @@ else
                         }
                     </span>
                 </div>
+                @if (Settings.TagsEnabled)
+                {
+                    <div class="sheet__row">
+                        <span class="sheet__key">Tags</span>
+                        <span class="sheet__val">
+                            @if (_detailItem.Tags.Count > 0)
+                            {
+                                <span class="sheet__tags">
+                                    @foreach (var tag in _detailItem.Tags)
+                                    {
+                                        <span class="tag-chip">@tag</span>
+                                    }
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="sheet__muted">—</span>
+                            }
+                        </span>
+                    </div>
+                }
                 <div class="sheet__row">
                     <span class="sheet__key">How it went</span>
                     <span class="sheet__val">
@@ -495,6 +568,13 @@ else
                 <textarea id="e-notes" class="input sheet__notes" rows="3"
                           placeholder="e.g. start slow, key of G" @bind="_editNotes" @bind:event="oninput"></textarea>
             </div>
+            @if (Settings.TagsEnabled)
+            {
+                <div class="field">
+                    <label class="field__label">Tags <span class="field__hint">— optional</span></label>
+                    <TagInput Tags="_editTags" TagsChanged="v => _editTags = v" Suggestions="UsedTags" />
+                </div>
+            }
             <div class="sheet__actions">
                 <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
                 <button class="btn btn-primary" @onclick="SaveEditAsync" disabled="@(!CanSaveEdit)">Save</button>
@@ -594,6 +674,10 @@ else
     private string _notes = string.Empty;
     private string _genre = string.Empty;
     private int? _year;        // release year; null = unset
+    private List<string> _tags = [];   // add-form tags buffer; normalized onto the song when it's added
+
+    // How many tag chips a card shows inline before collapsing the rest into a "+N" count.
+    private const int CardTagLimit = 3;
 
     // Filters. Genre / rating / enjoyment are multi-select: an empty set = no filter, otherwise the picks are OR'd.
     private string _filterName = string.Empty;
@@ -601,6 +685,8 @@ else
     private readonly HashSet<string> _filterGenres = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<int> _filterRatings = [];      // "how it went" rounded average(s): 0 Not rated, 1-5 stars
     private readonly HashSet<int> _filterEnjoyments = [];   // enjoyment rating(s): 0 Not rated, 1-5 stars
+    private readonly HashSet<string> _filterTags = new(StringComparer.OrdinalIgnoreCase);
+    private bool _tagFilterAll;   // Tags filter combine mode: false = match ANY selected (OR, default), true = ALL (AND)
 
     // The six rating choices shared by the "how it went" and "enjoyment" multi-selects.
     private static readonly (int val, string label)[] RatingOptions =
@@ -670,6 +756,7 @@ else
     private string _editGenre = string.Empty;
     private string _editNotes = string.Empty;
     private int? _editYear;
+    private List<string> _editTags = [];   // edit-sheet tags buffer; normalized back onto the song on save
 
     // Metadata auto-fill: look up a not-yet-looked-up song's blank year/genre and fill it from the match.
     // Runs in the background on add, and again when the detail sheet opens (which also shows a note of what
@@ -775,6 +862,7 @@ else
         _filterGenres.Count > 0 ||
         _filterRatings.Count > 0 ||
         _filterEnjoyments.Count > 0 ||
+        _filterTags.Count > 0 ||
         YearFilterActive;
 
     // ---- View-state persistence (filter + sort survive a tab change; held on IAppSession) ----
@@ -795,6 +883,9 @@ else
         foreach (var r in s.FilterRatings) _filterRatings.Add(r);
         _filterEnjoyments.Clear();
         foreach (var en in s.FilterEnjoyments) _filterEnjoyments.Add(en);
+        _filterTags.Clear();
+        foreach (var t in s.FilterTags) _filterTags.Add(t);
+        _tagFilterAll = s.FilterTagsAll;
         _filterYearLo = s.FilterYearLo;
         _filterYearHi = s.FilterYearHi;
         _sort = (SortColumn)s.Sort;
@@ -810,6 +901,8 @@ else
         s.FilterGenres = new HashSet<string>(_filterGenres, StringComparer.OrdinalIgnoreCase);
         s.FilterRatings = [.. _filterRatings];
         s.FilterEnjoyments = [.. _filterEnjoyments];
+        s.FilterTags = new HashSet<string>(_filterTags, StringComparer.OrdinalIgnoreCase);
+        s.FilterTagsAll = _tagFilterAll;
         s.FilterYearLo = _filterYearLo;
         s.FilterYearHi = _filterYearHi;
         s.Sort = (int)_sort;
@@ -824,6 +917,7 @@ else
         _filterGenres.Clear();
         _filterRatings.Clear();
         _filterEnjoyments.Clear();
+        _filterTags.Clear();
         _filterYearLo = _filterYearHi = null;
     }
 
@@ -831,6 +925,19 @@ else
     private void SetGenreFilter(string genre, bool on) { if (on) _filterGenres.Add(genre); else _filterGenres.Remove(genre); }
     private void SetRatingFilter(int value, bool on) { if (on) _filterRatings.Add(value); else _filterRatings.Remove(value); }
     private void SetEnjoymentFilter(int value, bool on) { if (on) _filterEnjoyments.Add(value); else _filterEnjoyments.Remove(value); }
+    private void SetTagFilter(string tag, bool on) { if (on) _filterTags.Add(tag); else _filterTags.Remove(tag); }
+
+    // Every tag in use across the list (distinct, case-insensitive, alphabetized). Doubles as the Tags filter's
+    // options and the reuse-suggestions for the add/edit tag inputs — no separate tag catalogue is kept.
+    private IReadOnlyList<string> UsedTags => _items
+        .SelectMany(i => i.Tags)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private string TagSummary => _filterTags.Count == 0
+        ? "Any tag"
+        : SummaryList(UsedTags.Where(_filterTags.Contains).ToList());
 
     // Summary shown on a filter's collapsed control: up to two picks, then "+N".
     // Only genres that at least one song actually uses — no point offering a filter that matches nothing.
@@ -865,6 +972,10 @@ else
             q = q.Where(i => _filterRatings.Contains(RoundedAvg(i)));
         if (_filterEnjoyments.Count > 0)
             q = q.Where(i => _filterEnjoyments.Contains(i.Enjoyment));
+        if (_filterTags.Count > 0)
+            q = _tagFilterAll
+                ? q.Where(i => _filterTags.All(f => i.Tags.Contains(f, StringComparer.OrdinalIgnoreCase)))  // AND
+                : q.Where(i => i.Tags.Any(t => _filterTags.Contains(t)));                                   // OR
         if (YearFilterActive)
             q = q.Where(i => i.Year.HasValue && i.Year.Value >= YearLo && i.Year.Value <= YearHi);
 
@@ -1294,6 +1405,7 @@ else
         _editGenre = _detailItem.Genre ?? string.Empty;
         _editNotes = _detailItem.Notes ?? string.Empty;
         _editYear = _detailItem.Year;
+        _editTags = [.. _detailItem.Tags];
         _editing = true;
     }
 
@@ -1318,6 +1430,7 @@ else
         _detailItem.Genre = string.IsNullOrWhiteSpace(_editGenre) ? null : _editGenre.Trim();
         _detailItem.Notes = string.IsNullOrWhiteSpace(_editNotes) ? null : _editNotes.Trim();
         _detailItem.Year = _editYear;
+        _detailItem.Tags = SongTags.Normalize(_editTags);
         await Store.UpdateAsync(_detailItem);
         _editing = false;
     }
@@ -1556,7 +1669,15 @@ else
 
         // New songs start on the wishlist (unsung). Sung-state + rating are set later from the detail sheet.
         var added = await Store.AddAsync(_title, _artist, _notes, _genre, _year);
+        // AddAsync has no tags parameter — persist any in a follow-up write so the store stays simple.
+        var tags = SongTags.Normalize(_tags);
+        if (tags.Count > 0)
+        {
+            added.Tags = tags;
+            await Store.UpdateAsync(added);
+        }
         _title = _artist = _notes = _genre = string.Empty;    // Store.Changed triggers the list refresh.
+        _tags = [];
         _year = null;
         _confirmedDuplicate = false;
 

@@ -179,4 +179,30 @@ public sealed class JsonFileSongListStoreTests : IDisposable
 
         Assert.Empty(await NewStore().GetAllAsync());
     }
+
+    [Fact]
+    public async Task Tags_round_trip_through_disk()
+    {
+        var writer = NewStore();
+        var item = await writer.AddAsync("Mr. Brightside", "The Killers");
+        item.Tags = ["closer", "high energy", "crowd pleaser"];
+        await writer.UpdateAsync(item);
+
+        // A fresh instance shares only the folder, not the in-memory cache — proves the JSON round-trip.
+        var song = Assert.Single(await NewStore().GetAllAsync());
+        Assert.Equal(["closer", "high energy", "crowd pleaser"], song.Tags);
+    }
+
+    [Fact]
+    public async Task A_song_saved_before_tags_existed_deserializes_to_an_empty_list()
+    {
+        // A file whose song object has no "Tags" property at all (pre-feature shape).
+        await File.WriteAllTextAsync(
+            _dir.FilePath("song-list.json"),
+            """[ { "Id": "11111111-1111-1111-1111-111111111111", "Title": "Old", "Artist": "A" } ]""");
+
+        var song = Assert.Single(await NewStore().GetAllAsync());
+        Assert.NotNull(song.Tags);
+        Assert.Empty(song.Tags);
+    }
 }

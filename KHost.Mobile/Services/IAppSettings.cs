@@ -48,6 +48,13 @@ public interface IAppSettings
     bool ScrollToFavorited { get; set; }
 
     /// <summary>
+    /// When true, a song's free-form tags are shown as chips on its card and detail sheet, the Tags filter is
+    /// offered on My Songs, and the tag inputs appear on the add / edit forms. When false, all of that is hidden;
+    /// any tags already saved on songs are left untouched, so turning it back on restores them.
+    /// </summary>
+    bool TagsEnabled { get; set; }
+
+    /// <summary>
     /// When true, each song's cover art (fetched from iTunes and cached on-device) is shown as its card background
     /// and behind the title on its detail sheet, with a scrim behind the text for legibility. Defaults to
     /// <c>true</c> like the other feature flags; turn it off to keep plain cards and skip the cover lookups/downloads.

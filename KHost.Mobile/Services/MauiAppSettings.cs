@@ -19,6 +19,7 @@ public sealed class MauiAppSettings : IAppSettings
     private const string LyricsKey = "settings.lyrics";
     private const string LyricsCacheKey = "settings.lyrics_cache";
     private const string ScrollToFavoritedKey = "settings.scroll_to_favorited";
+    private const string TagsKey = "settings.tags";
     private const string AlbumArtKey = "settings.album_art";
     private const string SurpriseSkipSungTodayKey = "settings.surprise_skip_sung_today";
     private const string RatePerformancesKey = "settings.rate_performances";
@@ -84,6 +85,12 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(ScrollToFavoritedKey, true);
         set => Preferences.Default.Set(ScrollToFavoritedKey, value);
+    }
+
+    public bool TagsEnabled
+    {
+        get => Preferences.Default.Get(TagsKey, true);
+        set => Preferences.Default.Set(TagsKey, value);
     }
 
     public bool AlbumArtEnabled

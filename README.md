@@ -26,12 +26,13 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 ## ✨ Features
 
 - **Tonight set list** — build an on-deck set for the venue on its own tab: add songs, drag to reorder, and check each one off as you sing it, with live *“X of Y done”* progress. It's kept separate from your wishlist, so a song you sang earlier today stays unchecked until you check it off here. Your place in the list is kept as you switch tabs and come back.
-- **My Songs** — a personal wishlist of songs to sing, as a swipeable card list with sorting and multi-select filters (text, genre, year, how-it-went / enjoyment rating). Your filters, sort, and scroll position stick as you switch tabs and come back. One tap on a card adds a song straight to tonight's set.
+- **My Songs** — a personal wishlist of songs to sing, as a swipeable card list with sorting and multi-select filters (text, genre, tags, year, how-it-went / enjoyment rating). Your filters, sort, and scroll position stick as you switch tabs and come back. One tap on a card adds a song straight to tonight's set.
 - **Ratings & history** — rate *every* performance (a "how it went" score that averages over time) plus a separate **enjoyment** rating, jot per-performance notes, and keep a running sung-history for each song.
 - **Lyrics** — look a song's lyrics up in-app from **[LRCLIB](https://lrclib.net/)** (no account needed) and cache them on-device so they open instantly next time.
 - **Surprise me** — can't decide what to sing? One tap picks a random song for you — and it can skip anything you've already sung today.
 - **Quick links** — jump straight to any song on **YouTube** or **Spotify**, or search your venue on **KaraFun**. KaraFun search is per-venue, so paste a link from your venue's KaraFun page once (Settings → *KaraFun*, or the first time you tap the button) and it remembers the venue ID.
 - **Favorites** — star the songs you love; they float to the top of the list.
+- **Tags** — add your own free-form labels to a song — *duet*, *closer*, *needs practice* — shown as chips on the card and detail sheet. Reuse suggestions keep them tidy, and you can filter your list by tag (match *any* or *all* of the tags you pick). Switch tags off entirely in Settings → *Show song tags*.
 - **Import & export** — pull songs from a public **Spotify** or **YouTube Music** playlist link, or a KHost Cue `.json` file, and export your whole list back out.
 - **Auto-fill** — looks up a song's release year and genre automatically (via the iTunes Search API) so you don't have to type them.
 - **Album art** — each song's cover is used as its card background — and behind the title on the song's detail sheet — with a dark fade behind the text for legibility. Covers are looked up from iTunes and cached on-device; clear them from the Danger zone, or switch the whole thing off in Settings → *Show album art on cards*.

@@ -18,6 +18,8 @@
     --kh-danger: #dc2626;
     --kh-star-hot: #e5484d;    /* "how it went" rating — warm red */
     --kh-star-cool: #3b82f6;   /* "enjoyment" rating — blue (distinct from the gold favorite star) */
+    --kh-tag-bg: color-mix(in srgb, var(--kh-primary) 13%, var(--kh-surface));   /* custom-tag chip — soft violet */
+    --kh-tag-fg: var(--kh-primary-strong);
     --kh-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
 
     --kh-header-h: 3.5rem;
@@ -40,6 +42,8 @@
         --kh-text-muted: #9a9aa6;
         --kh-border: #2e2e3a;
         --kh-danger: #f87171;
+        --kh-tag-bg: color-mix(in srgb, var(--kh-primary) 22%, var(--kh-surface));
+        --kh-tag-fg: #c4b5fd;
         --kh-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
 }
@@ -57,6 +61,8 @@
     --kh-danger: #f87171;
     --kh-star-hot: #ff6369;
     --kh-star-cool: #60a5fa;
+    --kh-tag-bg: color-mix(in srgb, var(--kh-primary) 22%, var(--kh-surface));
+    --kh-tag-fg: #c4b5fd;
     --kh-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 /* `data-theme="light"` needs no block: the base :root is already light, and the OS-dark
@@ -1173,6 +1179,8 @@ body.kh-sheet-open { overflow: hidden; }
 .song-card--art .song-card__artist { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75); }
 .song-card--art .song-card__genre { background: rgba(255, 255, 255, 0.18); color: #fff; }
 .song-card--art .song-card__year { color: rgba(255, 255, 255, 0.9); }
+.song-card--art .tag-chip { background: rgba(124, 58, 237, 0.55); color: #fff; }
+.song-card--art .tags-more { color: rgba(255, 255, 255, 0.9); }
 .song-card--art .rating-num { color: #fff; }
 .song-card--art .rating-num--muted { color: rgba(255, 255, 255, 0.7); }
 .song-card--art .song-card__ratings .rating-sep { background: rgba(255, 255, 255, 0.3); }
@@ -1277,6 +1285,20 @@ body.kh-sheet-open { overflow: hidden; }
     color: var(--kh-text-muted);
 }
 .song-card__year { font-size: 0.72rem; color: var(--kh-text-muted); }
+
+/* Custom-tag chip (style A — soft violet pill). Distinct from the neutral grey genre pill so tags read as
+   "the singer's own labels" at a glance. Shared by the card meta row and the detail sheet. */
+.tag-chip {
+    display: inline-block;
+    padding: 0.04rem 0.5rem;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    border-radius: 999px;
+    background: var(--kh-tag-bg);
+    color: var(--kh-tag-fg);
+    overflow-wrap: anywhere;
+}
+.tags-more { font-size: 0.72rem; color: var(--kh-text-muted); }
 
 /* Display-only stars in the card meta row. */
 .song-card .stars__star { font-size: 0.9rem; padding: 0.01rem; }
@@ -1444,6 +1466,60 @@ body.kh-sheet-open { overflow: hidden; }
 .msf__stars--hot { color: var(--kh-star-hot); }
 .msf__stars--cool { color: var(--kh-star-cool); }
 .msf__notrated { color: var(--kh-text-muted); }
+
+/* ---- Custom tags: chip input (add / edit forms) ------------------------- */
+/* A text entry that grows chips inline. Enter or comma commits; the box wraps its own border so it reads as
+   one field. Mirrors the .input look but hosts the chips + entry together. */
+.chip-input {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem;
+    padding: 0.4rem 0.45rem;
+    border: 1px solid var(--kh-border); border-radius: 0.55rem;
+    background: var(--kh-surface); cursor: text;
+}
+.chip-input:focus-within { border-color: var(--kh-primary); }
+.chip-input__chip {
+    display: inline-flex; align-items: center; gap: 0.2rem;
+    padding: 0.12rem 0.2rem 0.12rem 0.5rem;
+    font-size: 0.78rem; border-radius: 999px;
+    background: var(--kh-tag-bg); color: var(--kh-tag-fg);
+}
+.chip-input__x {
+    cursor: pointer; border: none; background: none; color: inherit;
+    font-size: 0.8rem; line-height: 1; padding: 0 0.2rem; opacity: 0.7;
+}
+.chip-input__x:hover { opacity: 1; }
+.chip-input__entry {
+    flex: 1 1 5rem; min-width: 5rem;
+    border: none; outline: none; background: none; color: var(--kh-text);
+    font: inherit; font-size: 0.9rem; padding: 0.25rem 0.2rem;
+}
+.chip-input__hint { font-size: 0.72rem; color: var(--kh-text-muted); margin-top: 0.3rem; }
+
+/* Reuse-existing-tag suggestions under the chip input. Dashed so they read as "tap to add", not already-added. */
+.chip-suggest__label {
+    font-size: 0.7rem; color: var(--kh-text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.5rem;
+}
+.chip-suggest { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
+.chip-suggest__chip {
+    font: inherit; font-size: 0.74rem; cursor: pointer;
+    padding: 0.14rem 0.55rem; border-radius: 999px;
+    border: 1px dashed var(--kh-border); background: none; color: var(--kh-text-muted);
+}
+.chip-suggest__chip:hover { border-color: var(--kh-primary); color: var(--kh-tag-fg); }
+
+/* Tag chips in the detail sheet's value column. */
+.sheet__tags { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; justify-content: flex-end; }
+
+/* Any/All segmented toggle for the Tags filter (which of the selected tags a song must carry). */
+.filters__tag-label { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.andor { display: inline-flex; border: 1px solid var(--kh-border); border-radius: 999px; overflow: hidden; }
+.andor__btn {
+    font: inherit; font-size: 0.66rem; font-weight: 700; cursor: pointer;
+    padding: 0.15rem 0.6rem; border: none; background: none; color: var(--kh-text-muted);
+    text-transform: none; letter-spacing: normal;
+}
+.andor__btn.is-on { background: var(--kh-primary); color: var(--kh-primary-contrast); }
 
 /* ---- Dual-handle range slider (year filter) ----------------------------- */
 /* From/To number inputs (manual entry) sit above the slider; both drive the same range. */

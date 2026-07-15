@@ -114,6 +114,21 @@
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Show song tags</span>
+                <span class="setting__desc">
+                    Add your own labels to a song — “duet”, “closer”, “needs practice” — shown as chips on its card
+                    and detail sheet, with a Tags filter on your list. Turn off to hide tags everywhere; any tags
+                    you've added are kept and come back when you re-enable it.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.TagsEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
         }
     </div>
 
