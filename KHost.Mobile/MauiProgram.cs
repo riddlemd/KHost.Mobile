@@ -1,3 +1,4 @@
+using KHost.Mobile.Clients.Deezer;
 using KHost.Mobile.Clients.Enrichment;
 using KHost.Mobile.Clients.Lyrics;
 using KHost.Mobile.Clients.Spotify;
@@ -66,6 +67,11 @@ public static class MauiProgram
         // Keyless release-year + genre + cover-art-URL lookup (iTunes Search API). Re-lookup is avoided per-song
         // via the SongListItem.MetadataLookedUp / ArtworkLookedUp flags, so no separate cache layer is needed.
         builder.Services.AddHttpClient<ITrackMetadataLookup, ITunesTrackMetadataLookup>();
+
+        // Keyless cover-art FALLBACK (Deezer). Consulted only when iTunes finds no cover — Deezer's field-scoped
+        // search surfaces tracks iTunes' popularity-ranked search misses (e.g. album deep cuts). Art only; its
+        // release dates are unreliable, so year/genre stay with iTunes.
+        builder.Services.AddHttpClient<ICoverArtLookup, DeezerCoverArtLookup>();
 
         // Cover-image downloads for IAlbumArtCache. Hits the artwork CDN (not the rate-limited Search API), so a
         // plain named client is enough; a short timeout keeps a slow image from hanging the best-effort load.

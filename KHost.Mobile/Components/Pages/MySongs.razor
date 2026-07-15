@@ -1,10 +1,12 @@
 @page "/"
+@using KHost.Mobile.Clients.Deezer
 @using KHost.Mobile.Clients.Enrichment
 @using KHost.Mobile.Clients.Lyrics
 @inject ISongListStore Store
 @inject ITonightStore Tonight
 @inject ILinkLauncher Links
 @inject ITrackMetadataLookup Metadata
+@inject ICoverArtLookup ArtFallback
 @inject ILyricsClient Lyrics
 @inject ILyricsCache LyricsCache
 @inject IAlbumArtCache AlbumArt
@@ -1278,11 +1280,25 @@ else
             filled.Add("Year");
         }
 
-        // The same matched result carries the cover URL — capture it for free so enabling album art later is instant.
-        if (item.ArtworkUrl is null && meta?.ArtworkUrl is string art)
-            item.ArtworkUrl = art;
-        item.ArtworkLookedUp = true;    // we've seen this song's artwork field too — no separate lookup needed
-        item.MetadataLookedUp = true;   // record the attempt (hit or miss) so we never look up again
+        // The iTunes match carries the cover for free — capture it so enabling album art later is instant. When
+        // iTunes has none and album art is on, fall back to Deezer (art only — never its unreliable year/genre).
+        var artUrl = meta?.ArtworkUrl;
+        var artLookedUp = true;
+        if (artUrl is null && Settings.AlbumArtEnabled)
+        {
+            try
+            {
+                artUrl = await ArtFallback.FindCoverArtUrlAsync(item.Title, item.Artist, token);
+            }
+            catch (DeezerCoverArtException)
+            {
+                artLookedUp = false;   // transient Deezer failure — leave art unflagged so it retries later
+            }
+        }
+        if (item.ArtworkUrl is null && artUrl is not null)
+            item.ArtworkUrl = artUrl;
+        item.ArtworkLookedUp = artLookedUp;   // hit or miss across both sources (unless Deezer failed transiently)
+        item.MetadataLookedUp = true;   // metadata attempt is done regardless of the art fallback
         await Store.UpdateAsync(item);   // persist flag + any fills; Store.Changed → RefreshAsync
 
         return filled.Count > 0
@@ -1307,20 +1323,22 @@ else
         if (!ShouldFetchArtwork(item))
             return;
 
-        TrackMetadata? meta;
+        string? art;
         try
         {
-            meta = await Metadata.LookupAsync(item.Title, item.Artist, token);
+            var meta = await Metadata.LookupAsync(item.Title, item.Artist, token);
+            // iTunes is primary; fall back to Deezer only when iTunes carries no cover.
+            art = meta?.ArtworkUrl ?? await ArtFallback.FindCoverArtUrlAsync(item.Title, item.Artist, token);
         }
-        catch (MetadataLookupException)
+        catch (Exception ex) when (ex is MetadataLookupException or DeezerCoverArtException)
         {
-            return;   // network/rate-limit failure — leave the flag unset to retry later
+            return;   // network/rate-limit failure on either source — leave the flag unset to retry later
         }
 
         if (token.IsCancellationRequested)
             return;
 
-        if (meta?.ArtworkUrl is string art)
+        if (art is not null)
             item.ArtworkUrl = art;
         item.ArtworkLookedUp = true;    // record the attempt (hit or miss) so we never re-spend on it
         await Store.UpdateAsync(item);   // Store.Changed → RefreshAsync → LoadArtAsync caches + shows the image

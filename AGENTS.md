@@ -28,7 +28,7 @@ repos/
 | Project | Role |
 |---|---|
 | `KHost.Mobile` | MAUI Blazor Hybrid host. Thin shell; UI is Razor components (`Components/`), local stores under `Services/`, models under `Models/`. |
-| `KHost.Mobile.Clients` | Standalone client library — the outward-facing lookups: playlist import (`Spotify/`, `YouTubeMusic/`), iTunes metadata (`Enrichment/`), LRCLIB lyrics (`Lyrics/`), and the GitHub-Releases update check (`Updates/`). No MAUI dependency. |
+| `KHost.Mobile.Clients` | Standalone client library — the outward-facing lookups: playlist import (`Spotify/`, `YouTubeMusic/`), iTunes metadata (`Enrichment/`), Deezer cover-art fallback (`Deezer/`), LRCLIB lyrics (`Lyrics/`), and the GitHub-Releases update check (`Updates/`). No MAUI dependency. |
 
 > Razor UI lives in `KHost.Mobile/Components/` for now. If a PWA build is ever wanted, extract components into a Razor Class Library (`KHost.Mobile.UI`) — the Hybrid design keeps that door open with no rewrite.
 
@@ -70,7 +70,9 @@ The app ships **offline/local UI only**. All local data sits behind an interface
 
 **Quick links & search** — `Services/YouTubeSearch.cs`, `SpotifySearch.cs`, and `ILinkLauncher`/`MauiLinkLauncher` open a song on YouTube/Spotify.
 
-**Auto-fill** — `KHost.Mobile.Clients/Enrichment/ITunesTrackMetadataLookup.cs` fills release year + genre (keyless iTunes Search API). `SongListItem.MetadataLookedUp` guards against re-spending a rate-limited call.
+**Auto-fill** — `KHost.Mobile.Clients/Enrichment/ITunesTrackMetadataLookup.cs` fills release year + genre + cover-art URL (keyless iTunes Search API). `SongListItem.MetadataLookedUp` guards against re-spending a rate-limited call.
+
+**Cover-art fallback** — `KHost.Mobile.Clients/Deezer/DeezerCoverArtLookup.cs` (keyless Deezer public API, `ICoverArtLookup`) is consulted **only when iTunes returns no cover** — iTunes' popularity-ranked search misses album deep cuts (e.g. "Aeroplane" by RHCP) that Deezer's field-scoped `artist:"…" track:"…"` search finds. **Art only** — Deezer's `release_date` is the digital-availability date, not the original release, so year/genre stay with iTunes. Wired into `MySongs.razor`'s `TryFetchArtworkUrlAsync` / `TryAutoFillMetadataAsync`; `SongListItem.ArtworkLookedUp` gates re-lookup. Parser loosens the artist match to accept name variants ("White Stripes" ↔ "The White Stripes", "Ben Folds" ↔ "Ben Folds Five") while still rejecting a wrong artist.
 
 **Import / export** — `ImportExport.razor` pulls songs from a public Spotify or YouTube Music playlist link, or a KHost Cue `.json` file, and exports the whole list back out (`KHost.Mobile.Clients/Spotify/`, `YouTubeMusic/`).
 
