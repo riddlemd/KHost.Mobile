@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using KHost.Mobile.Clients.Json;
 
 namespace KHost.Mobile.Clients.YouTubeMusic;
 
@@ -256,18 +257,4 @@ public static partial class YouTubeMusicPlaylistParser
         }
         return string.IsNullOrWhiteSpace(title) ? null : title;
     }
-
-    // --- JsonElement navigation helpers (null-safe: a missing/wrong-kind hop yields Undefined) ----
-
-    private static JsonElement Prop(this JsonElement element, string name)
-        => element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value)
-            ? value
-            : default;
-
-    private static string? Str(this JsonElement element, string name)
-        => element.ValueKind == JsonValueKind.Object
-           && element.TryGetProperty(name, out var value)
-           && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
 }

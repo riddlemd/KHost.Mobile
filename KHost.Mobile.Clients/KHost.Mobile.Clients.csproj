@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- The unit tests drive the internal parsing helpers (TrackTextNormalizer, JsonElementExtensions) directly. -->
+    <InternalsVisibleTo Include="KHost.Mobile.UnitTests" />
+  </ItemGroup>
+
 </Project>

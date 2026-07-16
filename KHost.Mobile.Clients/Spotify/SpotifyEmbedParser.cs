@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using KHost.Mobile.Clients.Json;
 
 namespace KHost.Mobile.Clients.Spotify;
 
@@ -40,12 +41,12 @@ public static partial class SpotifyEmbedParser
         var tracks = new List<SpotifyTrack>(rawCount);
         foreach (var entry in trackList.EnumerateArray())
         {
-            var title = GetString(entry, "title");
+            var title = entry.Str("title");
             if (string.IsNullOrWhiteSpace(title))
                 continue;   // skip unnamed / non-track rows defensively
 
-            var artist = GetString(entry, "subtitle") ?? string.Empty;
-            var trackId = TrackIdFromUri(GetString(entry, "uri"));
+            var artist = entry.Str("subtitle") ?? string.Empty;
+            var trackId = TrackIdFromUri(entry.Str("uri"));
             tracks.Add(new SpotifyTrack(title.Trim(), artist.Trim(), trackId));
         }
 
@@ -121,13 +122,6 @@ public static partial class SpotifyEmbedParser
 
         return null;
     }
-
-    private static string? GetString(JsonElement obj, string propertyName)
-        => obj.ValueKind == JsonValueKind.Object
-           && obj.TryGetProperty(propertyName, out var value)
-           && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
 
     private static string? TrackIdFromUri(string? uri)
         => uri is not null && uri.StartsWith(TrackUriPrefix, StringComparison.Ordinal)

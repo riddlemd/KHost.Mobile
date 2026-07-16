@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KHost.Mobile.Clients.Json;
 
 namespace KHost.Mobile.Clients.Lyrics;
 
@@ -30,7 +31,7 @@ public static class LrcLibResponseParser
             foreach (var record in doc.RootElement.EnumerateArray())
             {
                 firstOverall ??= record;
-                if (Bool(record, "instrumental") || !string.IsNullOrWhiteSpace(Str(record, "plainLyrics")))
+                if (record.Bool("instrumental") || !string.IsNullOrWhiteSpace(record.Str("plainLyrics")))
                     return Map(record);
             }
 
@@ -40,21 +41,9 @@ public static class LrcLibResponseParser
     }
 
     private static LyricsResult Map(JsonElement r) => new(
-        MatchedTitle: Str(r, "trackName"),
-        MatchedArtist: Str(r, "artistName"),
-        PlainLyrics: Str(r, "plainLyrics"),
-        SyncedLyrics: Str(r, "syncedLyrics"),
-        Instrumental: Bool(r, "instrumental"));
-
-    private static string? Str(JsonElement obj, string propertyName)
-        => obj.ValueKind == JsonValueKind.Object
-           && obj.TryGetProperty(propertyName, out var value)
-           && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
-
-    private static bool Bool(JsonElement obj, string propertyName)
-        => obj.ValueKind == JsonValueKind.Object
-           && obj.TryGetProperty(propertyName, out var value)
-           && value.ValueKind == JsonValueKind.True;
+        MatchedTitle: r.Str("trackName"),
+        MatchedArtist: r.Str("artistName"),
+        PlainLyrics: r.Str("plainLyrics"),
+        SyncedLyrics: r.Str("syncedLyrics"),
+        Instrumental: r.Bool("instrumental"));
 }

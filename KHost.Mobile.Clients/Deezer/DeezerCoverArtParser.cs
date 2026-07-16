@@ -1,6 +1,6 @@
-using System.Globalization;
-using System.Text;
 using System.Text.Json;
+using KHost.Mobile.Clients.Json;
+using KHost.Mobile.Clients.Matching;
 
 namespace KHost.Mobile.Clients.Deezer;
 
@@ -40,16 +40,16 @@ public static class DeezerCoverArtParser
             if (!doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array)
                 return null;
 
-            var wantTitle = Normalize(requestedTitle);
+            var wantTitle = TrackTextNormalizer.Normalize(requestedTitle);
             var wantArtist = Tokens(requestedArtist);
 
             foreach (var item in data.EnumerateArray())
             {
-                if (Normalize(Str(item, "title")) != wantTitle)
+                if (TrackTextNormalizer.Normalize(item.Str("title")) != wantTitle)
                     continue;
-                if (!ArtistMatches(Str(Child(item, "artist"), "name"), wantArtist))
+                if (!ArtistMatches(item.Prop("artist").Str("name"), wantArtist))
                     continue;
-                if (CoverUrl(Child(item, "album")) is string cover)
+                if (CoverUrl(item.Prop("album")) is string cover)
                     return cover;
             }
 
@@ -62,7 +62,7 @@ public static class DeezerCoverArtParser
     private static string? CoverUrl(JsonElement album)
     {
         foreach (var field in (ReadOnlySpan<string>)["cover_big", "cover_xl", "cover_medium", "cover_small", "cover"])
-            if (Str(album, field) is { Length: > 0 } url)
+            if (album.Str(field) is { Length: > 0 } url)
                 return url;
         return null;
     }
@@ -86,66 +86,8 @@ public static class DeezerCoverArtParser
     private static readonly HashSet<string> StopWords = new(StringComparer.Ordinal) { "the", "and", "a" };
 
     private static HashSet<string> Tokens(string? value)
-        => Normalize(value)
+        => TrackTextNormalizer.Normalize(value)
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Where(t => !StopWords.Contains(t))
             .ToHashSet(StringComparer.Ordinal);
-
-    // Same light normalization the iTunes parser uses: lowercase, drop bracketed/feature/version qualifiers,
-    // strip accents, fold every non-alphanumeric char to a space, and collapse whitespace.
-    private static readonly string[] Qualifiers = [" feat.", " feat ", " featuring ", " ft. ", " ft ", " - "];
-
-    private static string Normalize(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return string.Empty;
-
-        var text = value.Trim().ToLowerInvariant();
-        text = StripBetween(text, '(', ')');
-        text = StripBetween(text, '[', ']');
-
-        foreach (var marker in Qualifiers)
-        {
-            var idx = text.IndexOf(marker, StringComparison.Ordinal);
-            if (idx >= 0)
-                text = text[..idx];
-        }
-
-        var decomposed = text.Normalize(NormalizationForm.FormD);
-        var sb = new StringBuilder(decomposed.Length);
-        foreach (var ch in decomposed)
-        {
-            if (CharUnicodeInfo.GetUnicodeCategory(ch) == UnicodeCategory.NonSpacingMark)
-                continue;
-            sb.Append(char.IsLetterOrDigit(ch) ? ch : ' ');
-        }
-
-        return string.Join(' ', sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
-    }
-
-    private static string StripBetween(string text, char open, char close)
-    {
-        while (true)
-        {
-            var start = text.IndexOf(open);
-            if (start < 0)
-                return text;
-            var end = text.IndexOf(close, start + 1);
-            if (end < 0)
-                return text;
-            text = text.Remove(start, end - start + 1);
-        }
-    }
-
-    private static JsonElement Child(JsonElement obj, string propertyName)
-        => obj.ValueKind == JsonValueKind.Object && obj.TryGetProperty(propertyName, out var value)
-            ? value
-            : default;
-
-    private static string? Str(JsonElement obj, string propertyName)
-        => obj.ValueKind == JsonValueKind.Object
-           && obj.TryGetProperty(propertyName, out var value)
-           && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
 }

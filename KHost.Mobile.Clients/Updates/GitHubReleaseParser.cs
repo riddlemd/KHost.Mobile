@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KHost.Mobile.Clients.Json;
 
 namespace KHost.Mobile.Clients.Updates;
 
@@ -29,11 +30,11 @@ public static class GitHubReleaseParser
 
             foreach (var release in doc.RootElement.EnumerateArray())
             {
-                if (Bool(release, "draft"))
+                if (release.Bool("draft"))
                     continue;
 
-                var tag = Str(release, "tag_name");
-                var htmlUrl = Str(release, "html_url");
+                var tag = release.Str("tag_name");
+                var htmlUrl = release.Str("html_url");
                 if (tag is null || htmlUrl is null || !TryParseVersion(tag, out var version, out var clean))
                     continue;
 
@@ -41,7 +42,7 @@ public static class GitHubReleaseParser
                 if (bestVersion is null || version > bestVersion)
                 {
                     bestVersion = version;
-                    best = new ReleaseInfo(clean, Str(release, "name"), htmlUrl, Bool(release, "prerelease"));
+                    best = new ReleaseInfo(clean, release.Str("name"), htmlUrl, release.Bool("prerelease"));
                 }
             }
 
@@ -76,16 +77,4 @@ public static class GitHubReleaseParser
 
         return false;
     }
-
-    private static string? Str(JsonElement obj, string propertyName)
-        => obj.ValueKind == JsonValueKind.Object
-           && obj.TryGetProperty(propertyName, out var value)
-           && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
-
-    private static bool Bool(JsonElement obj, string propertyName)
-        => obj.ValueKind == JsonValueKind.Object
-           && obj.TryGetProperty(propertyName, out var value)
-           && value.ValueKind == JsonValueKind.True;
 }
