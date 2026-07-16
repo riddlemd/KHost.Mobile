@@ -773,6 +773,23 @@ body.kh-sheet-open { overflow: hidden; }
 }
 .kf-venue__ok { margin-top: 0.7rem; font-size: 0.9rem; color: var(--kh-text-muted); }
 .kf-venue__ok b { color: #e1477e; }
+/* Venue-link field with a trailing QR-scan button (Android/iOS). The input flexes; the button matches its height. */
+.kf-venue__input-row { display: flex; align-items: center; gap: 0.5rem; }
+.kf-venue__input-row .input { flex: 1 1 auto; min-width: 0; }
+.kf-venue__scan {
+    flex: 0 0 auto;
+    /* Square driven by a definite width (height follows via aspect-ratio); the row centers it next to the input
+       rather than stretching, so the button stays a true square regardless of the input's height. */
+    width: 2.9rem; aspect-ratio: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0;
+    color: var(--kh-text);
+    background-color: var(--kh-surface-2);
+    border: 1px solid var(--kh-border); border-radius: 0.6rem;
+    cursor: pointer;
+}
+.kf-venue__scan:disabled { opacity: 0.5; cursor: default; }
+.kf-venue__qr { width: 1.4rem; height: 1.4rem; display: block; }
 .sheet__notes { resize: vertical; min-height: 3.5rem; font-family: inherit; line-height: 1.4; }
 
 /* ---- Lyrics sheet (LRCLIB) ---------------------------------------------- */

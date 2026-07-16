@@ -1,0 +1,29 @@
+@* Reusable QR-code glyph — three finder patterns + data modules. Inherits color via currentColor and scales to
+   whatever size the passed-in class sets. Purely presentational; no interactivity. *@
+<svg class="@Class" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <g fill="currentColor">
+        @* Three finder patterns (corner squares), each an outer ring + centre dot *@
+        <path fill-rule="evenodd" d="M2 2h7v7H2Zm1.6 1.6h3.8v3.8H3.6Z" />
+        <rect x="4.4" y="4.4" width="2.2" height="2.2" />
+        <path fill-rule="evenodd" d="M15 2h7v7h-7Zm1.6 1.6h3.8v3.8h-3.8Z" />
+        <rect x="17.4" y="4.4" width="2.2" height="2.2" />
+        <path fill-rule="evenodd" d="M2 15h7v7H2Zm1.6 1.6h3.8v3.8H3.6Z" />
+        <rect x="4.4" y="17.4" width="2.2" height="2.2" />
+        @* Data modules *@
+        <rect x="11" y="2" width="2" height="2" />
+        <rect x="11" y="6" width="2" height="2" />
+        <rect x="11" y="11" width="2" height="2" />
+        <rect x="15" y="11" width="2" height="2" />
+        <rect x="19" y="11" width="2" height="2" />
+        <rect x="11" y="15" width="2" height="2" />
+        <rect x="15" y="15" width="2" height="2" />
+        <rect x="11" y="19" width="2" height="2" />
+        <rect x="15" y="19" width="2" height="2" />
+        <rect x="19" y="19" width="2" height="2" />
+    </g>
+</svg>
+
+@code {
+    /// <summary>CSS class applied to the root <c>svg</c> for sizing (color follows <c>currentColor</c>).</summary>
+    [Parameter] public string? Class { get; set; }
+}

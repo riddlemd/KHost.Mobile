@@ -8,7 +8,7 @@ public static class KaraFunSearch
     private const string QueryPrefix = "sc_";
 
     /// <summary>
-    /// Search URL for "Title Artist" under the given venue, e.g. <c>karafun.com/076217/search?q=sc_…</c>. KaraFun's
+    /// Search URL for "Title Artist" under the given venue, e.g. <c>karafun.com/012345/search?q=sc_…</c>. KaraFun's
     /// catalogue search lives under a venue, so the venue ID is part of the path (unlike YouTube/Spotify).
     /// </summary>
     public static string UrlFor(string venueId, string title, string? artist)

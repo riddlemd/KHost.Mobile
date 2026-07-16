@@ -1,7 +1,9 @@
-@* Shared "set your KaraFun venue" prompt. Shown when @Show is true; the user pastes a venue link (or the bare ID),
-   we parse it live and raise OnSave with the venue ID, or OnClose on cancel/backdrop. Presentational only — the
-   host owns the @Show state and persists the saved ID. Reused by Settings and the My Songs detail sheet. Uses the
-   --history stacking so it sits above the song detail sheet when opened from there. *@
+@* Shared "set your KaraFun venue" prompt. Shown when @Show is true; the user pastes a venue link (or the bare ID) —
+   or, on Android/iOS, scans the venue's QR code — we parse it live and raise OnSave with the venue ID, or OnClose on
+   cancel/backdrop. The host owns the @Show state and persists the saved ID. Reused by Settings and the My Songs
+   detail sheet. Uses the --history stacking so it sits above the song detail sheet when opened from there. *@
+@using Microsoft.Maui.Devices
+@inject IQrScanner Scanner
 @if (Show)
 {
     <div class="sheet-backdrop sheet-backdrop--history" @onclick="OnClose"></div>
@@ -12,8 +14,18 @@
 
         <div class="field" style="margin-top:0.85rem">
             <label class="field__label" for="kf-venue-url">KaraFun link <span class="field__hint">— or the ID itself</span></label>
-            <input id="kf-venue-url" class="input" placeholder="https://www.karafun.com/076217/…"
-                   @bind="_input" @bind:event="oninput" />
+            <div class="kf-venue__input-row">
+                <input id="kf-venue-url" class="input" placeholder="https://www.karafun.com/012345/…"
+                       @bind="_input" @bind:event="oninput" />
+                @* Scanning is native (ML Kit / Apple Vision), so the QR button shows only on Android/iOS; elsewhere the user pastes the link. *@
+                @if (_scanSupported)
+                {
+                    <button type="button" class="kf-venue__scan" @onclick="ScanAsync" disabled="@_scanning"
+                            aria-label="Scan QR code" title="Scan QR code">
+                        <QrCodeIcon Class="kf-venue__qr" />
+                    </button>
+                }
+            </div>
         </div>
 
         @if (Parsed is { } id)
@@ -23,6 +35,10 @@
         else if (!string.IsNullOrWhiteSpace(_input))
         {
             <div class="field__error">That doesn't look like a KaraFun venue link or ID.</div>
+        }
+        else if (_scanError is not null)
+        {
+            <div class="field__error">@_scanError</div>
         }
 
         <div class="sheet__actions" style="margin-top:1rem">
@@ -47,6 +63,12 @@
 
     private string _input = string.Empty;
     private bool _wasShown;
+    private bool _scanning;
+    private string? _scanError;
+
+    // The QR scanner is native to Android/iOS only; hide the button on other heads (where IQrScanner is a no-op).
+    private static bool _scanSupported =>
+        DeviceInfo.Current.Platform == DevicePlatform.Android || DeviceInfo.Current.Platform == DevicePlatform.iOS;
 
     // Gates Save and the live preview — non-null only when the input parses to a venue ID.
     private string? Parsed => KaraFunVenueUrlParser.TryParseId(_input, out var id) ? id : null;
@@ -55,8 +77,36 @@
     protected override void OnParametersSet()
     {
         if (Show && !_wasShown)
+        {
             _input = CurrentId ?? string.Empty;
+            _scanError = null;
+        }
         _wasShown = Show;
+    }
+
+    // Scan a QR code and, only if it's a real KaraFun venue URL (strict host check — not the loose paste parser),
+    // drop it into the field where the live preview then confirms it. A wrong QR shows an inline error instead.
+    private async Task ScanAsync()
+    {
+        if (_scanning)
+            return;
+        _scanning = true;
+        _scanError = null;
+        try
+        {
+            var scanned = await Scanner.ScanQrCodeAsync();
+            if (string.IsNullOrWhiteSpace(scanned))
+                return; // cancelled, permission denied, or nothing read
+
+            if (KaraFunVenueUrlParser.TryParseVenueUrl(scanned, out _))
+                _input = scanned;
+            else
+                _scanError = "That QR code isn't a KaraFun venue link.";
+        }
+        finally
+        {
+            _scanning = false;
+        }
     }
 
     private async Task SaveAsync()

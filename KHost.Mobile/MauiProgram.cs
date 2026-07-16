@@ -8,6 +8,9 @@ using KHost.Mobile.Diagnostics;
 using KHost.Mobile.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
+#if ANDROID || IOS
+using BarcodeScanning;
+#endif
 
 namespace KHost.Mobile;
 
@@ -24,6 +27,11 @@ public static class MauiProgram
             });
 
         builder.Services.AddMauiBlazorWebView();
+
+#if ANDROID || IOS
+        // Registers the native barcode scanner (ML Kit / Apple Vision) used to scan a KaraFun venue QR code.
+        builder.UseBarcodeScanning();
+#endif
 
         // The private data folder the JSON stores write into. Abstracted behind IAppDataDirectory so the stores stay
         // MAUI-free and unit-testable; the app binds it to the real FileSystem.AppDataDirectory.
@@ -58,6 +66,14 @@ public static class MauiProgram
         // mounted, and the Android MainActivity consults it so hardware back dismisses the top-most sheet/menu
         // instead of minimizing the app. Singleton so the components and the platform callback share one instance.
         builder.Services.AddSingleton<IBackButtonService, BackButtonService>();
+
+        // QR scanner for the KaraFun venue link. Native (ML Kit / Apple Vision) on Android/iOS; a no-op stub on
+        // other heads (the scan button is hidden there, but the KaraFun sheet still resolves IQrScanner via DI).
+#if ANDROID || IOS
+        builder.Services.AddSingleton<IQrScanner, MauiQrScanner>();
+#else
+        builder.Services.AddSingleton<IQrScanner, UnsupportedQrScanner>();
+#endif
 
         // HTTP-backed services go through IHttpClientFactory (AddHttpClient) so their message handlers are
         // pooled and rotated — a plain long-lived `new HttpClient()` never picks up DNS changes. Each service

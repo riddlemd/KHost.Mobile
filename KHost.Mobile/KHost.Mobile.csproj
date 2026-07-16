@@ -77,6 +77,18 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
     </ItemGroup>
 
+    <!-- QR/barcode scanning (KaraFun venue link). ML Kit on Android, Apple Vision on iOS — the package has no
+         benefit on Windows (scanner is Android/iOS only, per design), so it's scoped to those heads. -->
+    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+        <PackageReference Include="BarcodeScanning.Native.Maui" Version="3.0.4" />
+    </ItemGroup>
+
+    <!-- ML Kit + CameraX (pulled in by the scanner above) ship the same native .so libs in more than one transitive
+         package; the Android packager dedupes them and warns (XA4301). Harmless — suppress so the build stays clean. -->
+    <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+        <NoWarn>$(NoWarn);XA4301</NoWarn>
+    </PropertyGroup>
+
     <ItemGroup>
       <ProjectReference Include="..\KHost.Mobile.Clients\KHost.Mobile.Clients.csproj" />
     </ItemGroup>
