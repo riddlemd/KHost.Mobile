@@ -46,6 +46,11 @@ public static class MauiProgram
         // in-memory set + Changed event are shared app-wide.
         builder.Services.AddSingleton<ITonightStore, JsonFileTonightStore>();
 
+        // On-device venue list (name + optional KaraFun id / location / notes). Its own JSON-file store; singleton
+        // so its in-memory list + Changed event are shared app-wide. The active venue is a separate ephemeral
+        // pointer on IAppSession, not persisted here.
+        builder.Services.AddSingleton<IVenueStore, JsonFileVenueStore>();
+
         // User preferences (feature toggles) persisted via MAUI Preferences. Singleton: one view of the flags app-wide.
         builder.Services.AddSingleton<IAppSettings, MauiAppSettings>();
 

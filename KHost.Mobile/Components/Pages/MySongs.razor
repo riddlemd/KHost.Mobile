@@ -1531,6 +1531,7 @@ else
             Date = DateTimeOffset.Now,
             HowItWent = Math.Clamp(result.howItWent, 0, 5),
             Note = string.IsNullOrWhiteSpace(result.note) ? null : result.note.Trim(),
+            VenueId = Session.ActiveVenueId,   // tag with wherever they are right now (null when not at a venue)
         });
         item.Status = SongListItemStatus.Sang;
         await Store.UpdateAsync(item);

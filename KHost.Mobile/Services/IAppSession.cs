@@ -27,4 +27,20 @@ public interface IAppSession
     /// instance for the process; the page restores from it on init and writes back on dispose.
     /// </summary>
     MySongsViewState MySongsView { get; }
+
+    /// <summary>
+    /// The venue the singer is "at" right now — where performances get tagged and which catalog the header chip
+    /// reflects. Ephemeral like the rest of the session: it is re-resolved each launch (manually via the switcher
+    /// today, by geolocation later) and never persisted. Null means "not at a saved venue" (performances then log
+    /// untagged). Set via <see cref="SetActiveVenue"/> so <see cref="ActiveVenueChanged"/> can fire.
+    /// </summary>
+    Guid? ActiveVenueId { get; }
+
+    /// <summary>Set (or clear, with null) the <see cref="ActiveVenueId"/>. Raises <see cref="ActiveVenueChanged"/>
+    /// only when the value actually changes, so the header chip and Venues page can refresh in lock-step.</summary>
+    void SetActiveVenue(Guid? venueId);
+
+    /// <summary>Raised after <see cref="ActiveVenueId"/> changes (manual switch, geo re-check, or a delete that
+    /// clears it). Lets the header chip and any open venue view refresh without polling.</summary>
+    event EventHandler? ActiveVenueChanged;
 }

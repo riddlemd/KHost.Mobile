@@ -1,0 +1,399 @@
+@page "/venues"
+@layout MainLayout
+@inject IVenueStore Store
+@inject ISongListStore Songs
+@inject IAppSession Session
+@inject ILinkLauncher Links
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject IBackButtonService BackButton
+@implements IDisposable
+
+@* The Venues page — manage saved karaoke venues and see your history at each. Reached from the header ⋮ menu and
+   the active-venue chip. The active venue (a session pointer, not persisted here) is pinned + badged; performances
+   logged while a venue is active are tagged with it, which is what powers the per-venue history below. *@
+<section class="venues">
+    <div class="page-head">
+        <NavLink class="page-back" href="" aria-label="Back to my songs">←</NavLink>
+        <h1 class="page-title">Venues</h1>
+        <button type="button" class="btn btn-secondary venues__add" @onclick="OpenAdd">＋ Add</button>
+    </div>
+
+    @if (_venues.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-state__icon">📍</div>
+            <div class="empty-state__title">No venues yet</div>
+            <div>Add the places you sing — then the active one tags your sings and opens its KaraFun catalog. You can scan a venue's KaraFun QR code while adding.</div>
+            <button class="btn btn-primary venues__cta" @onclick="OpenAdd">Add your first venue</button>
+        </div>
+    }
+    else
+    {
+        <input class="input venues__search" type="search" placeholder="Search venues" aria-label="Search venues"
+               @bind="_search" @bind:event="oninput" />
+        @if (!Ordered().Any())
+        {
+            <div class="venues__nomatch">No venues match “@_search”.</div>
+        }
+        else
+        {
+        <div class="venue-list">
+            @foreach (var v in Ordered())
+            {
+                <div class="venue-row @(IsActive(v) ? "is-active" : "")" @onclick="() => OpenDetail(v)">
+                    <span class="venue-row__pin">@v.Glyph</span>
+                    <div class="venue-row__main">
+                        <div class="venue-row__name">
+                            @v.Name
+                            @if (v.IsFavorite)
+                            {
+                                <span class="venue-row__star">★</span>
+                            }
+                            @if (IsActive(v))
+                            {
+                                <span class="venue-row__badge">Active</span>
+                            }
+                        </div>
+                        <div class="venue-row__sub">@SubLine(v)</div>
+                    </div>
+                    @if (!IsActive(v))
+                    {
+                        <button type="button" class="btn btn-secondary venue-row__set"
+                                @onclick="() => SetActive(v)" @onclick:stopPropagation="true">Set active</button>
+                    }
+                </div>
+            }
+        </div>
+        }
+    }
+</section>
+
+@* ---- Detail sheet ---- *@
+@if (_detail is { } d)
+{
+    <div class="sheet-backdrop" @onclick="CloseDetail"></div>
+    <div class="sheet venue-detail" role="dialog" aria-modal="true" @ref="_detailSheet">
+        <button type="button" class="sheet__close" @onclick="CloseDetail" aria-label="Close">✕</button>
+
+        <div class="venue-detail__hero">
+            <span class="venue-detail__glyph">@d.Glyph</span>
+            <div class="venue-detail__heading">
+                <div class="venue-detail__name">
+                    @d.Name
+                    @if (IsActive(d))
+                    {
+                        <span class="venue-row__badge">Active</span>
+                    }
+                </div>
+                <button type="button" class="venue-detail__fav @(d.IsFavorite ? "is-on" : "")"
+                        @onclick="() => ToggleFavoriteAsync(d)" aria-label="Toggle favorite">
+                    @(d.IsFavorite ? "★ Favorite" : "☆ Favorite")
+                </button>
+            </div>
+        </div>
+
+        <div class="venue-detail__actions">
+            @if (!string.IsNullOrWhiteSpace(d.KaraFunVenueId))
+            {
+                <button class="btn btn-primary" @onclick="() => OpenCatalogAsync(d)">Open KaraFun Catalog</button>
+            }
+            @if (!IsActive(d))
+            {
+                <button class="btn btn-secondary" @onclick="() => SetActive(d)">Set active</button>
+            }
+            <button class="btn btn-secondary" @onclick="() => OpenEdit(d)">Edit</button>
+        </div>
+
+        <div class="venue-detail__info">
+            <div class="venue-detail__info-row">
+                <span class="venue-detail__info-label">KaraFun</span>
+                <span class="venue-detail__info-value">@(string.IsNullOrWhiteSpace(d.KaraFunVenueId) ? "Not set" : d.KaraFunVenueId)</span>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(d.Notes))
+            {
+                <div class="venue-detail__info-row">
+                    <span class="venue-detail__info-label">Notes</span>
+                    <span class="venue-detail__info-value">@d.Notes</span>
+                </div>
+            }
+        </div>
+
+        @{ var h = History(d); }
+        <div class="venue-detail__history">
+            <div class="venue-detail__history-title">Your history here</div>
+            @if (h.Sings == 0)
+            {
+                <div class="venue-detail__empty">You haven't logged a sing here yet.</div>
+            }
+            else
+            {
+                <div class="venue-stats">
+                    <div class="venue-stat"><span class="venue-stat__num">@h.Sings</span><span class="venue-stat__lbl">sing@(h.Sings == 1 ? "" : "s")</span></div>
+                    <div class="venue-stat"><span class="venue-stat__num">@(h.Average?.ToString("0.0") ?? "—")</span><span class="venue-stat__lbl">avg here</span></div>
+                    <div class="venue-stat"><span class="venue-stat__num">@(h.LastSung?.LocalDateTime.ToString("MMM d") ?? "—")</span><span class="venue-stat__lbl">last sung</span></div>
+                </div>
+
+                @if (h.GoTo.Count > 0)
+                {
+                    <div class="venue-detail__subhead">Go-to songs here</div>
+                    <ul class="venue-songlist">
+                        @foreach (var g in h.GoTo)
+                        {
+                            <li><span class="venue-songlist__title">@g.Title</span><span class="venue-songlist__meta">@g.Average.ToString("0.0")★ · @g.Count sing@(g.Count == 1 ? "" : "s")</span></li>
+                        }
+                    </ul>
+                }
+
+                <div class="venue-detail__subhead">Recent sings here</div>
+                <ul class="venue-songlist">
+                    @foreach (var r in h.Recent)
+                    {
+                        <li><span class="venue-songlist__title">@r.Title</span><span class="venue-songlist__meta">@(r.Rating >= 1 ? $"{r.Rating}★ · " : "")@r.Date.LocalDateTime.ToString("MMM d")</span></li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <button type="button" class="btn btn-danger venue-detail__delete" @onclick="() => AskDelete(d)">Delete venue</button>
+    </div>
+}
+
+@* ---- Add / edit sheet ---- *@
+<VenueEditSheet Editing="_editing" IsNew="_editingIsNew" OnSave="SaveVenueAsync" OnClose="CloseEdit" />
+
+@* ---- Delete confirm ---- *@
+@if (_confirmDelete is { } del)
+{
+    <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelDelete"></div>
+    <div class="confirm-pop" role="alertdialog" aria-modal="true">
+        <div class="confirm-pop__title">Delete “@del.Name”?</div>
+        <div class="confirm-pop__date">This removes the venue. Your sung history stays — those sings just lose the venue tag.</div>
+        <div class="confirm-pop__actions">
+            <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+            <button class="btn confirm-pop__delete" @onclick="() => ConfirmDeleteAsync(del)">Delete</button>
+        </div>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<Venue> _venues = [];
+    private IReadOnlyList<SongListItem> _songs = [];
+    private Venue? _detail;
+    private Venue? _editing;
+    private bool _editingIsNew;
+    private Venue? _confirmDelete;
+    private string _search = string.Empty;
+    private BackButtonOverlayGuard? _backGuard;
+
+    private ElementReference _detailSheet;
+    private DotNetObjectReference<Venues>? _selfRef;
+    private bool _detailBound;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _backGuard = new BackButtonOverlayGuard(BackButton,
+            closeTopMost: TryCloseTopOverlay,
+            notifyStateChanged: StateHasChanged);
+        Store.Changed += OnChanged;
+        Songs.Changed += OnChanged;
+        Session.ActiveVenueChanged += OnChanged;
+        await ReloadAsync();
+
+        // Deep-link from the switcher's "＋ Add venue" opens the add sheet straight away.
+        if (new Uri(Nav.Uri).Query.Contains("add=1", StringComparison.Ordinal))
+            OpenAdd();
+    }
+
+    private bool IsActive(Venue v) => Session.ActiveVenueId == v.Id;
+
+    // Name-filtered, then the active venue pinned to the top; the rest keep the store's favorites-first-then-name order.
+    private IEnumerable<Venue> Ordered()
+    {
+        IEnumerable<Venue> matches = string.IsNullOrWhiteSpace(_search)
+            ? _venues
+            : _venues.Where(v => v.Name.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        var list = matches.ToList();
+        var active = list.FirstOrDefault(v => IsActive(v));
+        return active is null ? list : new[] { active }.Concat(list.Where(v => v.Id != active.Id));
+    }
+
+    private string SubLine(Venue v)
+    {
+        var count = _songs.SelectMany(s => s.Performances).Count(p => p.VenueId == v.Id);
+        var kf = string.IsNullOrWhiteSpace(v.KaraFunVenueId) ? "No KaraFun" : $"KaraFun {v.KaraFunVenueId}";
+        return count == 0 ? kf : $"{kf} · {count} sing{(count == 1 ? "" : "s")} here";
+    }
+
+    private void OnChanged(object? sender, EventArgs e) => _ = ReloadOnUiAsync();
+
+    private async Task ReloadOnUiAsync()
+    {
+        try { await InvokeAsync(ReloadAsync); }
+        catch { /* best-effort refresh */ }
+    }
+
+    private async Task ReloadAsync()
+    {
+        _venues = await Store.GetAllAsync();
+        _songs = await Songs.GetAllAsync();
+        // Keep the open detail pointing at the fresh instance (e.g. after an edit), or close it if it's gone.
+        if (_detail is not null)
+            _detail = _venues.FirstOrDefault(v => v.Id == _detail.Id);
+        StateHasChanged();
+    }
+
+    private void OpenDetail(Venue v) => _detail = v;
+    private void CloseDetail() => _detail = null;
+
+    // Bind pull-down-to-dismiss on the detail sheet (same interop as the song detail / rating sheets). The element
+    // remounts each open, so re-bind then and reset the flag when it's hidden.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_detail is not null && !_detailBound)
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSheet.register", _detailSheet, _selfRef, new { closeMethod = "CloseDetailFromSwipe" });
+            _detailBound = true;
+        }
+        else if (_detail is null)
+        {
+            _detailBound = false;
+        }
+    }
+
+    // Pull-down-to-dismiss from khSheet (the sheet already animated off-screen): just clear the detail.
+    [JSInvokable]
+    public void CloseDetailFromSwipe()
+    {
+        _detail = null;
+        StateHasChanged();
+    }
+
+    private void SetActive(Venue v) => Session.SetActiveVenue(v.Id);
+
+    private Task OpenCatalogAsync(Venue v) =>
+        string.IsNullOrWhiteSpace(v.KaraFunVenueId)
+            ? Task.CompletedTask
+            : Links.OpenAsync(KaraFunSearch.CatalogUrlFor(v.KaraFunVenueId));
+
+    private async Task ToggleFavoriteAsync(Venue v)
+    {
+        v.IsFavorite = !v.IsFavorite;
+        await Store.UpdateAsync(v);
+    }
+
+    // ---- Add / edit ----
+    private void OpenAdd()
+    {
+        _editing = new Venue();
+        _editingIsNew = true;
+    }
+
+    // Edit a COPY so Cancel leaves the stored venue untouched; the store replaces by id on save.
+    private void OpenEdit(Venue v)
+    {
+        _editing = Clone(v);
+        _editingIsNew = false;
+    }
+
+    private void CloseEdit()
+    {
+        _editing = null;
+    }
+
+    private async Task SaveVenueAsync(Venue v)
+    {
+        if (_editingIsNew)
+            await Store.AddAsync(v);
+        else
+            await Store.UpdateAsync(v);
+        _editing = null;
+    }
+
+    private static Venue Clone(Venue v) => new()
+    {
+        Id = v.Id,
+        Name = v.Name,
+        Glyph = v.Glyph,
+        KaraFunVenueId = v.KaraFunVenueId,
+        Latitude = v.Latitude,
+        Longitude = v.Longitude,
+        IsFavorite = v.IsFavorite,
+        Notes = v.Notes,
+        AddedAt = v.AddedAt,
+    };
+
+    // ---- Delete ----
+    private void AskDelete(Venue v) => _confirmDelete = v;
+    private void CancelDelete() => _confirmDelete = null;
+
+    private async Task ConfirmDeleteAsync(Venue v)
+    {
+        _confirmDelete = null;
+        _detail = null;
+        // Clear the active pointer if this was the active venue, so nothing stamps a now-deleted id.
+        if (Session.ActiveVenueId == v.Id)
+            Session.SetActiveVenue(null);
+        await Store.RemoveAsync(v.Id);
+    }
+
+    // Closes the single top-most overlay, matching the CSS stacking (confirm > edit sheet > detail sheet).
+    private bool TryCloseTopOverlay()
+    {
+        if (_confirmDelete is not null) { CancelDelete(); return true; }
+        if (_editing is not null) { CloseEdit(); return true; }
+        if (_detail is not null) { CloseDetail(); return true; }
+        return false;
+    }
+
+    // ---- Per-venue history (derived over venue-tagged performances) ----
+    private VenueHistory History(Venue v)
+    {
+        var here = _songs
+            .SelectMany(s => s.Performances.Where(p => p.VenueId == v.Id).Select(p => (Song: s, Perf: p)))
+            .ToList();
+
+        var rated = here.Where(x => x.Perf.HowItWent >= 1).Select(x => x.Perf.HowItWent).ToList();
+
+        var goTo = here
+            .GroupBy(x => x.Song)
+            .Select(g => (Title: g.Key.Title,
+                          Count: g.Count(),
+                          Average: g.Where(x => x.Perf.HowItWent >= 1).Select(x => x.Perf.HowItWent).DefaultIfEmpty(0).Average()))
+            .Where(x => x.Average >= 1)
+            .OrderByDescending(x => x.Average).ThenByDescending(x => x.Count)
+            .Take(3)
+            .ToList();
+
+        var recent = here
+            .OrderByDescending(x => x.Perf.Date)
+            .Take(5)
+            .Select(x => (Title: x.Song.Title, Rating: x.Perf.HowItWent, Date: x.Perf.Date))
+            .ToList();
+
+        return new VenueHistory(
+            here.Count,
+            rated.Count > 0 ? rated.Average() : null,
+            here.Count > 0 ? here.Max(x => x.Perf.Date) : null,
+            goTo,
+            recent);
+    }
+
+    private sealed record VenueHistory(
+        int Sings,
+        double? Average,
+        DateTimeOffset? LastSung,
+        List<(string Title, int Count, double Average)> GoTo,
+        List<(string Title, int Rating, DateTimeOffset Date)> Recent);
+
+    public void Dispose()
+    {
+        _backGuard?.Dispose();
+        _selfRef?.Dispose();
+        Store.Changed -= OnChanged;
+        Songs.Changed -= OnChanged;
+        Session.ActiveVenueChanged -= OnChanged;
+    }
+}

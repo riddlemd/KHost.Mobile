@@ -27,6 +27,7 @@
     <Compile Include="..\KHost.Mobile\Models\Genres.cs" Link="Linked\Models\Genres.cs" />
     <Compile Include="..\KHost.Mobile\Models\SongListItem.cs" Link="Linked\Models\SongListItem.cs" />
     <Compile Include="..\KHost.Mobile\Models\SongTags.cs" Link="Linked\Models\SongTags.cs" />
+    <Compile Include="..\KHost.Mobile\Models\VenueGlyphs.cs" Link="Linked\Models\VenueGlyphs.cs" />
     <Compile Include="..\KHost.Mobile\Services\KaraFunSearch.cs" Link="Linked\Services\KaraFunSearch.cs" />
     <Compile Include="..\KHost.Mobile\Services\KaraFunVenueUrlParser.cs" Link="Linked\Services\KaraFunVenueUrlParser.cs" />
   </ItemGroup>

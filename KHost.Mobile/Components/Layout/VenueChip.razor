@@ -1,0 +1,153 @@
+@inject IVenueStore Store
+@inject IAppSession Session
+@inject IAppSettings Settings
+@inject NavigationManager Nav
+@inject IBackButtonService BackButton
+@implements IDisposable
+
+@* Always-visible active-venue chip + quick switcher, mounted in the header by MainLayout (only when the Venues
+   feature is on). The chip shows where you are right now (glyph + name, or "Set venue" when none); tapping it opens
+   a dropdown to switch active venue or jump to the Venues page. Reflects live changes to the active venue (a switch
+   here, a "Set active" on the Venues page, or a venue delete that clears it) via IAppSession's change event. *@
+<div class="venue-chip-host">
+    <button type="button" class="venue-chip @(_active is null ? "venue-chip--empty" : "")"
+            @onclick="Toggle" aria-haspopup="true" aria-expanded="@_open"
+            aria-label="@(_active is null ? "Set active venue" : $"Active venue: {_active.Name}")">
+        <span class="venue-chip__glyph">@(_active?.Glyph ?? "🎤")</span>
+        <span class="venue-chip__name">@(_active?.Name ?? "Set venue")</span>
+        <span class="venue-chip__caret">▾</span>
+    </button>
+
+    @if (_open)
+    {
+        <div class="venue-switcher__scrim" @onclick="Close"></div>
+        <div class="venue-switcher" role="menu">
+            @if (_venues.Count == 0)
+            {
+                <div class="venue-switcher__empty">No venues yet.</div>
+            }
+            else
+            {
+                @foreach (var v in _venues)
+                {
+                    <button type="button" class="venue-switcher__row @(IsActive(v) ? "is-active" : "")"
+                            role="menuitemradio" aria-checked="@IsActive(v)" @onclick="() => Activate(v)">
+                        <span class="venue-switcher__glyph">@v.Glyph</span>
+                        <span class="venue-switcher__name">
+                            @v.Name
+                            @if (v.IsFavorite)
+                            {
+                                <span class="venue-switcher__star">★</span>
+                            }
+                        </span>
+                        @if (IsActive(v))
+                        {
+                            <span class="venue-switcher__check">✓</span>
+                        }
+                    </button>
+                }
+                @if (_active is not null)
+                {
+                    <button type="button" class="venue-switcher__row venue-switcher__row--muted"
+                            role="menuitem" @onclick="ClearActive">
+                        <span class="venue-switcher__glyph">🚫</span>
+                        <span class="venue-switcher__name">Not at a venue</span>
+                    </button>
+                }
+            }
+            <div class="venue-switcher__foot">
+                <button type="button" class="venue-switcher__action" @onclick="AddVenue">＋ Add venue</button>
+                <button type="button" class="venue-switcher__action" @onclick="ManageVenues">Manage venues ›</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<Venue> _venues = [];
+    private Venue? _active;
+    private bool _open;
+    private BackButtonOverlayGuard? _backGuard;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _backGuard = new BackButtonOverlayGuard(BackButton,
+            closeTopMost: TryCloseSwitcher,
+            notifyStateChanged: StateHasChanged);
+        Store.Changed += OnStoreChanged;
+        Session.ActiveVenueChanged += OnActiveChanged;
+        await MigrateLegacyVenueAsync();
+        await ReloadAsync();
+    }
+
+    private bool IsActive(Venue v) => Session.ActiveVenueId == v.Id;
+
+    // One-time move of the old single global KaraFun venue ID into a real venue, so upgraders start with one saved.
+    private async Task MigrateLegacyVenueAsync()
+    {
+        if (Settings.VenuesSeeded)
+            return;
+
+        var legacyId = Settings.KaraFunVenueId;
+        if (!string.IsNullOrWhiteSpace(legacyId) && (await Store.GetAllAsync()).Count == 0)
+            await Store.AddAsync(new Venue { Name = "My KaraFun venue", KaraFunVenueId = legacyId.Trim() });
+
+        Settings.VenuesSeeded = true;
+    }
+
+    private void OnStoreChanged(object? sender, EventArgs e) => _ = ReloadOnUiAsync();
+    private void OnActiveChanged(object? sender, EventArgs e) => _ = ReloadOnUiAsync();
+
+    private async Task ReloadOnUiAsync()
+    {
+        try { await InvokeAsync(ReloadAsync); }
+        catch { /* best-effort: a stale chip is harmless */ }
+    }
+
+    private async Task ReloadAsync()
+    {
+        _venues = await Store.GetAllAsync();
+        _active = _venues.FirstOrDefault(v => v.Id == Session.ActiveVenueId);
+        StateHasChanged();
+    }
+
+    private void Toggle() => _open = !_open;
+    private void Close() => _open = false;
+
+    private bool TryCloseSwitcher()
+    {
+        if (_open) { Close(); return true; }
+        return false;
+    }
+
+    private void Activate(Venue v)
+    {
+        Session.SetActiveVenue(v.Id);   // raises ActiveVenueChanged → OnActiveChanged refreshes _active
+        Close();
+    }
+
+    private void ClearActive()
+    {
+        Session.SetActiveVenue(null);
+        Close();
+    }
+
+    private void AddVenue()
+    {
+        Close();
+        Nav.NavigateTo("venues?add=1");
+    }
+
+    private void ManageVenues()
+    {
+        Close();
+        Nav.NavigateTo("venues");
+    }
+
+    public void Dispose()
+    {
+        _backGuard?.Dispose();
+        Store.Changed -= OnStoreChanged;
+        Session.ActiveVenueChanged -= OnActiveChanged;
+    }
+}

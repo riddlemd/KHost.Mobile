@@ -30,6 +30,8 @@
     <Compile Include="..\KHost.Mobile\Models\SongListItem.cs" Link="Linked\Models\SongListItem.cs" />
     <Compile Include="..\KHost.Mobile\Models\TonightEntry.cs" Link="Linked\Models\TonightEntry.cs" />
     <Compile Include="..\KHost.Mobile\Models\LyricsCacheEntry.cs" Link="Linked\Models\LyricsCacheEntry.cs" />
+    <Compile Include="..\KHost.Mobile\Models\Venue.cs" Link="Linked\Models\Venue.cs" />
+    <Compile Include="..\KHost.Mobile\Models\VenueGlyphs.cs" Link="Linked\Models\VenueGlyphs.cs" />
 
     <Compile Include="..\KHost.Mobile\Services\IAppDataDirectory.cs" Link="Linked\Services\IAppDataDirectory.cs" />
     <Compile Include="..\KHost.Mobile\Services\ISongListStore.cs" Link="Linked\Services\ISongListStore.cs" />
@@ -38,6 +40,9 @@
     <Compile Include="..\KHost.Mobile\Services\ITonightStore.cs" Link="Linked\Services\ITonightStore.cs" />
     <Compile Include="..\KHost.Mobile\Services\JsonFileTonightStore.cs" Link="Linked\Services\JsonFileTonightStore.cs" />
     <Compile Include="..\KHost.Mobile\Services\TonightJsonContext.cs" Link="Linked\Services\TonightJsonContext.cs" />
+    <Compile Include="..\KHost.Mobile\Services\IVenueStore.cs" Link="Linked\Services\IVenueStore.cs" />
+    <Compile Include="..\KHost.Mobile\Services\JsonFileVenueStore.cs" Link="Linked\Services\JsonFileVenueStore.cs" />
+    <Compile Include="..\KHost.Mobile\Services\VenueJsonContext.cs" Link="Linked\Services\VenueJsonContext.cs" />
     <Compile Include="..\KHost.Mobile\Services\ILyricsCache.cs" Link="Linked\Services\ILyricsCache.cs" />
     <Compile Include="..\KHost.Mobile\Services\JsonFileLyricsCache.cs" Link="Linked\Services\JsonFileLyricsCache.cs" />
     <Compile Include="..\KHost.Mobile\Services\LyricsCacheJsonContext.cs" Link="Linked\Services\LyricsCacheJsonContext.cs" />

@@ -25,4 +25,10 @@ public class KaraFunSearchTests
         var url = KaraFunSearch.UrlFor(" 012345 ", "  Song & Co  ", "  A/B  ");
         Assert.Equal("https://www.karafun.com/012345/search?q=sc_Song%20%26%20Co%20A%2FB", url);
     }
+
+    [Fact]
+    public void CatalogUrlFor_builds_the_venue_home_with_no_query()
+    {
+        Assert.Equal("https://www.karafun.com/012345/", KaraFunSearch.CatalogUrlFor(" 012345 "));
+    }
 }

@@ -26,6 +26,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 ## ✨ Features
 
 - **Tonight set list** — build an on-deck set for the venue on its own tab: add songs, drag to reorder, and check each one off as you sing it, with live *“X of Y done”* progress. It's kept separate from your wishlist, so a song you sang earlier today stays unchecked until you check it off here. Your place in the list is kept as you switch tabs and come back.
+- **Venues** — keep a list of the places you sing, each with its own icon, optional KaraFun ID, and notes. An **active-venue chip** in the header shows where you are and switches with a tap; the active venue **opens its KaraFun catalog** in one tap and **tags every song you log there**, so each venue builds up its own history — your go-to songs and recent sings at that spot. Add a venue by hand or by **scanning its KaraFun QR code**. Turn the whole thing off in Settings → *Venues*.
 - **My Songs** — a personal wishlist of songs to sing, as a swipeable card list with sorting and multi-select filters (text, genre, tags, year, how-it-went / enjoyment rating). Your filters, sort, and scroll position stick as you switch tabs and come back. One tap on a card adds a song straight to tonight's set.
 - **Ratings & history** — rate *every* performance (a "how it went" score that averages over time) plus a separate **enjoyment** rating, jot per-performance notes, and keep a running sung-history for each song.
 - **Lyrics** — look a song's lyrics up in-app from **[LRCLIB](https://lrclib.net/)** (no account needed) and cache them on-device so they open instantly next time.
@@ -43,7 +44,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 ## 🛠️ Tech stack
 
 - **[.NET 10](https://dotnet.microsoft.com/)** with **[.NET MAUI Blazor Hybrid](https://learn.microsoft.com/dotnet/maui/)** — native iOS/Android shell hosting a Razor (Blazor) UI.
-- On-device storage in JSON files behind interfaces (`ISongListStore`, `ITonightStore`, `ILyricsCache`) that keep storage concerns out of the UI.
+- On-device storage in JSON files behind interfaces (`ISongListStore`, `ITonightStore`, `IVenueStore`, `ILyricsCache`) that keep storage concerns out of the UI.
 
 ## 🚀 Getting started
 

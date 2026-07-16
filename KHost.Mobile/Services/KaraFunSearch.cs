@@ -19,4 +19,11 @@ public static class KaraFunSearch
             : $"{title.Trim()} {artist.Trim()}";
         return $"https://www.karafun.com/{venueId.Trim()}/search?q={QueryPrefix}" + Uri.EscapeDataString(query);
     }
+
+    /// <summary>
+    /// The venue's KaraFun catalog home (no song query), e.g. <c>karafun.com/012345/</c> — for "Open KaraFun
+    /// Catalog" on the venue page, distinct from the song-scoped <see cref="UrlFor"/>. Opens the venue's whole
+    /// songbook so the singer can browse it directly.
+    /// </summary>
+    public static string CatalogUrlFor(string venueId) => $"https://www.karafun.com/{venueId.Trim()}/";
 }

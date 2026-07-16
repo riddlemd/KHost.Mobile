@@ -30,6 +30,20 @@ public interface IAppSettings
     bool KaraFunEnabled { get; set; }
 
     /// <summary>
+    /// When true, the Venues feature is available: the always-visible active-venue chip in the header, the Venues
+    /// page (⋮ menu), and venue tagging of performances. When false the chip and the ⋮ entry are hidden and no
+    /// venue is stamped on new performances; saved venues are left untouched, so turning it back on restores them.
+    /// </summary>
+    bool VenuesEnabled { get; set; }
+
+    /// <summary>
+    /// One-time guard for the legacy <see cref="KaraFunVenueId"/> → seeded-venue migration. Defaults to <c>false</c>
+    /// (like <see cref="TutorialCompleted"/>): the first time the venue feature loads with an old global KaraFun ID
+    /// set and no saved venues, one venue is seeded from it and this flips to <c>true</c> so it never re-seeds.
+    /// </summary>
+    bool VenuesSeeded { get; set; }
+
+    /// <summary>
     /// The KaraFun venue ID that "Find on KaraFun" links search under, or empty if not set yet. KaraFun search is
     /// per-venue, so the button prompts for this the first time it's tapped without one.
     /// </summary>

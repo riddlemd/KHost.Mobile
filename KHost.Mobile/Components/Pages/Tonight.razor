@@ -2,6 +2,7 @@
 @inject ISongListStore Store
 @inject ITonightStore TonightStore
 @inject IAppSettings Settings
+@inject IAppSession Session
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject IBackButtonService BackButton
@@ -259,7 +260,7 @@ else
             else
             {
                 // Log an unrated performance and complete immediately, no prompt.
-                var perf = new Performance { Date = DateTimeOffset.Now, HowItWent = 0 };
+                var perf = new Performance { Date = DateTimeOffset.Now, HowItWent = 0, VenueId = Session.ActiveVenueId };
                 song.Performances.Add(perf);
                 song.Status = SongListItemStatus.Sang;
                 await Store.UpdateAsync(song);
@@ -287,6 +288,7 @@ else
             Date = DateTimeOffset.Now,
             HowItWent = Math.Clamp(result.howItWent, 0, 5),
             Note = string.IsNullOrWhiteSpace(result.note) ? null : result.note.Trim(),
+            VenueId = Session.ActiveVenueId,   // tag with wherever they are right now (null when not at a venue)
         };
         item.Performances.Add(performance);
         item.Status = SongListItemStatus.Sang;

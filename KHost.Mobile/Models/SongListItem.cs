@@ -33,6 +33,12 @@ public sealed class Performance
 
     /// <summary>An optional note about this specific performance (e.g. "crowd loved it", "forgot the bridge"). Null when unset.</summary>
     public string? Note { get; set; }
+
+    /// <summary>The <see cref="Venue.Id"/> the singer was at when this sing was logged, or null when there was no
+    /// active venue (or the performance predates venues). Stamped from the session's active venue at log time and
+    /// never changed after; powers per-venue history. A venue deleted later leaves this as an orphan id — harmless,
+    /// it just no longer resolves to a saved venue.</summary>
+    public Guid? VenueId { get; set; }
 }
 
 /// <summary>

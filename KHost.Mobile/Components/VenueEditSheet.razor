@@ -1,0 +1,196 @@
+@* Add / edit a venue. Shown when @Editing is set (pass a fresh Venue() to add, or a working copy of an existing
+   one to edit — the host owns whether it's new). Collects glyph + name (+ optional KaraFun id, favorite, notes),
+   writing them onto the passed instance, and raises OnSave with it. Location capture lands with the geolocation
+   slice; the model already carries the coords. Uses --history stacking so it sits above the venue detail sheet. *@
+@using Microsoft.Maui.Devices
+@inject IQrScanner Scanner
+@inject IJSRuntime JS
+@implements IDisposable
+@if (Editing is not null)
+{
+    <div class="sheet-backdrop sheet-backdrop--history" @onclick="OnClose"></div>
+    <div class="sheet sheet--history" role="dialog" aria-modal="true" @ref="_sheet">
+        <button type="button" class="sheet__close" @onclick="OnClose" aria-label="Close">✕</button>
+        <div class="sheet__title">@(IsNew ? "Add venue" : "Edit venue")</div>
+
+        <div class="field" style="margin-top:0.85rem">
+            <label class="field__label" for="venue-name">Name</label>
+            <div class="venue-id-row">
+                <button type="button" class="venue-glyph-btn @(_glyphOpen ? "is-open" : "")"
+                        @onclick="() => _glyphOpen = !_glyphOpen" aria-label="Change icon" aria-expanded="@_glyphOpen"
+                        title="Change icon">@_glyph</button>
+                <input id="venue-name" class="input venue-name" placeholder="Venue name" aria-label="Venue name"
+                       @bind="_name" @bind:event="oninput" />
+            </div>
+            @if (_glyphOpen)
+            {
+                <div class="glyph-grid" role="radiogroup" aria-label="Venue icon">
+                    @foreach (var g in VenueGlyphs.All)
+                    {
+                        <button type="button" class="glyph-grid__item @(g == _glyph ? "is-sel" : "")"
+                                role="radio" aria-checked="@(g == _glyph)" @onclick="() => SelectGlyph(g)">@g</button>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="field">
+            <label class="field__label" for="venue-kf">KaraFun venue ID <span class="field__hint">— optional</span></label>
+            <div class="kf-venue__input-row">
+                <input id="venue-kf" class="input" placeholder="e.g. 012345"
+                       @bind="_karaFunId" @bind:event="oninput" />
+                @if (_scanSupported)
+                {
+                    <button type="button" class="kf-venue__scan" @onclick="ScanAsync" disabled="@_scanning"
+                            aria-label="Scan QR code" title="Scan QR code">
+                        <QrCodeIcon Class="kf-venue__qr" />
+                    </button>
+                }
+            </div>
+            @if (_scanError is not null)
+            {
+                <div class="field__error">@_scanError</div>
+            }
+        </div>
+
+        <label class="setting venue-fav-row">
+            <span class="setting__text"><span class="setting__title">⭐ Favorite</span></span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="_isFavorite" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <div class="field">
+            <label class="field__label" for="venue-notes">Notes <span class="field__hint">— optional</span></label>
+            <input id="venue-notes" class="input" placeholder="e.g. ask for the KJ, cash only"
+                   @bind="_notes" @bind:event="oninput" />
+        </div>
+
+        <div class="sheet__actions" style="margin-top:1rem">
+            <button class="btn btn-secondary" @onclick="OnClose">Cancel</button>
+            <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(string.IsNullOrWhiteSpace(_name))">Save</button>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>The venue being added/edited. Null hides the sheet. The host passes a fresh <see cref="Venue"/> to
+    /// add or a working copy to edit; on save its fields are written and it's handed back via <see cref="OnSave"/>.</summary>
+    [Parameter] public Venue? Editing { get; set; }
+
+    /// <summary>Whether this is a brand-new venue (drives the title). The host knows; the sheet just displays it.</summary>
+    [Parameter] public bool IsNew { get; set; }
+
+    /// <summary>Raised with the populated venue when the user saves (name guaranteed non-blank).</summary>
+    [Parameter] public EventCallback<Venue> OnSave { get; set; }
+
+    /// <summary>Raised when the sheet is dismissed without saving (✕ / Cancel / backdrop).</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string _glyph = VenueGlyphs.Default;
+    private string _name = string.Empty;
+    private string _karaFunId = string.Empty;
+    private string _notes = string.Empty;
+    private bool _isFavorite;
+    private bool _glyphOpen;   // the icon grid is collapsed until the glyph tile is tapped
+    private Guid? _seededFor;   // the venue id the buffers belong to; a change means a fresh open → reseed
+    private bool _scanning;
+    private string? _scanError;
+
+    private ElementReference _sheet;
+    private DotNetObjectReference<VenueEditSheet>? _selfRef;
+    private bool _bound;
+
+    // The QR scanner is native to Android/iOS only; hide the button on other heads (where IQrScanner is a no-op).
+    private static bool _scanSupported =>
+        DeviceInfo.Current.Platform == DevicePlatform.Android || DeviceInfo.Current.Platform == DevicePlatform.iOS;
+
+    // A fresh open (different venue id) must reseed the buffers, else edits from a prior open would leak across.
+    protected override void OnParametersSet()
+    {
+        if (Editing is { } v && v.Id != _seededFor)
+        {
+            _seededFor = v.Id;
+            _glyph = string.IsNullOrWhiteSpace(v.Glyph) ? VenueGlyphs.Default : v.Glyph;
+            _name = v.Name;
+            _karaFunId = v.KaraFunVenueId ?? string.Empty;
+            _notes = v.Notes ?? string.Empty;
+            _isFavorite = v.IsFavorite;
+            _glyphOpen = false;
+            _scanError = null;
+        }
+    }
+
+    // Pick a glyph and collapse the grid — the tile then shows the choice next to the name.
+    private void SelectGlyph(string g)
+    {
+        _glyph = g;
+        _glyphOpen = false;
+    }
+
+    // Bind pull-down-to-dismiss while shown (same interop as the song detail / rating sheets); a swipe closes
+    // without saving, like Cancel. The sheet element remounts on each open, so re-bind then and reset when hidden.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Editing is not null && !_bound)
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSheet.register", _sheet, _selfRef, new { closeMethod = "DismissFromSwipe" });
+            _bound = true;
+        }
+        else if (Editing is null)
+        {
+            _bound = false;
+        }
+    }
+
+    // Pull-down-to-dismiss from khSheet (the sheet already animated off-screen): discard, same as Cancel.
+    [JSInvokable]
+    public async Task DismissFromSwipe()
+    {
+        await OnClose.InvokeAsync();
+        StateHasChanged();
+    }
+
+    // Strict host check (not the loose paste parser) so an arbitrary scanned string can't silently become a venue.
+    private async Task ScanAsync()
+    {
+        if (_scanning)
+            return;
+        _scanning = true;
+        _scanError = null;
+        try
+        {
+            var scanned = await Scanner.ScanQrCodeAsync();
+            if (string.IsNullOrWhiteSpace(scanned))
+                return; // cancelled, permission denied, or nothing read
+
+            if (KaraFunVenueUrlParser.TryParseVenueUrl(scanned, out var id))
+                _karaFunId = id;
+            else
+                _scanError = "That QR code isn't a KaraFun venue link.";
+        }
+        finally
+        {
+            _scanning = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (Editing is not { } v || string.IsNullOrWhiteSpace(_name))
+            return;
+
+        v.Glyph = string.IsNullOrWhiteSpace(_glyph) ? VenueGlyphs.Default : _glyph.Trim();
+        v.Name = _name.Trim();
+        // Keep only a parseable venue ID (accepts a pasted link or a bare id); blank clears it.
+        v.KaraFunVenueId = KaraFunVenueUrlParser.TryParseId(_karaFunId, out var parsed) ? parsed : null;
+        v.Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim();
+        v.IsFavorite = _isFavorite;
+
+        await OnSave.InvokeAsync(v);
+    }
+
+    public void Dispose() => _selfRef?.Dispose();
+}

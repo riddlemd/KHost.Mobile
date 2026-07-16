@@ -238,6 +238,36 @@
     </div>
 
     <div class="card">
+        <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("venues")' aria-expanded="@IsOpen("venues")">
+            <span class="filters-toggle__label">Venues</span>
+            <span class="filters-toggle__chevron @(IsOpen("venues") ? "is-open" : "")">▾</span>
+        </button>
+        @if (IsOpen("venues"))
+        {
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Venues</span>
+                <span class="setting__desc">
+                    Keep a list of the places you sing, with an active-venue chip in the header. The active venue
+                    opens its KaraFun catalog and tags the songs you log there, so each venue builds its own history.
+                    Turn off to hide the chip and the Venues page; your saved venues are kept.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.VenuesEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+        @if (Prefs.VenuesEnabled)
+        {
+            <div class="kf-venue">
+                <NavLink class="btn btn-secondary settings__clear" href="venues">Manage venues</NavLink>
+            </div>
+        }
+        }
+    </div>
+
+    <div class="card">
         <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("singing")' aria-expanded="@IsOpen("singing")">
             <span class="filters-toggle__label">Singing &amp; ratings</span>
             <span class="filters-toggle__chevron @(IsOpen("singing") ? "is-open" : "")">▾</span>

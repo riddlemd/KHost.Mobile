@@ -12,6 +12,10 @@
             <span class="brand-lockup__cue">Cue</span>
         </span>
     </div>
+    @if (Settings.VenuesEnabled)
+    {
+        <VenueChip />
+    }
     <div class="header-menu">
         <button type="button" class="header-menu__btn" data-tut="menu" @onclick="ToggleMenu"
                 aria-haspopup="true" aria-expanded="@_menuOpen" aria-label="Menu">
@@ -25,6 +29,13 @@
                     <span class="header-menu__icon">@(_theme == "dark" ? "☀️" : "🌙")</span>
                     @(_theme == "dark" ? "Light mode" : "Dark mode")
                 </button>
+                @if (Settings.VenuesEnabled)
+                {
+                    <NavLink class="header-menu__item" role="menuitem" href="venues" @onclick="CloseMenu">
+                        <span class="header-menu__icon">📍</span>
+                        Venues
+                    </NavLink>
+                }
                 <NavLink class="header-menu__item" role="menuitem" href="import-export" @onclick="CloseMenu">
                     <span class="header-menu__icon">🔁</span>
                     Import / Export
