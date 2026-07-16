@@ -3,8 +3,12 @@ namespace KHost.Mobile.Services;
 /// <summary>Builds a KaraFun search URL for a song at a given venue. Pure and host-agnostic so it's trivially testable.</summary>
 public static class KaraFunSearch
 {
+    // KaraFun's venue search expects the q value to carry an "sc_" search-context prefix; without it the page
+    // loads but returns no matches. Kept as a constant since this token may be reworked upstream.
+    private const string QueryPrefix = "sc_";
+
     /// <summary>
-    /// Search URL for "Title Artist" under the given venue, e.g. <c>karafun.com/076217/search?q=…</c>. KaraFun's
+    /// Search URL for "Title Artist" under the given venue, e.g. <c>karafun.com/076217/search?q=sc_…</c>. KaraFun's
     /// catalogue search lives under a venue, so the venue ID is part of the path (unlike YouTube/Spotify).
     /// </summary>
     public static string UrlFor(string venueId, string title, string? artist)
@@ -13,6 +17,6 @@ public static class KaraFunSearch
         var query = string.IsNullOrWhiteSpace(artist)
             ? title.Trim()
             : $"{title.Trim()} {artist.Trim()}";
-        return $"https://www.karafun.com/{venueId.Trim()}/search?q=" + Uri.EscapeDataString(query);
+        return $"https://www.karafun.com/{venueId.Trim()}/search?q={QueryPrefix}" + Uri.EscapeDataString(query);
     }
 }
