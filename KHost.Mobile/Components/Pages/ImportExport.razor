@@ -11,6 +11,7 @@
 @inject IYouTubeMusicImportService YtMusic
 @inject ITrackMetadataLookup Metadata
 @inject IAppSettings Settings
+@inject IBackButtonService BackButton
 @implements IDisposable
 
 <section class="ie">
@@ -277,8 +278,20 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _backGuard = new BackButtonOverlayGuard(BackButton,
+            closeTopMost: TryCloseTopOverlay,
+            notifyStateChanged: StateHasChanged);
         Store.Changed += OnStoreChanged;
         _items = await Store.GetAllAsync();
+    }
+
+    // Routes the Android back button to close the import sheet instead of navigating; active only while it's open.
+    private BackButtonOverlayGuard? _backGuard;
+
+    private bool TryCloseTopOverlay()
+    {
+        if (_importOpen) { CloseImport(); return true; }
+        return false;
     }
 
     // Bridge the store's synchronous Changed event to async work without `async void`: a void handler hands
@@ -648,6 +661,7 @@
 
     public void Dispose()
     {
+        _backGuard?.Dispose();
         Store.Changed -= OnStoreChanged;
         _reviewCts?.Cancel();     // stop a background review if the user navigates away mid-enrichment
         _reviewCts?.Dispose();

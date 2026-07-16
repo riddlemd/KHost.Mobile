@@ -16,6 +16,7 @@
 @inject IAppSession Session
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject IBackButtonService BackButton
 @implements IDisposable
 
 @* The wishlist. "Tonight" lives on its own tab now (Components/Pages/Tonight.razor); each card here still carries
@@ -1006,6 +1007,9 @@ else
     protected override async Task OnInitializedAsync()
     {
         RestoreViewState();   // before the first render, so restored filters/sort show immediately
+        _backGuard = new BackButtonOverlayGuard(BackButton,
+            closeTopMost: TryCloseTopOverlay,
+            notifyStateChanged: StateHasChanged);
         Store.Changed += OnStoreChanged;
         Tonight.Changed += OnTonightChanged;
 
@@ -1433,6 +1437,22 @@ else
         _detailItem = null;
         _editing = false;
         // The page-scroll lock is reconciled from state in OnAfterRenderAsync — no explicit unlock needed here.
+    }
+
+    // Routes the Android back button to close the top-most sheet instead of navigating; active only while a sheet is open.
+    private BackButtonOverlayGuard? _backGuard;
+
+    // Closes the single top-most open overlay, matching the CSS stacking order (confirm pop-up > the --history
+    // sub-sheets > the base detail sheet). Returns false when nothing is open (let navigation proceed).
+    private bool TryCloseTopOverlay()
+    {
+        if (_historyConfirmIndex is not null) { CancelRemoveSungDate(); return true; }
+        if (_karaFunPromptOpen) { CloseKaraFunPrompt(); return true; }
+        if (_ratingPromptItem is not null) { CloseRatingPrompt(); return true; }
+        if (_historyItem is not null) { CloseHistory(); return true; }
+        if (_lyricsItem is not null) { CloseLyrics(); return true; }
+        if (_detailItem is not null) { CloseDetail(); return true; }
+        return false;
     }
 
     // Pull-down-to-dismiss from khSheet: the sheet already animated off-screen, so just close.
@@ -1891,6 +1911,7 @@ else
         _ = JS.InvokeVoidAsync("khScroll.untrack", ScrollKey);
         Store.Changed -= OnStoreChanged;
         Tonight.Changed -= OnTonightChanged;
+        _backGuard?.Dispose();
         // Safety net: never leave the page-scroll lock on if this page is torn down with a sheet open.
         if (_pageLocked)
             _ = JS.InvokeVoidAsync("khSheet.setLock", false);

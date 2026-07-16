@@ -54,6 +54,11 @@ public static class MauiProgram
         // Opens external links (e.g. a YouTube search) in the OS browser / matching app.
         builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
 
+        // App-wide registry for the Android back button: components register an overlay-close callback while
+        // mounted, and the Android MainActivity consults it so hardware back dismisses the top-most sheet/menu
+        // instead of minimizing the app. Singleton so the components and the platform callback share one instance.
+        builder.Services.AddSingleton<IBackButtonService, BackButtonService>();
+
         // HTTP-backed services go through IHttpClientFactory (AddHttpClient) so their message handlers are
         // pooled and rotated — a plain long-lived `new HttpClient()` never picks up DNS changes. Each service
         // is stateless (only const fields) and consumed via @inject, so the typed client's transient lifetime

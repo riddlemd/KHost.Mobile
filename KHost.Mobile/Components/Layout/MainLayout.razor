@@ -2,6 +2,7 @@
 @inject IJSRuntime JS
 @inject IAppSettings Settings
 @inject NavigationManager Nav
+@inject IBackButtonService BackButton
 @implements IDisposable
 
 <header class="app-header">
@@ -60,7 +61,13 @@
     private string _theme = "light";
     private bool _menuOpen;
 
-    protected override void OnInitialized() => Nav.LocationChanged += OnLocationChanged;
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        _backGuard = new BackButtonOverlayGuard(BackButton,
+            closeTopMost: TryCloseTopOverlay,
+            notifyStateChanged: StateHasChanged);
+    }
 
     // Re-render on navigation so the bottom bar reflects the current Tonight setting (e.g. right after it's
     // toggled on the Settings page). The layout persists across pages, so nothing else re-reads the flag.
@@ -76,6 +83,15 @@
         }
     }
 
+    // Routes the Android back button to close the ⋮ menu instead of navigating; active only while it's open.
+    private BackButtonOverlayGuard? _backGuard;
+
+    private bool TryCloseTopOverlay()
+    {
+        if (_menuOpen) { CloseMenu(); return true; }
+        return false;
+    }
+
     private void ToggleMenu() => _menuOpen = !_menuOpen;
 
     private void CloseMenu() => _menuOpen = false;
@@ -86,5 +102,9 @@
         _theme = await JS.InvokeAsync<string>("khTheme.toggle");
     }
 
-    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+        _backGuard?.Dispose();
+    }
 }

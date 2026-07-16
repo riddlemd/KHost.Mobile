@@ -4,6 +4,7 @@
 @inject IAppSettings Settings
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject IBackButtonService BackButton
 @implements IDisposable
 
 @* The "Tonight" on-deck set — its own tab. Drag the ⠿ handle to reorder, tap ✓ to check a song off (which logs
@@ -126,6 +127,9 @@ else
             return;
         }
 
+        _backGuard = new BackButtonOverlayGuard(BackButton,
+            closeTopMost: TryCloseTopOverlay,
+            notifyStateChanged: StateHasChanged);
         Store.Changed += OnStoreChanged;
         TonightStore.Changed += OnTonightChanged;
         await RefreshAsync();
@@ -166,6 +170,18 @@ else
             _locked = open;
             await JS.InvokeVoidAsync("khSheet.setLock", open);
         }
+    }
+
+    // Routes the Android back button to close the top-most overlay instead of navigating; active only while one is open.
+    private BackButtonOverlayGuard? _backGuard;
+
+    // Closes the single top-most open overlay, matching the CSS stacking order (confirm pop-ups > the rating sheet).
+    private bool TryCloseTopOverlay()
+    {
+        if (_removeSong is not null) { CancelRemove(); return true; }
+        if (_confirmEndNight) { CancelEndNight(); return true; }
+        if (_ratingPromptItem is not null) { OnRatingCancel(); return true; }
+        return false;
     }
 
     private void GoToMyList() => Nav.NavigateTo("");
@@ -327,6 +343,7 @@ else
         _ = JS.InvokeVoidAsync("khScroll.untrack", ScrollKey);
         Store.Changed -= OnStoreChanged;
         TonightStore.Changed -= OnTonightChanged;
+        _backGuard?.Dispose();
         // Never leave the page-scroll lock on if this page is torn down with the prompt open.
         if (_locked)
             _ = JS.InvokeVoidAsync("khSheet.setLock", false);

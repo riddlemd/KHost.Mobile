@@ -6,6 +6,7 @@
 @inject IAlbumArtCache AlbumArt
 @inject IAppSession Session
 @inject NavigationManager Nav
+@inject IBackButtonService BackButton
 @implements IDisposable
 
 <section class="settings">
@@ -365,10 +366,24 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _backGuard = new BackButtonOverlayGuard(BackButton,
+            closeTopMost: TryCloseTopOverlay,
+            notifyStateChanged: StateHasChanged);
         Store.Changed += OnStoreChanged;
         LyricsCache.Changed += OnStoreChanged;
         AlbumArt.Changed += OnStoreChanged;
         await RefreshCountAsync();
+    }
+
+    // Routes the Android back button to close the top-most overlay instead of navigating; active only while one is open.
+    private BackButtonOverlayGuard? _backGuard;
+
+    // Closes the single top-most open overlay, matching the CSS stacking order (confirm pop-up > the venue sheet).
+    private bool TryCloseTopOverlay()
+    {
+        if (_confirmClear) { CancelClear(); return true; }
+        if (_karaFunPromptOpen) { CloseKaraFunPrompt(); return true; }
+        return false;
     }
 
     // Same non-async-void bridge the other pages use: marshal the reload onto the render thread and swallow failures.
@@ -440,6 +455,7 @@
 
     public void Dispose()
     {
+        _backGuard?.Dispose();
         Store.Changed -= OnStoreChanged;
         LyricsCache.Changed -= OnStoreChanged;
         AlbumArt.Changed -= OnStoreChanged;
