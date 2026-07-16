@@ -348,45 +348,8 @@
         return false;
     }
 
-    // ---- Per-venue history (derived over venue-tagged performances) ----
-    private VenueHistory History(Venue v)
-    {
-        var here = _songs
-            .SelectMany(s => s.Performances.Where(p => p.VenueId == v.Id).Select(p => (Song: s, Perf: p)))
-            .ToList();
-
-        var rated = here.Where(x => x.Perf.HowItWent >= 1).Select(x => x.Perf.HowItWent).ToList();
-
-        var goTo = here
-            .GroupBy(x => x.Song)
-            .Select(g => (Title: g.Key.Title,
-                          Count: g.Count(),
-                          Average: g.Where(x => x.Perf.HowItWent >= 1).Select(x => x.Perf.HowItWent).DefaultIfEmpty(0).Average()))
-            .Where(x => x.Average >= 1)
-            .OrderByDescending(x => x.Average).ThenByDescending(x => x.Count)
-            .Take(3)
-            .ToList();
-
-        var recent = here
-            .OrderByDescending(x => x.Perf.Date)
-            .Take(5)
-            .Select(x => (Title: x.Song.Title, Rating: x.Perf.HowItWent, Date: x.Perf.Date))
-            .ToList();
-
-        return new VenueHistory(
-            here.Count,
-            rated.Count > 0 ? rated.Average() : null,
-            here.Count > 0 ? here.Max(x => x.Perf.Date) : null,
-            goTo,
-            recent);
-    }
-
-    private sealed record VenueHistory(
-        int Sings,
-        double? Average,
-        DateTimeOffset? LastSung,
-        List<(string Title, int Count, double Average)> GoTo,
-        List<(string Title, int Rating, DateTimeOffset Date)> Recent);
+    // Per-venue history is a pure derivation over venue-tagged performances — see Models/VenueHistory.
+    private VenueHistory History(Venue v) => VenueHistory.ForVenue(_songs, v.Id);
 
     public void Dispose()
     {

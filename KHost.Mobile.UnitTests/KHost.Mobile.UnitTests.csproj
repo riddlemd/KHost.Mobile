@@ -28,6 +28,11 @@
     <Compile Include="..\KHost.Mobile\Models\SongListItem.cs" Link="Linked\Models\SongListItem.cs" />
     <Compile Include="..\KHost.Mobile\Models\SongTags.cs" Link="Linked\Models\SongTags.cs" />
     <Compile Include="..\KHost.Mobile\Models\VenueGlyphs.cs" Link="Linked\Models\VenueGlyphs.cs" />
+    <Compile Include="..\KHost.Mobile\Models\Venue.cs" Link="Linked\Models\Venue.cs" />
+    <Compile Include="..\KHost.Mobile\Models\VenueHistory.cs" Link="Linked\Models\VenueHistory.cs" />
+    <Compile Include="..\KHost.Mobile\Services\IAppSession.cs" Link="Linked\Services\IAppSession.cs" />
+    <Compile Include="..\KHost.Mobile\Services\AppSession.cs" Link="Linked\Services\AppSession.cs" />
+    <Compile Include="..\KHost.Mobile\Services\MySongsViewState.cs" Link="Linked\Services\MySongsViewState.cs" />
     <Compile Include="..\KHost.Mobile\Services\KaraFunSearch.cs" Link="Linked\Services\KaraFunSearch.cs" />
     <Compile Include="..\KHost.Mobile\Services\KaraFunVenueUrlParser.cs" Link="Linked\Services\KaraFunVenueUrlParser.cs" />
   </ItemGroup>
