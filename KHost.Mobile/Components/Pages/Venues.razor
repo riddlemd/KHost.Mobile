@@ -54,6 +54,10 @@
                             {
                                 <span class="venue-row__badge">Active</span>
                             }
+                            @if (!v.ShowInSwitcher)
+                            {
+                                <span class="venue-row__badge venue-row__badge--muted">Hidden</span>
+                            }
                         </div>
                         <div class="venue-row__sub">@SubLine(v)</div>
                     </div>
@@ -271,7 +275,8 @@
         StateHasChanged();
     }
 
-    private void SetActive(Venue v) => Session.SetActiveVenue(v.Id);
+    // A manual pick pins the venue so the periodic geo re-check won't override it.
+    private void SetActive(Venue v) => Session.SetActiveVenue(v.Id, pinned: true);
 
     private Task OpenCatalogAsync(Venue v) =>
         string.IsNullOrWhiteSpace(v.KaraFunVenueId)
@@ -321,6 +326,7 @@
         Latitude = v.Latitude,
         Longitude = v.Longitude,
         IsFavorite = v.IsFavorite,
+        ShowInSwitcher = v.ShowInSwitcher,
         Notes = v.Notes,
         AddedAt = v.AddedAt,
     };

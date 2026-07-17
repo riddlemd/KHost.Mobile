@@ -30,5 +30,7 @@
     <string>Assets.xcassets/appicon.appiconset</string>
     <key>NSCameraUsageDescription</key>
     <string>Scan a KaraFun venue QR code to set your venue.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Set your active venue automatically based on where you are.</string>
 </dict>
 </plist>

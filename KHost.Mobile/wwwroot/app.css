@@ -1806,7 +1806,13 @@ body.kh-sheet-open { overflow: hidden; }
     border-radius: 0.6rem;
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
     animation: sheet-fade 0.12s ease;
+    /* Cap to the space below the header so a long list scrolls instead of running off-screen; the bottom inset
+       keeps the pinned foot clear of the system nav / gesture bar. */
+    display: flex; flex-direction: column;
+    max-height: calc(100dvh - var(--kh-header-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1rem);
 }
+/* Only the venue rows scroll; the foot (mode toggle + actions) stays pinned and reachable. */
+.venue-switcher__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .venue-switcher__empty { padding: 0.7rem; color: var(--kh-text-muted); font-size: 0.9rem; }
 .venue-switcher__row {
     display: flex; align-items: center; gap: 0.6rem; width: 100%;
@@ -1821,13 +1827,24 @@ body.kh-sheet-open { overflow: hidden; }
 .venue-switcher__name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .venue-switcher__star { color: #f4b740; font-size: 0.8rem; margin-left: 0.3rem; }
 .venue-switcher__check { color: #e1477e; font-weight: 800; }
-.venue-switcher__foot { border-top: 1px solid var(--kh-border); margin-top: 0.2rem; padding-top: 0.2rem; }
+.venue-switcher__foot { flex: 0 0 auto; border-top: 1px solid var(--kh-border); margin-top: 0.2rem; padding-top: 0.2rem; }
 .venue-switcher__action {
     display: block; width: 100%; text-align: left;
     padding: 0.55rem 0.6rem; border: none; background: none;
     color: var(--kh-primary); font-size: 0.9rem; font-weight: 700; cursor: pointer; border-radius: 0.45rem;
 }
 .venue-switcher__action:hover { background: var(--kh-surface-2); }
+
+/* Pinned / auto-update mode toggle in the switcher foot — a two-segment control (📍 Auto | 📌 Pinned) */
+.venue-switcher__seg { display: flex; gap: 0.25rem; padding: 0.25rem; margin: 0.15rem 0 0.3rem; background: var(--kh-surface-2); border-radius: 0.55rem; }
+.venue-switcher__seg-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+    padding: 0.5rem 0.3rem; border: none; border-radius: 0.4rem;
+    background: none; color: var(--kh-text-muted); font-size: 0.85rem; font-weight: 700; cursor: pointer;
+}
+.venue-switcher__seg-btn.is-on { background: var(--kh-surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16); }
+.venue-switcher__seg-btn.is-on.is-auto { color: var(--kh-primary); }
+.venue-switcher__seg-btn.is-on.is-pin { color: #e1477e; }
 
 /* Venues page — list */
 .venues__add { flex: 0 0 auto; margin-left: auto; padding: 0.45rem 0.85rem; }
@@ -1854,6 +1871,8 @@ body.kh-sheet-open { overflow: hidden; }
     font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;
     color: #fff; background: #e1477e; border-radius: 999px; padding: 0.1rem 0.45rem;
 }
+/* "Hidden from switcher" marker — muted so it reads as a status, not an alert like the pink Active badge. */
+.venue-row__badge--muted { color: var(--kh-text-muted); background: var(--kh-surface-2); }
 .venue-row__sub { font-size: 0.8rem; color: var(--kh-text-muted); margin-top: 0.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .venue-row__set { flex: 0 0 auto; padding: 0.4rem 0.7rem; }
 
@@ -1914,3 +1933,13 @@ body.kh-sheet-open { overflow: hidden; }
 }
 .glyph-grid__item.is-sel { border-color: #e1477e; background: rgba(225, 71, 126, 0.15); }
 .venue-fav-row { margin: 0.25rem 0 0.75rem; }
+
+/* Add/edit sheet — captured location row */
+.venue-loc { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.9rem; }
+.venue-loc__coords { color: var(--kh-text-muted); }
+.venue-loc__link { border: none; background: none; color: var(--kh-primary); font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 0.2rem 0; }
+.venue-loc__link--danger { color: #e1477e; }
+.venue-loc__capture { width: auto; }
+
+/* Settings — venue re-check interval select */
+.venue-recheck { flex: 0 0 auto; width: auto; padding-top: 0.4rem; padding-bottom: 0.4rem; }

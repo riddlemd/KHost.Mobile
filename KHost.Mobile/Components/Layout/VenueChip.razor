@@ -1,6 +1,7 @@
 @inject IVenueStore Store
 @inject IAppSession Session
 @inject IAppSettings Settings
+@inject IVenueLocator Locator
 @inject NavigationManager Nav
 @inject IBackButtonService BackButton
 @implements IDisposable
@@ -22,40 +23,53 @@
     {
         <div class="venue-switcher__scrim" @onclick="Close"></div>
         <div class="venue-switcher" role="menu">
-            @if (_venues.Count == 0)
-            {
-                <div class="venue-switcher__empty">No venues yet.</div>
-            }
-            else
-            {
-                @foreach (var v in _venues)
+            @* Scrollable list so a long venue set never pushes the foot (toggle + actions) off-screen. *@
+            <div class="venue-switcher__list">
+                @if (!ListedVenues.Any())
                 {
-                    <button type="button" class="venue-switcher__row @(IsActive(v) ? "is-active" : "")"
-                            role="menuitemradio" aria-checked="@IsActive(v)" @onclick="() => Activate(v)">
-                        <span class="venue-switcher__glyph">@v.Glyph</span>
-                        <span class="venue-switcher__name">
-                            @v.Name
-                            @if (v.IsFavorite)
+                    <div class="venue-switcher__empty">@(_venues.Count == 0 ? "No venues yet." : "No venues shown here.")</div>
+                }
+                else
+                {
+                    @foreach (var v in ListedVenues)
+                    {
+                        <button type="button" class="venue-switcher__row @(IsActive(v) ? "is-active" : "")"
+                                role="menuitemradio" aria-checked="@IsActive(v)" @onclick="() => Activate(v)">
+                            <span class="venue-switcher__glyph">@v.Glyph</span>
+                            <span class="venue-switcher__name">
+                                @v.Name
+                                @if (v.IsFavorite)
+                                {
+                                    <span class="venue-switcher__star">★</span>
+                                }
+                            </span>
+                            @if (IsActive(v))
                             {
-                                <span class="venue-switcher__star">★</span>
+                                <span class="venue-switcher__check">✓</span>
                             }
-                        </span>
-                        @if (IsActive(v))
-                        {
-                            <span class="venue-switcher__check">✓</span>
-                        }
-                    </button>
+                        </button>
+                    }
+                    @if (_active is not null)
+                    {
+                        <button type="button" class="venue-switcher__row venue-switcher__row--muted"
+                                role="menuitem" @onclick="ClearActive">
+                            <span class="venue-switcher__glyph">🚫</span>
+                            <span class="venue-switcher__name">Not at a venue</span>
+                        </button>
+                    }
                 }
-                @if (_active is not null)
-                {
-                    <button type="button" class="venue-switcher__row venue-switcher__row--muted"
-                            role="menuitem" @onclick="ClearActive">
-                        <span class="venue-switcher__glyph">🚫</span>
-                        <span class="venue-switcher__name">Not at a venue</span>
-                    </button>
-                }
-            }
+            </div>
             <div class="venue-switcher__foot">
+                @if (Settings.LocationAutoDetect)
+                {
+                    @* Two modes, not an on/off: 📍 Auto follows your location, 📌 Pinned holds the manual pick. *@
+                    <div class="venue-switcher__seg" role="group" aria-label="Venue update mode">
+                        <button type="button" class="venue-switcher__seg-btn @(Session.ActiveVenuePinned ? "" : "is-on is-auto")"
+                                aria-pressed="@(Session.ActiveVenuePinned ? "false" : "true")" @onclick="SetAutoAsync">📍 Auto</button>
+                        <button type="button" class="venue-switcher__seg-btn @(Session.ActiveVenuePinned ? "is-on is-pin" : "")"
+                                aria-pressed="@(Session.ActiveVenuePinned ? "true" : "false")" @onclick="SetPinned">📌 Pinned</button>
+                    </div>
+                }
                 <button type="button" class="venue-switcher__action" @onclick="AddVenue">＋ Add venue</button>
                 <button type="button" class="venue-switcher__action" @onclick="ManageVenues">Manage venues ›</button>
             </div>
@@ -68,6 +82,7 @@
     private Venue? _active;
     private bool _open;
     private BackButtonOverlayGuard? _backGuard;
+    private CancellationTokenSource? _trackCts;
 
     protected override async Task OnInitializedAsync()
     {
@@ -78,9 +93,36 @@
         Session.ActiveVenueChanged += OnActiveChanged;
         await MigrateLegacyVenueAsync();
         await ReloadAsync();
+        StartLocationTracking();
+    }
+
+    private void StartLocationTracking()
+    {
+        if (!Settings.LocationAutoDetect)
+            return;
+        _trackCts = new CancellationTokenSource();
+        _ = TrackLocationAsync(_trackCts.Token);
+    }
+
+    private async Task TrackLocationAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Locator.ResolveActiveAsync(ct);
+            var minutes = Math.Clamp(Settings.VenueRecheckMinutes, 2, 30);
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(minutes));
+            while (await timer.WaitForNextTickAsync(ct))
+                await Locator.ResolveActiveAsync(ct);
+        }
+        catch (OperationCanceledException) { /* stopped on dispose */ }
+        catch { /* best-effort background tracking — a missed re-check is harmless */ }
     }
 
     private bool IsActive(Venue v) => Session.ActiveVenueId == v.Id;
+
+    // The switcher's quick list only. _venues stays the full set (so an active hidden venue is still resolved for
+    // the chip, and management still sees everything); only the dropdown rows honor ShowInSwitcher.
+    private IEnumerable<Venue> ListedVenues => _venues.Where(v => v.ShowInSwitcher);
 
     // One-time move of the old single global KaraFun venue ID into a real venue, so upgraders start with one saved.
     private async Task MigrateLegacyVenueAsync()
@@ -120,17 +162,29 @@
         return false;
     }
 
+    // A manual pick pins the venue so the periodic geo re-check won't stomp it (until "resume auto-detect").
     private void Activate(Venue v)
     {
-        Session.SetActiveVenue(v.Id);   // raises ActiveVenueChanged → OnActiveChanged refreshes _active
+        Session.SetActiveVenue(v.Id, pinned: true);
         Close();
     }
 
     private void ClearActive()
     {
-        Session.SetActiveVenue(null);
+        Session.SetActiveVenue(null, pinned: true);   // "not at a venue" is a deliberate choice — pin it too
         Close();
     }
+
+    // Unpin so location drives the venue again; resolve now so the nearest applies without waiting for the timer.
+    // Left open so the mode flip stays visible.
+    private async Task SetAutoAsync()
+    {
+        Session.SetActiveVenue(Session.ActiveVenueId, pinned: false);
+        try { await Locator.ResolveActiveAsync(); } catch { /* best-effort */ }
+    }
+
+    // 📌 Pinned: hold the current venue so the periodic geo re-check leaves it alone.
+    private void SetPinned() => Session.SetActiveVenue(Session.ActiveVenueId, pinned: true);
 
     private void AddVenue()
     {
@@ -147,6 +201,8 @@
     public void Dispose()
     {
         _backGuard?.Dispose();
+        _trackCts?.Cancel();
+        _trackCts?.Dispose();
         Store.Changed -= OnStoreChanged;
         Session.ActiveVenueChanged -= OnActiveChanged;
     }

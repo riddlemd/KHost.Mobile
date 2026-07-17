@@ -35,6 +35,11 @@ public sealed class Venue
     /// <summary>Starred by the singer. Favorites float to the top of the venue list and the switcher.</summary>
     public bool IsFavorite { get; set; }
 
+    /// <summary>When false, the venue is kept out of the header switcher's quick list — it still exists on the Venues
+    /// page, can be set active there, and still tags sings / opens its KaraFun catalog. Defaults to <c>true</c> so
+    /// existing venues (and a file that predates this field) stay listed.</summary>
+    public bool ShowInSwitcher { get; set; } = true;
+
     /// <summary>Free-text notes ("great sound", "cash only", "ask for Dana"). Null when unset.</summary>
     public string? Notes { get; set; }
 

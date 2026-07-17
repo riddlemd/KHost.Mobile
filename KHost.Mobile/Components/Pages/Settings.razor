@@ -246,23 +246,35 @@
         {
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">Venues</span>
+                <span class="setting__title">Auto-detect venue by location</span>
                 <span class="setting__desc">
-                    Keep a list of the places you sing, with an active-venue chip in the header. The active venue
-                    opens its KaraFun catalog and tags the songs you log there, so each venue builds its own history.
-                    Turn off to hide the chip and the Venues page; your saved venues are kept.
+                    Use your location to set the active venue automatically — it switches to the nearest saved venue
+                    as you move between them, re-checking on the interval below. On by default; it asks for location
+                    permission the first time. Foreground only — it won't track you in your pocket. Picking a venue by
+                    hand pins it until you resume auto-detect.
                 </span>
             </span>
             <span class="switch">
-                <input class="switch__input" type="checkbox" @bind="Prefs.VenuesEnabled" />
+                <input class="switch__input" type="checkbox" @bind="Prefs.LocationAutoDetect" />
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
-        @if (Prefs.VenuesEnabled)
+
+        @if (Prefs.LocationAutoDetect)
         {
-            <div class="kf-venue">
-                <NavLink class="btn btn-secondary settings__clear" href="venues">Manage venues</NavLink>
-            </div>
+            <label class="setting">
+                <span class="setting__text">
+                    <span class="setting__title">Re-check location every</span>
+                    <span class="setting__desc">How often to re-check your venue while the app is open.</span>
+                </span>
+                <select class="input venue-recheck" @bind="Prefs.VenueRecheckMinutes">
+                    <option value="2">2 min</option>
+                    <option value="5">5 min</option>
+                    <option value="10">10 min</option>
+                    <option value="15">15 min</option>
+                    <option value="30">30 min</option>
+                </select>
+            </label>
         }
         }
     </div>

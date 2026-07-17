@@ -1,9 +1,10 @@
 @* Add / edit a venue. Shown when @Editing is set (pass a fresh Venue() to add, or a working copy of an existing
-   one to edit — the host owns whether it's new). Collects glyph + name (+ optional KaraFun id, favorite, notes),
-   writing them onto the passed instance, and raises OnSave with it. Location capture lands with the geolocation
-   slice; the model already carries the coords. Uses --history stacking so it sits above the venue detail sheet. *@
+   one to edit — the host owns whether it's new). Collects glyph + name (+ optional KaraFun id, captured location,
+   favorite, notes), writing them onto the passed instance, and raises OnSave with it. Uses --history stacking so it
+   sits above the venue detail sheet. *@
 @using Microsoft.Maui.Devices
 @inject IQrScanner Scanner
+@inject ILocationProvider Geo
 @inject IJSRuntime JS
 @implements IDisposable
 @if (Editing is not null)
@@ -53,10 +54,41 @@
             }
         </div>
 
+        <div class="field">
+            <label class="field__label">Location <span class="field__hint">— optional</span></label>
+            @if (_lat is not null && _lng is not null)
+            {
+                <div class="venue-loc">
+                    <span class="venue-loc__pin">📍</span>
+                    <span class="venue-loc__coords">@_lat.Value.ToString("0.0000"), @_lng.Value.ToString("0.0000")</span>
+                    <button type="button" class="venue-loc__link" @onclick="CaptureLocationAsync" disabled="@_capturing">Update</button>
+                    <button type="button" class="venue-loc__link venue-loc__link--danger" @onclick="ClearLocation">Clear</button>
+                </div>
+            }
+            else
+            {
+                <button type="button" class="btn btn-secondary venue-loc__capture" @onclick="CaptureLocationAsync" disabled="@_capturing">
+                    @(_capturing ? "Locating…" : "📍 Use my current location")
+                </button>
+            }
+            @if (_locError is not null)
+            {
+                <div class="field__error">@_locError</div>
+            }
+        </div>
+
         <label class="setting venue-fav-row">
             <span class="setting__text"><span class="setting__title">⭐ Favorite</span></span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="_isFavorite" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting venue-fav-row">
+            <span class="setting__text"><span class="setting__title">👁️ Show in switcher</span></span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="_showInSwitcher" />
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
@@ -93,7 +125,12 @@
     private string _karaFunId = string.Empty;
     private string _notes = string.Empty;
     private bool _isFavorite;
+    private bool _showInSwitcher = true;
     private bool _glyphOpen;   // the icon grid is collapsed until the glyph tile is tapped
+    private double? _lat;
+    private double? _lng;
+    private bool _capturing;
+    private string? _locError;
     private Guid? _seededFor;   // the venue id the buffers belong to; a change means a fresh open → reseed
     private bool _scanning;
     private string? _scanError;
@@ -117,10 +154,36 @@
             _karaFunId = v.KaraFunVenueId ?? string.Empty;
             _notes = v.Notes ?? string.Empty;
             _isFavorite = v.IsFavorite;
+            _showInSwitcher = v.ShowInSwitcher;
+            _lat = v.Latitude;
+            _lng = v.Longitude;
             _glyphOpen = false;
             _scanError = null;
+            _locError = null;
         }
     }
+
+    private async Task CaptureLocationAsync()
+    {
+        if (_capturing)
+            return;
+        _capturing = true;
+        _locError = null;
+        try
+        {
+            var here = await Geo.GetCurrentAsync();
+            if (here is null)
+                _locError = "Couldn't get your location. Check that location is on and permission is granted.";
+            else
+                (_lat, _lng) = (here.Latitude, here.Longitude);
+        }
+        finally
+        {
+            _capturing = false;
+        }
+    }
+
+    private void ClearLocation() => (_lat, _lng) = (null, null);
 
     // Pick a glyph and collapse the grid — the tile then shows the choice next to the name.
     private void SelectGlyph(string g)
@@ -188,6 +251,9 @@
         v.KaraFunVenueId = KaraFunVenueUrlParser.TryParseId(_karaFunId, out var parsed) ? parsed : null;
         v.Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim();
         v.IsFavorite = _isFavorite;
+        v.ShowInSwitcher = _showInSwitcher;
+        v.Latitude = _lat;
+        v.Longitude = _lng;
 
         await OnSave.InvokeAsync(v);
     }

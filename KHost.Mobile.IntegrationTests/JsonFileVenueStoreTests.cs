@@ -117,4 +117,40 @@ public sealed class JsonFileVenueStoreTests : IDisposable
         Assert.Equal("The Dive", got.Name);
         Assert.Equal("🍸", got.Glyph);
     }
+
+    [Fact]
+    public async Task ShowInSwitcher_false_round_trips_to_disk()
+    {
+        var writer = NewStore();
+        var v = await writer.AddAsync(new Venue { Name = "Backup Room", ShowInSwitcher = false });
+
+        var got = await NewStore().GetAsync(v.Id);
+        Assert.NotNull(got);
+        Assert.False(got!.ShowInSwitcher);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_persists_a_toggled_ShowInSwitcher()
+    {
+        var store = NewStore();
+        var v = await store.AddAsync(new Venue { Name = "The Mint" });
+
+        v.ShowInSwitcher = false;
+        await store.UpdateAsync(v);
+
+        var got = await NewStore().GetAsync(v.Id);
+        Assert.False(got!.ShowInSwitcher);
+    }
+
+    [Fact]
+    public async Task A_legacy_file_without_ShowInSwitcher_defaults_it_to_true()
+    {
+        // A venue file written before the field existed must keep the venue listed, not silently hide it.
+        await File.WriteAllTextAsync(
+            _dir.FilePath("venues.json"),
+            """[ { "Id": "a1000001-0000-4000-8000-000000000001", "Name": "Old Venue", "Glyph": "🎤" } ]""");
+
+        var got = Assert.Single(await NewStore().GetAllAsync());
+        Assert.True(got.ShowInSwitcher);
+    }
 }

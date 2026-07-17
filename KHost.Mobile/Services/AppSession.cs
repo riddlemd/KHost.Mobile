@@ -16,15 +16,18 @@ public sealed class AppSession : IAppSession
     public Guid? ActiveVenueId { get; private set; }
 
     /// <inheritdoc />
+    public bool ActiveVenuePinned { get; private set; }
+
+    /// <inheritdoc />
     public event EventHandler? ActiveVenueChanged;
 
     /// <inheritdoc />
-    public void SetActiveVenue(Guid? venueId)
+    public void SetActiveVenue(Guid? venueId, bool pinned = false)
     {
-        if (ActiveVenueId == venueId)
-            return;
-
+        var venueChanged = ActiveVenueId != venueId;
         ActiveVenueId = venueId;
-        ActiveVenueChanged?.Invoke(this, EventArgs.Empty);
+        ActiveVenuePinned = pinned;   // always reflects the latest caller (e.g. "resume auto" unpins the same venue)
+        if (venueChanged)
+            ActiveVenueChanged?.Invoke(this, EventArgs.Empty);
     }
 }

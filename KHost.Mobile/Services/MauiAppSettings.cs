@@ -16,8 +16,9 @@ public sealed class MauiAppSettings : IAppSettings
     private const string SpotifySearchKey = "settings.spotify_search";
     private const string KaraFunKey = "settings.karafun";
     private const string KaraFunVenueIdKey = "settings.karafun_venue_id";
-    private const string VenuesKey = "settings.venues";
     private const string VenuesSeededKey = "settings.venues_seeded";
+    private const string LocationAutoDetectKey = "settings.location_autodetect";
+    private const string VenueRecheckMinutesKey = "settings.venue_recheck_minutes";
     private const string LyricsKey = "settings.lyrics";
     private const string LyricsCacheKey = "settings.lyrics_cache";
     private const string ScrollToFavoritedKey = "settings.scroll_to_favorited";
@@ -71,17 +72,23 @@ public sealed class MauiAppSettings : IAppSettings
         set => Preferences.Default.Set(KaraFunVenueIdKey, value);
     }
 
-    public bool VenuesEnabled
-    {
-        get => Preferences.Default.Get(VenuesKey, true);
-        set => Preferences.Default.Set(VenuesKey, value);
-    }
-
     // Defaults to false (not true like the feature flags): a fresh install hasn't run the legacy-ID migration yet.
     public bool VenuesSeeded
     {
         get => Preferences.Default.Get(VenuesSeededKey, false);
         set => Preferences.Default.Set(VenuesSeededKey, value);
+    }
+
+    public bool LocationAutoDetect
+    {
+        get => Preferences.Default.Get(LocationAutoDetectKey, true);
+        set => Preferences.Default.Set(LocationAutoDetectKey, value);
+    }
+
+    public int VenueRecheckMinutes
+    {
+        get => Preferences.Default.Get(VenueRecheckMinutesKey, 5);
+        set => Preferences.Default.Set(VenueRecheckMinutesKey, value);
     }
 
     public bool LyricsEnabled

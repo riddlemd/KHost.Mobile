@@ -51,6 +51,11 @@ public static class MauiProgram
         // pointer on IAppSession, not persisted here.
         builder.Services.AddSingleton<IVenueStore, JsonFileVenueStore>();
 
+        // Device location + the venue auto-selector behind it. ILocationProvider wraps MAUI Geolocation (best-effort,
+        // permission-gated); IVenueLocator turns a fix into the nearest saved venue and sets it active. Both singleton.
+        builder.Services.AddSingleton<ILocationProvider, MauiLocationProvider>();
+        builder.Services.AddSingleton<IVenueLocator, MauiVenueLocator>();
+
         // User preferences (feature toggles) persisted via MAUI Preferences. Singleton: one view of the flags app-wide.
         builder.Services.AddSingleton<IAppSettings, MauiAppSettings>();
 

@@ -12,6 +12,12 @@ public class VenueTests
     }
 
     [Fact]
+    public void New_venue_is_shown_in_the_switcher_by_default()
+    {
+        Assert.True(new Venue().ShowInSwitcher);
+    }
+
+    [Fact]
     public void HasLocation_is_true_only_when_both_coordinates_are_set()
     {
         Assert.False(new Venue().HasLocation);

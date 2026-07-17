@@ -52,4 +52,32 @@ public class AppSessionTests
         Assert.Null(session.ActiveVenueId);
         Assert.Equal(1, fired);
     }
+
+    [Fact]
+    public void SetActiveVenue_records_the_pin_flag()
+    {
+        var session = new AppSession();
+
+        session.SetActiveVenue(Guid.NewGuid());               // defaults to unpinned (auto)
+        Assert.False(session.ActiveVenuePinned);
+
+        session.SetActiveVenue(Guid.NewGuid(), pinned: true); // a manual pick
+        Assert.True(session.ActiveVenuePinned);
+    }
+
+    [Fact]
+    public void SetActiveVenue_can_unpin_the_same_venue_without_raising()
+    {
+        var session = new AppSession();
+        var venue = Guid.NewGuid();
+        session.SetActiveVenue(venue, pinned: true);
+
+        var fired = 0;
+        session.ActiveVenueChanged += (_, _) => fired++;
+        session.SetActiveVenue(venue, pinned: false);   // "resume auto-detect" on the same venue
+
+        Assert.False(session.ActiveVenuePinned);
+        Assert.Equal(venue, session.ActiveVenueId);
+        Assert.Equal(0, fired);   // venue didn't change, so no refresh event
+    }
 }

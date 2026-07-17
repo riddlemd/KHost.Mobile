@@ -30,18 +30,25 @@ public interface IAppSettings
     bool KaraFunEnabled { get; set; }
 
     /// <summary>
-    /// When true, the Venues feature is available: the always-visible active-venue chip in the header, the Venues
-    /// page (⋮ menu), and venue tagging of performances. When false the chip and the ⋮ entry are hidden and no
-    /// venue is stamped on new performances; saved venues are left untouched, so turning it back on restores them.
-    /// </summary>
-    bool VenuesEnabled { get; set; }
-
-    /// <summary>
     /// One-time guard for the legacy <see cref="KaraFunVenueId"/> → seeded-venue migration. Defaults to <c>false</c>
     /// (like <see cref="TutorialCompleted"/>): the first time the venue feature loads with an old global KaraFun ID
     /// set and no saved venues, one venue is seeded from it and this flips to <c>true</c> so it never re-seeds.
     /// </summary>
     bool VenuesSeeded { get; set; }
+
+    /// <summary>
+    /// When true, the active venue is auto-selected from the device's location — switching to the nearest saved
+    /// venue as the singer moves, and re-checking every <see cref="VenueRecheckMinutes"/> minutes while the app is
+    /// open (foreground only). Defaults to <c>true</c>; the location permission is requested the first time it runs.
+    /// Manually picking a venue pins it until "resume auto-detect"; turn this off to switch venues only by hand.
+    /// </summary>
+    bool LocationAutoDetect { get; set; }
+
+    /// <summary>
+    /// How often (minutes) the location auto-detect re-checks the current venue while the app is open. Defaults to
+    /// 5; the UI offers a small set of choices and the tracker clamps to ~2–30.
+    /// </summary>
+    int VenueRecheckMinutes { get; set; }
 
     /// <summary>
     /// The KaraFun venue ID that "Find on KaraFun" links search under, or empty if not set yet. KaraFun search is

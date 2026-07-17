@@ -36,9 +36,17 @@ public interface IAppSession
     /// </summary>
     Guid? ActiveVenueId { get; }
 
-    /// <summary>Set (or clear, with null) the <see cref="ActiveVenueId"/>. Raises <see cref="ActiveVenueChanged"/>
-    /// only when the value actually changes, so the header chip and Venues page can refresh in lock-step.</summary>
-    void SetActiveVenue(Guid? venueId);
+    /// <summary>
+    /// Whether the active venue was chosen manually (the switcher / a "Set active") rather than resolved from
+    /// location. While pinned, the periodic geo re-check leaves the active venue alone so a deliberate pick isn't
+    /// stomped. Cleared by "resume auto-detect" (and by the next launch, since the session resets).
+    /// </summary>
+    bool ActiveVenuePinned { get; }
+
+    /// <summary>Set (or clear, with null) the <see cref="ActiveVenueId"/>, recording whether it was a manual
+    /// (<paramref name="pinned"/>) choice. Raises <see cref="ActiveVenueChanged"/> only when the venue actually
+    /// changes, so the header chip and Venues page refresh in lock-step; the pin state always updates.</summary>
+    void SetActiveVenue(Guid? venueId, bool pinned = false);
 
     /// <summary>Raised after <see cref="ActiveVenueId"/> changes (manual switch, geo re-check, or a delete that
     /// clears it). Lets the header chip and any open venue view refresh without polling.</summary>
