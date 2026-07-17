@@ -12,7 +12,7 @@
    here, a "Set active" on the Venues page, or a venue delete that clears it) via IAppSession's change event. *@
 <div class="venue-chip-host">
     <button type="button" class="venue-chip @(_active is null ? "venue-chip--empty" : "")"
-            @onclick="Toggle" aria-haspopup="true" aria-expanded="@_open"
+            data-tut="venue" @onclick="Toggle" aria-haspopup="true" aria-expanded="@_open"
             aria-label="@(_active is null ? "Set active venue" : $"Active venue: {_active.Name}")">
         <span class="venue-chip__glyph">@(_active?.Glyph ?? "🎤")</span>
         <span class="venue-chip__name">@(_active?.Name ?? "Set venue")</span>
