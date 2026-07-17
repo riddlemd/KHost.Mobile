@@ -1922,26 +1922,13 @@ body.kh-sheet-open { overflow: hidden; }
 }
 .venue-detail__heading { min-width: 0; }
 .venue-detail__name { font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; }
-/* Tonal toggle chip so the favorite on/off state is obvious and clearly tappable. */
-.venue-detail__fav {
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    border: 1px solid var(--kh-border); background: var(--kh-surface-2);
-    color: var(--kh-text-muted); font-weight: 700; font-size: 0.85rem; cursor: pointer;
-    padding: 0.45rem 0.85rem; border-radius: 999px;
-}
-.venue-detail__fav:active { transform: scale(0.97); }
-.venue-detail__fav.is-on {
-    background: color-mix(in srgb, #f4b740 22%, var(--kh-surface));
-    border-color: color-mix(in srgb, #f4b740 55%, var(--kh-surface));
-    color: #8a6d12;
-}
-/* Dark theme: dark-gold text is unreadable on the tinted chip, so go bright gold. */
-:root[data-theme="dark"] .venue-detail__fav.is-on { color: #f4b740; }
 .venue-detail__actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
 .venue-detail__actions .btn { width: 100%; }
+/* Favorite / Active switches in the detail card: centered single-line toggle rows. */
+.venue-detail__toggle { align-items: center; }
 .venue-detail__info { margin-top: 1rem; border-top: 1px solid var(--kh-border); padding-top: 0.75rem; }
 .venue-detail__info-row { display: flex; gap: 0.75rem; padding: 0.3rem 0; font-size: 0.9rem; }
-.venue-detail__info-label { flex: 0 0 4.5rem; color: var(--kh-text-muted); font-weight: 700; }
+.venue-detail__info-label { flex: 0 0 6.5rem; color: var(--kh-text-muted); font-weight: 700; white-space: nowrap; }
 .venue-detail__info-value { flex: 1 1 auto; min-width: 0; word-break: break-word; }
 .venue-detail__history { margin-top: 1rem; border-top: 1px solid var(--kh-border); padding-top: 0.85rem; }
 .venue-detail__history-title { font-weight: 800; margin-bottom: 0.6rem; }
@@ -1958,7 +1945,8 @@ body.kh-sheet-open { overflow: hidden; }
 .venue-songlist li { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.3rem 0; font-size: 0.9rem; }
 .venue-songlist__title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .venue-songlist__meta { flex: 0 0 auto; color: var(--kh-text-muted); font-size: 0.82rem; }
-.venue-detail__delete { width: 100%; margin-top: 1.1rem; }
+.venue-detail__edit { width: 100%; margin-top: 1.1rem; }
+.venue-detail__delete { width: 100%; margin-top: 0.5rem; }
 
 /* Add/edit sheet — glyph tile beside the name; tapping it reveals the curated picker (the WebView emoji
    keyboard is unreliable, so we ship a fixed grid rather than opening the OS keyboard). */

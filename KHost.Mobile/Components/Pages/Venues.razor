@@ -55,7 +55,10 @@
                                 <span class="venue-row__badge venue-row__badge--muted">Hidden</span>
                             }
                         </div>
-                        <div class="venue-row__sub">@SubLine(v)</div>
+                        @if (SubLine(v) is { Length: > 0 } sub)
+                        {
+                            <div class="venue-row__sub">@sub</div>
+                        }
                     </div>
                     @* Radio = single-select: the filled dot marks the active venue. Tapping it sets active without
                        opening the detail sheet (which the rest of the row does). *@
@@ -80,17 +83,7 @@
         <div class="venue-detail__hero">
             <span class="venue-detail__glyph">@d.Glyph</span>
             <div class="venue-detail__heading">
-                <div class="venue-detail__name">
-                    @d.Name
-                    @if (IsActive(d))
-                    {
-                        <span class="venue-row__badge">Active</span>
-                    }
-                </div>
-                <button type="button" class="venue-detail__fav @(d.IsFavorite ? "is-on" : "")"
-                        @onclick="() => ToggleFavoriteAsync(d)" aria-label="Toggle favorite">
-                    @(d.IsFavorite ? "★ Favorite" : "☆ Favorite")
-                </button>
+                <div class="venue-detail__name">@d.Name</div>
             </div>
         </div>
 
@@ -99,16 +92,26 @@
             {
                 <button class="btn btn-primary" @onclick="() => OpenCatalogAsync(d)">Open KaraFun Catalog</button>
             }
-            @if (!IsActive(d))
-            {
-                <button class="btn btn-secondary" @onclick="() => SetActive(d)">Set active</button>
-            }
-            <button class="btn btn-secondary" @onclick="() => OpenEdit(d)">Edit</button>
+            <label class="setting venue-detail__toggle">
+                <span class="setting__text"><span class="setting__title">Favorite</span></span>
+                <span class="switch">
+                    <input class="switch__input" type="checkbox" checked="@d.IsFavorite" @onchange="() => ToggleFavoriteAsync(d)" />
+                    <span class="switch__track"><span class="switch__thumb"></span></span>
+                </span>
+            </label>
+            @* Flipping Active off clears the active venue (not-at-a-venue), same as picking "Not at a venue" elsewhere. *@
+            <label class="setting venue-detail__toggle">
+                <span class="setting__text"><span class="setting__title">Active</span></span>
+                <span class="switch">
+                    <input class="switch__input" type="checkbox" checked="@IsActive(d)" @onchange="() => ToggleActive(d)" />
+                    <span class="switch__track"><span class="switch__thumb"></span></span>
+                </span>
+            </label>
         </div>
 
         <div class="venue-detail__info">
             <div class="venue-detail__info-row">
-                <span class="venue-detail__info-label">KaraFun</span>
+                <span class="venue-detail__info-label">KaraFun Id</span>
                 <span class="venue-detail__info-value">@(string.IsNullOrWhiteSpace(d.KaraFunVenueId) ? "Not set" : d.KaraFunVenueId)</span>
             </div>
             @if (!string.IsNullOrWhiteSpace(d.Notes))
@@ -156,6 +159,7 @@
             }
         </div>
 
+        <button type="button" class="btn btn-secondary venue-detail__edit" @onclick="() => OpenEdit(d)">Edit</button>
         <button type="button" class="btn btn-danger venue-detail__delete" @onclick="() => AskDelete(d)">Delete venue</button>
     </div>
 }
@@ -237,11 +241,12 @@
         return matches.OrderBy(v => v.Name, StringComparer.CurrentCultureIgnoreCase);
     }
 
+    // Just the sung count here (KaraFun status dropped from the row); empty when nothing's been sung, so the row
+    // shows only the name.
     private string SubLine(Venue v)
     {
         var count = _songs.SelectMany(s => s.Performances).Count(p => p.VenueId == v.Id);
-        var kf = string.IsNullOrWhiteSpace(v.KaraFunVenueId) ? "No KaraFun" : $"KaraFun {v.KaraFunVenueId}";
-        return count == 0 ? kf : $"{kf} · {count} sing{(count == 1 ? "" : "s")} here";
+        return count == 0 ? "" : $"{count} sing{(count == 1 ? "" : "s")} here";
     }
 
     private void OnChanged(object? sender, EventArgs e) => _ = ReloadOnUiAsync();
@@ -374,6 +379,10 @@
 
     // A manual pick pins the venue so the periodic geo re-check won't override it.
     private void SetActive(Venue v) => Session.SetActiveVenue(v.Id, pinned: true);
+
+    // Detail-card toggle: clear the active venue if this card's venue is already active, else make it active.
+    // Pinned either way (a manual pick), same as the list radio.
+    private void ToggleActive(Venue v) => Session.SetActiveVenue(IsActive(v) ? null : v.Id, pinned: true);
 
     private Task OpenCatalogAsync(Venue v) =>
         string.IsNullOrWhiteSpace(v.KaraFunVenueId)

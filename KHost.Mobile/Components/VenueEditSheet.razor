@@ -21,7 +21,7 @@
                         @onclick="() => _glyphOpen = !_glyphOpen" aria-label="Change icon" aria-expanded="@_glyphOpen"
                         title="Change icon">@_glyph</button>
                 <input id="venue-name" class="input venue-name" placeholder="Venue name" aria-label="Venue name"
-                       @bind="_name" @bind:event="oninput" />
+                       maxlength="16" @bind="_name" @bind:event="oninput" />
             </div>
             @if (_glyphOpen)
             {
@@ -86,7 +86,7 @@
         </label>
 
         <label class="setting venue-fav-row">
-            <span class="setting__text"><span class="setting__title">👁️ Show in switcher</span></span>
+            <span class="setting__text"><span class="setting__title">⚡ Show in quick switch</span></span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="_showInSwitcher" />
                 <span class="switch__track"><span class="switch__thumb"></span></span>
