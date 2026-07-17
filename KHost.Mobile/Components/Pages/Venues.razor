@@ -38,10 +38,10 @@
         }
         else
         {
-        <div class="venue-list">
+        <div class="venue-list" @ref="_swipeRoot">
             @foreach (var v in Ordered())
             {
-                <div class="venue-row @(IsActive(v) ? "is-active" : "")" @onclick="() => OpenDetail(v)">
+                <div class="venue-row @(IsActive(v) ? "is-active" : "")" @key="v.Id" data-venue-id="@v.Id">
                     <span class="venue-row__pin">@v.Glyph</span>
                     <div class="venue-row__main">
                         <div class="venue-row__name">
@@ -50,10 +50,6 @@
                             {
                                 <span class="venue-row__star">★</span>
                             }
-                            @if (IsActive(v))
-                            {
-                                <span class="venue-row__badge">Active</span>
-                            }
                             @if (!v.ShowInSwitcher)
                             {
                                 <span class="venue-row__badge venue-row__badge--muted">Hidden</span>
@@ -61,11 +57,12 @@
                         </div>
                         <div class="venue-row__sub">@SubLine(v)</div>
                     </div>
-                    @if (!IsActive(v))
-                    {
-                        <button type="button" class="btn btn-secondary venue-row__set"
-                                @onclick="() => SetActive(v)" @onclick:stopPropagation="true">Set active</button>
-                    }
+                    @* Radio = single-select: the filled dot marks the active venue. Tapping it sets active without
+                       opening the detail sheet (which the rest of the row does). *@
+                    <button type="button" class="venue-row__radio @(IsActive(v) ? "is-on" : "")"
+                            @onclick="() => SetActive(v)" @onclick:stopPropagation="true"
+                            role="radio" aria-checked="@IsActive(v)"
+                            aria-label="@(IsActive(v) ? $"{v.Name} — active venue" : $"Set {v.Name} active")"></button>
                 </div>
             }
         </div>
@@ -163,6 +160,15 @@
     </div>
 }
 
+@* ---- Undo toast after a swipe-remove ---- *@
+@if (_undoVenue is not null)
+{
+    <div class="snackbar" role="status">
+        <span class="snackbar__text">Removed &ldquo;@_undoVenue.Name&rdquo;</span>
+        <button class="snackbar__action" @onclick="UndoRemoveAsync">Undo</button>
+    </div>
+}
+
 @* ---- Add / edit sheet ---- *@
 <VenueEditSheet Editing="_editing" IsNew="_editingIsNew" OnSave="SaveVenueAsync" OnClose="CloseEdit" />
 
@@ -194,6 +200,15 @@
     private DotNetObjectReference<Venues>? _selfRef;
     private bool _detailBound;
 
+    private ElementReference _swipeRoot;   // the .venue-list container swipe.js is delegated on
+    private bool _swipeBound;
+
+    // Undo-after-swipe-remove: the last removed venue (+ whether it was active, to restore that too) and a timer.
+    private const int UndoWindowMs = 5000;
+    private Venue? _undoVenue;
+    private bool _undoWasActive;
+    private CancellationTokenSource? _undoCts;
+
     protected override async Task OnInitializedAsync()
     {
         _backGuard = new BackButtonOverlayGuard(BackButton,
@@ -211,16 +226,15 @@
 
     private bool IsActive(Venue v) => Session.ActiveVenueId == v.Id;
 
-    // Name-filtered, then the active venue pinned to the top; the rest keep the store's favorites-first-then-name order.
+    // Always plain A→Z by name (not favorites-first, not active-pinned): the radio dot marks the active venue and the
+    // star marks favorites, so nothing needs to float — a fixed order keeps rows from jumping as you activate/favorite.
     private IEnumerable<Venue> Ordered()
     {
         IEnumerable<Venue> matches = string.IsNullOrWhiteSpace(_search)
             ? _venues
             : _venues.Where(v => v.Name.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase));
 
-        var list = matches.ToList();
-        var active = list.FirstOrDefault(v => IsActive(v));
-        return active is null ? list : new[] { active }.Concat(list.Where(v => v.Id != active.Id));
+        return matches.OrderBy(v => v.Name, StringComparer.CurrentCultureIgnoreCase);
     }
 
     private string SubLine(Venue v)
@@ -251,10 +265,93 @@
     private void OpenDetail(Venue v) => _detail = v;
     private void CloseDetail() => _detail = null;
 
+    // Tap (a stationary pointerup) from swipe.js opens the row's detail sheet; called from JS, so render explicitly.
+    [JSInvokable]
+    public Task OpenDetailById(string id)
+    {
+        if (Guid.TryParse(id, out var guid))
+        {
+            var v = _venues.FirstOrDefault(x => x.Id == guid);
+            if (v is not null)
+            {
+                OpenDetail(v);
+                StateHasChanged();
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    // A commit-swipe from swipe.js removes the venue immediately and offers a few-second undo (mirrors My Songs).
+    [JSInvokable]
+    public async Task RemoveById(string id)
+    {
+        if (!Guid.TryParse(id, out var guid))
+            return;
+
+        var removed = _venues.FirstOrDefault(v => v.Id == guid);
+        if (removed is null)
+            return;
+
+        var wasActive = Session.ActiveVenueId == guid;
+        if (wasActive)
+            Session.SetActiveVenue(null);   // don't leave the active pointer on a deleted venue
+
+        await Store.RemoveAsync(guid);
+        ShowUndo(removed, wasActive);
+    }
+
+    private void ShowUndo(Venue venue, bool wasActive)
+    {
+        _undoCts?.Cancel();
+        _undoCts = new CancellationTokenSource();
+        _undoVenue = venue;
+        _undoWasActive = wasActive;
+        _ = DismissUndoAfterDelay(_undoCts.Token);
+    }
+
+    private async Task DismissUndoAfterDelay(CancellationToken token)
+    {
+        try { await Task.Delay(UndoWindowMs, token); }
+        catch (TaskCanceledException) { return; }   // superseded by a newer removal or an Undo
+
+        _undoVenue = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UndoRemoveAsync()
+    {
+        _undoCts?.Cancel();
+        var venue = _undoVenue;
+        var wasActive = _undoWasActive;
+        _undoVenue = null;
+        if (venue is null)
+            return;
+
+        // Id is preserved, so it re-lands in its alphabetical slot; restore the active pointer if it held it.
+        await Store.AddAsync(venue);
+        if (wasActive)
+            Session.SetActiveVenue(venue.Id, pinned: true);
+    }
+
     // Bind pull-down-to-dismiss on the detail sheet (same interop as the song detail / rating sheets). The element
     // remounts each open, so re-bind then and reset the flag when it's hidden.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Swipe-left-to-remove on the venue rows (same interop as My Songs). The .venue-list container unmounts when
+        // a search matches nothing, so re-bind against the fresh element on the next mount.
+        var listShown = _venues.Count > 0 && Ordered().Any();
+        if (listShown && !_swipeBound)
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSwipe.register", _swipeRoot, _selfRef,
+                new { idAttr = "data-venue-id", swipingClass = "venue-row--swiping", tapMethod = "OpenDetailById", removeMethod = "RemoveById" });
+            _swipeBound = true;
+        }
+        else if (!listShown)
+        {
+            _swipeBound = false;
+        }
+
         if (_detail is not null && !_detailBound)
         {
             _selfRef ??= DotNetObjectReference.Create(this);
@@ -361,6 +458,8 @@
     {
         _backGuard?.Dispose();
         _selfRef?.Dispose();
+        _undoCts?.Cancel();
+        _undoCts?.Dispose();
         Store.Changed -= OnChanged;
         Songs.Changed -= OnChanged;
         Session.ActiveVenueChanged -= OnChanged;

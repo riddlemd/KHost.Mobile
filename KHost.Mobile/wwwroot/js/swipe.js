@@ -1,12 +1,20 @@
-// Swipe-a-row-left-to-remove for the song table.
-// Event-delegated on a stable container (the <tbody>); works with pointer events so it
+// Swipe-a-row-left-to-remove. Event-delegated on a stable container; works with pointer events so it
 // covers touch + mouse. Vertical scrolling stays native via `touch-action: pan-y` on the rows.
 // As a row slides left it uncovers a red "Remove" strip (a single reusable fixed element)
 // sized to the vacated space, so the pending action is always labelled.
+// Reused by both the song list and the venues list; `options` names the per-list attribute/class/methods
+// (defaults keep the original song-table contract), so a stationary tap and a commit-swipe call the
+// list's own [JSInvokable] handlers.
 window.khSwipe = {
-    register(container, dotNetRef) {
+    register(container, dotNetRef, options) {
         if (!container || container._khSwipeBound) return;
         container._khSwipeBound = true;
+
+        const opts = options || {};
+        const idAttr = opts.idAttr || 'data-song-id';
+        const swipingClass = opts.swipingClass || 'song-row--swiping';
+        const tapMethod = opts.tapMethod || 'OpenDetail';
+        const removeMethod = opts.removeMethod || 'RemoveById';
 
         const START_THRESHOLD = 8;    // px of horizontal travel before we treat it as a swipe
         const TAP_SLOP = 10;          // px of movement (either axis) past which it's a scroll/swipe, not a tap
@@ -41,7 +49,7 @@ window.khSwipe = {
         };
 
         container.addEventListener('pointerdown', (e) => {
-            const row = e.target.closest('[data-song-id]');
+            const row = e.target.closest(`[${idAttr}]`);
             if (!row) return;
             // Let taps on the interactive controls (favorite, rating, inputs) work normally.
             if (e.target.closest('button, input, select, a, label')) return;
@@ -49,7 +57,7 @@ window.khSwipe = {
             const rect = row.getBoundingClientRect();
             active = {
                 row,
-                id: row.getAttribute('data-song-id'),
+                id: row.getAttribute(idAttr),
                 startX: e.clientX,
                 startY: e.clientY,
                 rect,
@@ -73,7 +81,7 @@ window.khSwipe = {
                 if (Math.abs(dx) < START_THRESHOLD) return;
                 if (Math.abs(dx) <= Math.abs(dy)) { active = null; return; }  // vertical intent -> let it scroll
                 active.dragging = true;
-                active.row.classList.add('song-row--swiping');
+                active.row.classList.add(swipingClass);
                 try { active.row.setPointerCapture(active.pointerId); } catch { /* ignore */ }
             }
 
@@ -87,14 +95,14 @@ window.khSwipe = {
             if (!active) return;
             const a = active;
             active = null;
-            a.row.classList.remove('song-row--swiping');
+            a.row.classList.remove(swipingClass);
 
             if (!a.dragging) {
                 // Open the detail sheet ONLY on a genuine tap: a stationary pointerup. A pointercancel means the
                 // browser took the gesture over to scroll, and any travel past the slop is a scroll/swipe — neither
                 // should open the sheet. This is what stops a scroll from firing the detail page.
                 if (e.type === 'pointerup' && !a.moved) {
-                    dotNetRef.invokeMethodAsync('OpenDetail', a.id);
+                    dotNetRef.invokeMethodAsync(tapMethod, a.id);
                 }
                 return;
             }
@@ -107,7 +115,7 @@ window.khSwipe = {
                 a.row.style.opacity = '0';
                 setTimeout(() => {
                     hideLabel();
-                    dotNetRef.invokeMethodAsync('RemoveById', a.id);
+                    dotNetRef.invokeMethodAsync(removeMethod, a.id);
                 }, SLIDE_MS + 20);
             } else {
                 // Snap back.

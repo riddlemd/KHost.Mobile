@@ -955,7 +955,9 @@ body.kh-sheet-open { overflow: hidden; }
 .confirm-pop__actions .btn { flex: 1 1 0; }
 .btn.confirm-pop__delete { background: var(--kh-danger); color: #fff; border: none; }
 
-.btn-secondary {
+/* Doubled selector (.btn.btn-secondary) so it out-specifies the later base .btn background/border, same trick
+   as .btn.btn-danger below — otherwise .btn { background:none } strips the fill off every secondary button. */
+.btn.btn-secondary {
     background: var(--kh-surface-2);
     color: var(--kh-text);
     border: 1px solid var(--kh-border);
@@ -1241,19 +1243,25 @@ body.kh-sheet-open { overflow: hidden; }
     letter-spacing: 0.02em;
     color: var(--kh-text-muted);
 }
-.sort-bar__group { display: flex; align-items: center; flex-wrap: wrap; gap: 0.15rem; row-gap: 0.2rem; }
+/* Segmented control: the group is a pill container, the active field lifts to the surface colour. */
+.sort-bar__group {
+    display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0.15rem; row-gap: 0.2rem;
+    padding: 0.2rem; background: var(--kh-surface-2); border: 1px solid var(--kh-border); border-radius: 0.55rem;
+}
 .sort-bar__btn {
     background: none;
     border: none;
-    padding: 0.15rem 0.1rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.4rem;
     font: inherit;
-    color: inherit;
+    font-size: 0.72rem;
+    color: var(--kh-text-muted);
     cursor: pointer;
     user-select: none;
 }
 .sort-bar__btn:hover { color: var(--kh-text); }
+.sort-bar__btn.is-on { background: var(--kh-surface); color: var(--kh-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16); }
 .sort-bar__arrow { color: var(--kh-primary); }
-.sort-bar__sep { color: var(--kh-border); }
 .sort-bar__surprise {
     background: var(--kh-surface-2);
     color: var(--kh-primary);
@@ -1607,16 +1615,19 @@ body.kh-sheet-open { overflow: hidden; }
     cursor: pointer;
 }
 
+/* Quiet button — tinted text, but a real tappable hit area + press state so it reads as a control, not a link. */
 .btn-link {
     background: none;
     border: none;
-    padding: 0.25rem 0;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.5rem;
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--kh-primary);
     cursor: pointer;
 }
-.btn-link:hover { text-decoration: underline; }
+.btn-link:hover { background: color-mix(in srgb, var(--kh-primary) 10%, var(--kh-surface)); }
+.btn-link:active { background: color-mix(in srgb, var(--kh-primary) 16%, var(--kh-surface)); }
 
 .btn {
     display: inline-flex;
@@ -1633,9 +1644,15 @@ body.kh-sheet-open { overflow: hidden; }
     color: var(--kh-text);
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Tactile press feedback on every button, so taps feel native rather than web-flat. */
+.btn:active { transform: scale(0.98); }
 
 .btn-primary { background-color: var(--kh-primary); color: var(--kh-primary-contrast); width: 100%; }
 .btn-primary:active { background-color: var(--kh-primary-strong); }
+
+/* Soft-fill accent — lighter than primary, for a standalone emphasis action (e.g. "Add venue"). */
+.btn.btn-tonal { background: color-mix(in srgb, var(--kh-primary) 14%, var(--kh-surface)); color: var(--kh-primary-strong); border-color: transparent; }
+.btn.btn-tonal:active { background: color-mix(in srgb, var(--kh-primary) 22%, var(--kh-surface)); }
 /* Bootstrap's .btn:disabled forces its own blue (--bs-btn-disabled-bg) on a disabled .btn-primary, out-
    specifying our .btn-primary. Re-assert the brand purple for the disabled state (still dimmed by opacity). */
 .btn-primary:disabled,
@@ -1758,7 +1775,8 @@ body.kh-sheet-open { overflow: hidden; }
 
 .tutorial__row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .tutorial--center .tutorial__row { justify-content: center; }
-.tutorial__skip { border: none; background: none; color: var(--kh-text-muted); font-size: 0.85rem; cursor: pointer; padding: 0.4rem 0.15rem; }
+.tutorial__skip { border: none; background: none; color: var(--kh-text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 0.5rem 0.7rem; border-radius: 0.5rem; }
+.tutorial__skip:active { background: var(--kh-surface-2); }
 .tutorial__nav { display: flex; gap: 0.5rem; }
 
 /* Respect reduced-motion: no sliding spotlight, no fade-in. */
@@ -1829,11 +1847,12 @@ body.kh-sheet-open { overflow: hidden; }
 .venue-switcher__check { color: #e1477e; font-weight: 800; }
 .venue-switcher__foot { flex: 0 0 auto; border-top: 1px solid var(--kh-border); margin-top: 0.2rem; padding-top: 0.2rem; }
 .venue-switcher__action {
-    display: block; width: 100%; text-align: left;
-    padding: 0.55rem 0.6rem; border: none; background: none;
-    color: var(--kh-primary); font-size: 0.9rem; font-weight: 700; cursor: pointer; border-radius: 0.45rem;
+    display: flex; align-items: center; gap: 0.4rem; width: 100%; text-align: left;
+    padding: 0.6rem 0.7rem; border: none; background: none;
+    color: var(--kh-primary); font-size: 0.9rem; font-weight: 700; cursor: pointer; border-radius: 0.5rem;
 }
 .venue-switcher__action:hover { background: var(--kh-surface-2); }
+.venue-switcher__action:active { background: var(--kh-surface-2); }
 
 /* Pinned / auto-update mode toggle in the switcher foot — a two-segment control (📍 Auto | 📌 Pinned) */
 .venue-switcher__seg { display: flex; gap: 0.25rem; padding: 0.25rem; margin: 0.15rem 0 0.3rem; background: var(--kh-surface-2); border-radius: 0.55rem; }
@@ -1857,7 +1876,10 @@ body.kh-sheet-open { overflow: hidden; }
     padding: 0.75rem 0.85rem;
     background: var(--kh-surface); border: 1px solid var(--kh-border);
     border-radius: var(--kh-radius); cursor: pointer;
+    /* Vertical scroll stays native; swipe.js captures horizontal for swipe-to-remove (opaque bg hides the row below). */
+    touch-action: pan-y;
 }
+.venue-row--swiping { cursor: grabbing; }
 .venue-row.is-active { border-color: #e1477e; background: rgba(225, 71, 126, 0.08); }
 .venue-row__pin {
     flex: 0 0 auto; width: 2.4rem; height: 2.4rem; border-radius: 0.7rem;
@@ -1874,7 +1896,22 @@ body.kh-sheet-open { overflow: hidden; }
 /* "Hidden from switcher" marker — muted so it reads as a status, not an alert like the pink Active badge. */
 .venue-row__badge--muted { color: var(--kh-text-muted); background: var(--kh-surface-2); }
 .venue-row__sub { font-size: 0.8rem; color: var(--kh-text-muted); margin-top: 0.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.venue-row__set { flex: 0 0 auto; padding: 0.4rem 0.7rem; }
+/* Active-venue selector: a radio dot (filled = active) that replaces the wide "Set active" button. The button is a
+   44px hit target; the visible dot is drawn smaller via ::before so it doesn't grow the row. */
+.venue-row__radio {
+    flex: 0 0 auto; width: 2.5rem; height: 2.5rem; margin: -0.4rem -0.2rem -0.4rem 0;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.venue-row__radio::before {
+    content: ""; box-sizing: border-box; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+    border: 2px solid var(--kh-border); transition: transform 0.06s ease;
+}
+.venue-row__radio.is-on::before {
+    border-color: var(--kh-primary); background: var(--kh-primary);
+    box-shadow: inset 0 0 0 0.28rem var(--kh-surface);
+}
+.venue-row__radio:active::before { transform: scale(0.9); }
 
 /* Venues page — detail sheet */
 .venue-detail__hero { display: flex; align-items: center; gap: 0.85rem; margin-top: 0.4rem; }
@@ -1885,8 +1922,21 @@ body.kh-sheet-open { overflow: hidden; }
 }
 .venue-detail__heading { min-width: 0; }
 .venue-detail__name { font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; }
-.venue-detail__fav { border: none; background: none; color: var(--kh-text-muted); font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 0.2rem 0; }
-.venue-detail__fav.is-on { color: #f4b740; }
+/* Tonal toggle chip so the favorite on/off state is obvious and clearly tappable. */
+.venue-detail__fav {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    border: 1px solid var(--kh-border); background: var(--kh-surface-2);
+    color: var(--kh-text-muted); font-weight: 700; font-size: 0.85rem; cursor: pointer;
+    padding: 0.45rem 0.85rem; border-radius: 999px;
+}
+.venue-detail__fav:active { transform: scale(0.97); }
+.venue-detail__fav.is-on {
+    background: color-mix(in srgb, #f4b740 22%, var(--kh-surface));
+    border-color: color-mix(in srgb, #f4b740 55%, var(--kh-surface));
+    color: #8a6d12;
+}
+/* Dark theme: dark-gold text is unreadable on the tinted chip, so go bright gold. */
+:root[data-theme="dark"] .venue-detail__fav.is-on { color: #f4b740; }
 .venue-detail__actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
 .venue-detail__actions .btn { width: 100%; }
 .venue-detail__info { margin-top: 1rem; border-top: 1px solid var(--kh-border); padding-top: 0.75rem; }
@@ -1937,8 +1987,10 @@ body.kh-sheet-open { overflow: hidden; }
 /* Add/edit sheet — captured location row */
 .venue-loc { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.9rem; }
 .venue-loc__coords { color: var(--kh-text-muted); }
-.venue-loc__link { border: none; background: none; color: var(--kh-primary); font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 0.2rem 0; }
-.venue-loc__link--danger { color: #e1477e; }
+/* Small bordered chips so the inline location actions read as buttons, not raw links floating in the row. */
+.venue-loc__link { border: 1px solid var(--kh-border); background: var(--kh-surface-2); color: var(--kh-text); font-weight: 700; font-size: 0.8rem; cursor: pointer; padding: 0.35rem 0.7rem; border-radius: 0.5rem; }
+.venue-loc__link:active { transform: scale(0.97); }
+.venue-loc__link--danger { color: #e1477e; border-color: color-mix(in srgb, #e1477e 40%, var(--kh-border)); background: color-mix(in srgb, #e1477e 10%, var(--kh-surface)); }
 .venue-loc__capture { width: auto; }
 
 /* Settings — venue re-check interval select */

@@ -286,13 +286,10 @@ else
 {
     <div class="sort-bar">
         <div class="sort-bar__group">
-            <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Title)">Song <span class="sort-bar__arrow">@Arrow(SortColumn.Title)</span></button>
-            <span class="sort-bar__sep">/</span>
-            <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Artist)">Artist <span class="sort-bar__arrow">@Arrow(SortColumn.Artist)</span></button>
-            <span class="sort-bar__sep">/</span>
-            <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.HowItWent)">How it went <span class="sort-bar__arrow">@Arrow(SortColumn.HowItWent)</span></button>
-            <span class="sort-bar__sep">/</span>
-            <button type="button" class="sort-bar__btn" @onclick="() => SortBy(SortColumn.Enjoyment)">Enjoyment <span class="sort-bar__arrow">@Arrow(SortColumn.Enjoyment)</span></button>
+            <button type="button" class="sort-bar__btn @(_sort == SortColumn.Title ? "is-on" : "")" @onclick="() => SortBy(SortColumn.Title)">Song <span class="sort-bar__arrow">@Arrow(SortColumn.Title)</span></button>
+            <button type="button" class="sort-bar__btn @(_sort == SortColumn.Artist ? "is-on" : "")" @onclick="() => SortBy(SortColumn.Artist)">Artist <span class="sort-bar__arrow">@Arrow(SortColumn.Artist)</span></button>
+            <button type="button" class="sort-bar__btn @(_sort == SortColumn.HowItWent ? "is-on" : "")" @onclick="() => SortBy(SortColumn.HowItWent)">How it went <span class="sort-bar__arrow">@Arrow(SortColumn.HowItWent)</span></button>
+            <button type="button" class="sort-bar__btn @(_sort == SortColumn.Enjoyment ? "is-on" : "")" @onclick="() => SortBy(SortColumn.Enjoyment)">Enjoyment <span class="sort-bar__arrow">@Arrow(SortColumn.Enjoyment)</span></button>
         </div>
     </div>
     <div class="song-cards" @ref="_swipeRoot">

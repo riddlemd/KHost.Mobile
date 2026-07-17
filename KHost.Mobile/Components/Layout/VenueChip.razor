@@ -70,7 +70,6 @@
                                 aria-pressed="@(Session.ActiveVenuePinned ? "true" : "false")" @onclick="SetPinned">📌 Pinned</button>
                     </div>
                 }
-                <button type="button" class="venue-switcher__action" @onclick="AddVenue">＋ Add venue</button>
                 <button type="button" class="venue-switcher__action" @onclick="ManageVenues">Manage venues ›</button>
             </div>
         </div>
@@ -185,12 +184,6 @@
 
     // 📌 Pinned: hold the current venue so the periodic geo re-check leaves it alone.
     private void SetPinned() => Session.SetActiveVenue(Session.ActiveVenueId, pinned: true);
-
-    private void AddVenue()
-    {
-        Close();
-        Nav.NavigateTo("venues?add=1");
-    }
 
     private void ManageVenues()
     {
