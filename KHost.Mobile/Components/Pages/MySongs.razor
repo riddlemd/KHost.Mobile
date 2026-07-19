@@ -247,7 +247,7 @@
     // Any filter/sort change (a new signature) rewinds the infinite list to the first page. Favoriting / removing a
     // song doesn't change the signature, so paging holds its place. Done here (not in each handler) so it's automatic.
     var listSig = FilterSortSignature();
-    if (listSig != _lastListSig) { _renderCount = PageSize; _lastListSig = listSig; }
+    if (listSig != _lastListSig) { _renderCount = PageSize; _lastListSig = listSig; _pagingReset = true; }
     var page = visible.Take(_renderCount).ToList();
     _listRendered = !_loading && visible.Count > 0;
 }
@@ -742,6 +742,7 @@ else
     private string _lastListSig = "";
     private ElementReference _sentinel;
     private bool _infiniteBound;
+    private bool _pagingReset;   // set when a filter/sort change rewound paging → OnAfterRender scrolls back to top
 
     // Detail-sheet drag-to-dismiss (pull down to close; the page behind is locked while it's open).
     private ElementReference _detailSheet;
@@ -1105,6 +1106,15 @@ else
             _scrollRestored = true;
             await JS.InvokeVoidAsync("khScroll.restore", ScrollKey);
             await JS.InvokeVoidAsync("khScroll.track", ScrollKey);
+            _pagingReset = false;   // the restore positioned this first paint; don't also jump to top
+        }
+        else if (_pagingReset)
+        {
+            // A filter/sort change rewound to page 1 — show the new results from the top (and stop the retained deep
+            // scroll from instantly tripping the sentinel to load extra pages).
+            _pagingReset = false;
+            await JS.InvokeVoidAsync("khInfinite.suspend", 400);
+            await JS.InvokeVoidAsync("khScroll.toTop");
         }
 
         // Add-form year input needs the digit-only guard. The form is collapsible, so re-bind whenever it's

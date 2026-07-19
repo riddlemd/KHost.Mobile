@@ -42,6 +42,8 @@ window.khScroll = {
         const y = this._pos[key];
         if (y != null) window.scrollTo({ top: y, behavior: 'instant' });
     },
+
+    toTop() { window.scrollTo({ top: 0, behavior: 'instant' }); },
 };
 
 // Infinite scroll: watch a sentinel element at the end of the list and, as it nears the viewport, ask .NET to
@@ -49,14 +51,25 @@ window.khScroll = {
 // observer at a time (the page has a single list); re-observing swaps the target, disconnect stops it on unmount.
 window.khInfinite = {
     _observer: null,
+    _suspended: false,
+    _timer: null,
 
     observe(sentinel, dotNetRef) {
         this.disconnect();
         if (!sentinel) return;
         this._observer = new IntersectionObserver((entries) => {
+            // Suspended briefly after a page-1 reset so the shrink-content reflow (which momentarily parks the
+            // sentinel in view before the scroll-to-top lands) doesn't trip a spurious extra load.
+            if (this._suspended) return;
             if (entries.some(e => e.isIntersecting)) dotNetRef.invokeMethodAsync('LoadMore');
         }, { rootMargin: '600px 0px' });
         this._observer.observe(sentinel);
+    },
+
+    suspend(ms) {
+        this._suspended = true;
+        clearTimeout(this._timer);
+        this._timer = setTimeout(() => { this._suspended = false; }, ms || 400);
     },
 
     disconnect() {
