@@ -1500,14 +1500,32 @@ else
         if (_detailItem is null || !CanSaveEdit)
             return;
 
-        _detailItem.Title = _editTitle.Trim();
-        _detailItem.Artist = _editArtist.Trim();
+        var newTitle = _editTitle.Trim();
+        var newArtist = _editArtist.Trim();
+        // A title/artist change makes the current cover art belong to a different song — clear it so a fresh cover is
+        // fetched for the new title/artist (rather than keeping the old, now-wrong image).
+        var identityChanged = !string.Equals(newTitle, _detailItem.Title, StringComparison.Ordinal)
+                           || !string.Equals(newArtist, _detailItem.Artist, StringComparison.Ordinal);
+
+        _detailItem.Title = newTitle;
+        _detailItem.Artist = newArtist;
         _detailItem.Genre = string.IsNullOrWhiteSpace(_editGenre) ? null : _editGenre.Trim();
         _detailItem.Notes = string.IsNullOrWhiteSpace(_editNotes) ? null : _editNotes.Trim();
         _detailItem.Year = _editYear;
         _detailItem.Tags = SongTags.Normalize(_editTags);
+
+        if (identityChanged)
+        {
+            _detailItem.ArtworkUrl = null;
+            _detailItem.ArtworkLookedUp = false;   // re-open the one-shot art lookup for the new title/artist
+            _artUris.Remove(_detailItem.Id);       // drop the stale cover so the card doesn't keep showing it
+        }
+
         await Store.UpdateAsync(_detailItem);
         _editing = false;
+
+        if (identityChanged)
+            await LoadDetailSuggestionAsync(_detailItem);   // fetch + cache a fresh cover for the new song
     }
 
     // ---- "Sang it" rating prompt -------------------------------------------------------------
