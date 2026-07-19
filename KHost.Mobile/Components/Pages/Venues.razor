@@ -16,7 +16,7 @@
     <div class="page-head">
         <NavLink class="page-back" href="" aria-label="Back to my songs">←</NavLink>
         <h1 class="page-title">Venues</h1>
-        <button type="button" class="btn btn-secondary venues__add" @onclick="OpenAdd">＋ Add</button>
+        <button type="button" class="btn btn-secondary venues__add" data-tut="venue-add" @onclick="OpenAdd">＋ Add</button>
     </div>
 
     @if (_venues.Count == 0)
@@ -90,7 +90,7 @@
         <div class="venue-detail__actions">
             @if (!string.IsNullOrWhiteSpace(d.KaraFunVenueId))
             {
-                <button class="btn btn-primary" @onclick="() => OpenCatalogAsync(d)">Open KaraFun Catalog</button>
+                <button class="btn btn-primary" data-tut="venue-karafun" @onclick="() => OpenCatalogAsync(d)">Open KaraFun Catalog</button>
             }
             @* Flipping Active off clears the active venue (not-at-a-venue), same as picking "Not at a venue" elsewhere. *@
             <label class="setting venue-detail__toggle">
@@ -100,7 +100,7 @@
                     <span class="switch__track"><span class="switch__thumb"></span></span>
                 </span>
             </label>
-            <label class="setting venue-detail__toggle">
+            <label class="setting venue-detail__toggle" data-tut="venue-favorite">
                 <span class="setting__text"><span class="setting__title">Favorite</span></span>
                 <span class="switch">
                     <input class="switch__input" type="checkbox" checked="@d.IsFavorite" @onchange="() => ToggleFavoriteAsync(d)" />
@@ -124,7 +124,7 @@
         </div>
 
         @{ var h = History(d); }
-        <div class="venue-detail__history">
+        <div class="venue-detail__history" data-tut="venue-history">
             <div class="venue-detail__history-title">Your history here</div>
             @if (h.Sings == 0)
             {
@@ -221,11 +221,30 @@
         Store.Changed += OnChanged;
         Songs.Changed += OnChanged;
         Session.ActiveVenueChanged += OnChanged;
+        Session.TutorialVenueDetailChanged += OnTutorialVenueDetail;
         await ReloadAsync();
 
         // Deep-link from the switcher's "＋ Add venue" opens the add sheet straight away.
         if (new Uri(Nav.Uri).Query.Contains("add=1", StringComparison.Ordinal))
             OpenAdd();
+
+        // The tour may have asked for a venue's detail before this page mounted — reflect it now.
+        ApplyTutorialVenueDetail();
+    }
+
+    // The first-run tour drives the detail sheet (to spotlight its KaraFun / toggles / history) via a session signal.
+    private void OnTutorialVenueDetail(object? sender, EventArgs e) => _ = InvokeAsync(() =>
+    {
+        ApplyTutorialVenueDetail();
+        StateHasChanged();
+    });
+
+    private void ApplyTutorialVenueDetail()
+    {
+        if (Session.TutorialVenueDetailId is { } id)
+            _detail = _venues.FirstOrDefault(v => v.Id == id) ?? _detail;
+        else if (_detail is not null)
+            _detail = null;   // tour cleared the signal → close the detail it opened
     }
 
     private bool IsActive(Venue v) => Session.ActiveVenueId == v.Id;
@@ -472,5 +491,6 @@
         Store.Changed -= OnChanged;
         Songs.Changed -= OnChanged;
         Session.ActiveVenueChanged -= OnChanged;
+        Session.TutorialVenueDetailChanged -= OnTutorialVenueDetail;
     }
 }

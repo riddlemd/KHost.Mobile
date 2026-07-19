@@ -135,7 +135,7 @@
 
     <div class="card">
         <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("song")' aria-expanded="@IsOpen("song")">
-            <span class="filters-toggle__label">On a song</span>
+            <span class="filters-toggle__label">Song Details</span>
             <span class="filters-toggle__chevron @(IsOpen("song") ? "is-open" : "")">▾</span>
         </button>
         @if (IsOpen("song"))
@@ -327,7 +327,7 @@
         }
     </div>
 
-    <div class="card">
+    <div class="card" data-tut="settings-danger">
         <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("danger")' aria-expanded="@IsOpen("danger")">
             <span class="filters-toggle__label">Danger zone</span>
             <span class="filters-toggle__chevron @(IsOpen("danger") ? "is-open" : "")">▾</span>

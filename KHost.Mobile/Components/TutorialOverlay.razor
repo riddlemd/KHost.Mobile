@@ -4,6 +4,7 @@
 @inject IAppSession Session
 @inject ISongListStore Songs
 @inject ITonightStore Tonight
+@inject IVenueStore VenueStore
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -21,23 +22,34 @@
         <div class="tutorial__hole" @ref="_hole"></div>
         <div class="tutorial__caret" @ref="_caret"></div>
         <div class="tutorial__tip" role="dialog" aria-modal="true" aria-label="App tour" @ref="_tip">
+            @if (Current.Chapter.Length > 0)
+            {
+                <div class="tutorial__chaprow">
+                    <span class="tutorial__eyebrow">@ChapterEyebrow</span>
+                    <button type="button" class="tutorial__skipchap" @onclick="SkipChapterAsync">Skip chapter ⏭</button>
+                </div>
+            }
             <div class="tutorial__badge" aria-hidden="true">@Current.Badge</div>
             <div class="tutorial__title">@Current.Title</div>
             <p class="tutorial__body">@Current.Body</p>
-            <div class="tutorial__dots">
-                @for (var d = 0; d < Steps.Count; d++)
-                {
-                    <span class="tutorial__dot @(d == _index ? "is-on" : "")"></span>
-                }
-            </div>
+            @{ var dots = ChapterDots; }
+            @if (dots.Count > 1)
+            {
+                <div class="tutorial__dots">
+                    @foreach (var s in dots)
+                    {
+                        <span class="tutorial__dot @(s == Current ? "is-on" : "")"></span>
+                    }
+                </div>
+            }
             <div class="tutorial__row">
-                <button type="button" class="tutorial__skip" @onclick="FinishAsync">@(IsLast ? "" : "Skip")</button>
+                <button type="button" class="tutorial__skip" @onclick="FinishAsync">@(IsLast ? "" : "Skip tour")</button>
                 <div class="tutorial__nav">
                     @if (_index > 0)
                     {
                         <button type="button" class="btn btn-secondary" @onclick="BackAsync">Back</button>
                     }
-                    <button type="button" class="btn btn-primary" @onclick="NextAsync">@(IsLast ? "Done" : "Next")</button>
+                    <button type="button" class="btn btn-primary" @onclick="NextAsync">@NextLabel</button>
                 </div>
             </div>
         </div>
@@ -45,82 +57,140 @@
 }
 
 @code {
-    // One tour step. Route is the target page's base-relative path ("" = My List). Anchor is the data-tut value of
-    // the control to spotlight, or null for a centered explain-only card. A step whose anchor isn't on-screen (a
-    // feature that's off, or a control that only appears once the list has songs) degrades to a centered card, so
-    // features that live on song cards / the detail sheet are written as centered cards. NeedsTonight/NeedsTags
-    // steps drop out entirely when that feature is disabled (their target wouldn't render at all).
-    private sealed record Step(string Route, string? Anchor, string Badge, string Title, string Body,
-        bool NeedsTonight = false, bool NeedsTags = false);
+    // One tour step. Chapter groups steps into a skippable section ("" = the chapter-less Welcome/outro). IsIntro
+    // marks a chapter's opening card. Route is the target page ("" = My List); Anchor is the data-tut value to
+    // spotlight (null = a centered explain card, also the graceful fallback when a target isn't on-screen). VenueDetail
+    // steps want the Venues detail sheet open (driven via the session signal). NeedsTonight/NeedsTags steps drop out
+    // entirely when that feature is off.
+    private sealed record Step(string Chapter, string Route, string? Anchor, string Badge, string Title, string Body,
+        bool IsIntro = false, bool NeedsTonight = false, bool NeedsTags = false, bool VenueDetail = false);
 
     private static readonly Step[] AllSteps =
     [
-        new("", null, "🎤", "Welcome to KHost Cue",
-            "Your karaoke wishlist and tonight's set — all on your phone. Here's the quick tour."),
+        new("", "", null, "🎤", "Welcome to KHost Cue",
+            "Your karaoke wishlist and tonight's set — all on your phone. This tour is in chapters; skip any card, any chapter, or the whole thing whenever you like."),
 
-        // ---- My List: the always-present controls (spotlit when the list has songs, else a centered card) ----
-        new("", "add", "➕", "Build your list",
+        // ============ Chapter: Your list ============
+        new("Your list", "", null, "📓", "Your list",
+            "This is where every song you'd love to sing lives. A quick lap around it.", IsIntro: true),
+        new("Your list", "", "add", "➕", "Build your list",
             "Tap here to add any song you'd like to sing — we'll auto-fill the year and genre for you."),
-        new("", "search", "🔍", "Find it fast",
+        new("Your list", "", "search", "🔍", "Find it fast",
             "One search box matches a song's title or artist, so you can jump to anything in a long list."),
-        new("", "filter", "⛃", "Filter your list",
+        new("Your list", "", "filter", "⛃", "Filter your list",
             "Narrow the list by genre, rating, year or tags. Active filters show as chips you can tap to clear."),
-        new("", "sort", "↕️", "Sort your way",
+        new("Your list", "", "sort", "↕️", "Sort your way",
             "Order the list by song, artist, how it went, enjoyment, or when you added it."),
-
-        // ---- Features that live on song cards / the detail sheet — centered explain cards (work on an empty list) ----
-        new("", null, "⭐", "Star your favorites",
+        new("Your list", "", null, "⭐", "Star your favorites",
             "Tap a song's star to favorite it — favorites always float to the top of your list."),
-        new("", null, "💿", "Covers, automatically",
+        new("Your list", "", null, "💿", "Covers, automatically",
             "We fetch each song's album art and use it as the card background. Prefer plain cards? Turn it off in Settings."),
-        new("", null, "🎶", "Rate & remember",
-            "Tap any song to open it — mark it sung, rate how each performance went, set how much you enjoy it, and browse its full sung history."),
-        new("", null, "📖", "Lyrics on tap",
-            "Pull up a song's lyrics right inside the app — no account needed."),
-        new("", null, "🔗", "Find it anywhere",
-            "From a song's sheet, jump straight to it on YouTube, Spotify, or your venue's KaraFun catalog."),
-        new("", null, "🏷️", "Your own labels",
-            "Tag songs — duet, closer, needs practice — and filter by them later. Toggle tags in Settings.", NeedsTags: true),
-        new("", null, "🎲", "Can't decide?",
+        new("Your list", "", null, "🎲", "Can't decide?",
             "Hit “Surprise me” and we'll pick a song for you — it can even skip anything you've already sung today."),
-        new("", null, "👈", "Swipe to remove",
+        new("Your list", "", null, "👈", "Swipe to remove",
             "Swipe a song row to the left to remove it — venues too. Changed your mind? Tap Undo before it fades."),
 
-        // ---- Tonight (the quick-add on the list, then the set itself over on the Tonight tab) ----
-        new("", "tonight-quick", "🎤", "Queue it for tonight",
+        // ============ Chapter: Song Details ============
+        new("Song Details", "", null, "🎶", "Song Details",
+            "Tap any song to open it — there's more under the hood than the card shows.", IsIntro: true),
+        new("Song Details", "", null, "🎤", "Rate & remember",
+            "Mark a song sung, rate how each performance went, and browse its full sung history over time."),
+        new("Song Details", "", null, "💙", "Two kinds of rating",
+            "“How it went” tracks each performance; a separate enjoyment rating says how much you love the song itself."),
+        new("Song Details", "", null, "📖", "Lyrics on tap",
+            "Pull up a song's lyrics right inside the app — no account needed."),
+        new("Song Details", "", null, "🔗", "Find it anywhere",
+            "Jump straight to a song on YouTube, Spotify, or your venue's KaraFun catalog."),
+        new("Song Details", "", null, "🏷️", "Your own labels",
+            "Tag songs — duet, closer, needs practice — and filter by them later. Toggle tags in Settings.", NeedsTags: true),
+
+        // ============ Chapter: Tonight ============
+        new("Tonight", "", null, "🌙", "Tonight",
+            "Build a set for the night, then work through it on stage.", IsIntro: true, NeedsTonight: true),
+        new("Tonight", "", "tonight-quick", "🎤", "Queue it for tonight",
             "Tap the add-to-tonight button on any song to line it up for tonight's set — right from the list, no need to open it.", NeedsTonight: true),
-        new("tonight", "tonight-set", "🌙", "Tonight's set",
+        new("Tonight", "tonight", "tonight-set", "🌙", "Tonight's set",
             "This is your on-deck set for the night, with a live progress bar that fills as you go.", NeedsTonight: true),
-        new("tonight", "tonight-reorder", "🔀", "Reorder on the fly",
+        new("Tonight", "tonight", "tonight-reorder", "🔀", "Reorder on the fly",
             "Drag the ⠿ handle to reshuffle your set as the night unfolds.", NeedsTonight: true),
-        new("tonight", "tonight-check", "☑️", "Check them off",
+        new("Tonight", "tonight", "tonight-check", "☑️", "Check them off",
             "Tap ✓ as you finish each song — it logs the performance (asking how it went) and moves the progress bar along.", NeedsTonight: true),
 
-        // ---- Venues ----
-        new("", "venue", "📍", "Set your venue",
-            "Tap here to pick where you're singing. It auto-switches to the nearest saved spot as you move, tags every song you log there, and opens that venue's KaraFun catalog in a tap."),
-        new("", null, "🏠", "Every venue remembers",
-            "Each place builds its own history — your go-to songs and recent sings there. Tap the chip anytime to switch venues or add a new one."),
+        // ============ Chapter: Venues ============
+        new("Venues", "", null, "📍", "Venues",
+            "The places you sing. Each one tags your performances, remembers your go-to songs, and opens its KaraFun catalog.", IsIntro: true),
+        new("Venues", "", "venue", "📍", "Set your venue",
+            "Tap the header chip to pick where you're singing — every song you log then gets tagged to that venue."),
+        new("Venues", "", "venue", "🧭", "Switch & auto-detect",
+            "The chip switches venues with a tap, and can auto-detect the nearest saved spot as you move (pin one to stay put)."),
+        new("Venues", "", null, "🎙️", "KaraFun integration",
+            "KHost Cue works with KaraFun, the karaoke catalog: give a venue its KaraFun id and you can open its whole song list — and “Find on KaraFun” appears on every song."),
+        new("Venues", "venues", "venue-karafun", "🎫", "Its KaraFun catalog",
+            "One tap on a venue opens its KaraFun catalog, so you can line up what the room can actually play.", VenueDetail: true),
+        new("Venues", "venues", "venue-history", "🏠", "Every venue remembers",
+            "Each venue builds its own history here — how many sings, your average, and your go-to songs at that spot.", VenueDetail: true),
+        new("Venues", "venues", "venue-favorite", "⭐", "Favorite & hide",
+            "Favorite the spots you sing most so they lead the list; you can also hide a rarely-used venue from the quick switcher (Edit → Show in quick switch).", VenueDetail: true),
+        new("Venues", "venues", "venue-add", "➕", "Add a venue",
+            "Add the places you sing from here — type the details, or scan the venue's KaraFun QR code to fill them in."),
 
-        // ---- The menu, Import/Export, and Settings ----
-        new("", "menu", "⋮", "More lives here",
-            "Import, Export, Settings, themes and About all live in this menu. Let's peek at the big ones."),
-        new("import-export", "import", "📥", "Import a whole playlist",
+        // ============ Chapter: Import & Export ============
+        new("Import & Export", "", null, "📥", "Import & Export",
+            "Bring a whole playlist in, or back your list up.", IsIntro: true),
+        new("Import & Export", "import-export", "import", "📥", "Import a playlist",
             "Already have a playlist? Pick a source, paste a public link, and every track lands in your list — no retyping."),
-        new("import-export", "export", "📤", "Export anytime",
+        new("Import & Export", "import-export", "export", "📤", "Export anytime",
             "Back up your whole list — or move it to another device — by exporting it to a file you can re-import later."),
-        new("settings", "settings-features", "⚙️", "Make it yours",
-            "Every feature is a toggle — auto-fill, Tonight, lyrics, album art, update checks and more. Turn off anything you don't want."),
-        new("settings", "settings-replay", "↺", "Replay anytime",
-            "Want this tour again later? It's right here under Settings."),
 
-        new("", null, "✅", "You're all set!",
-            "Add your first song or import a playlist — and you're ready for the mic. 🎤"),
+        // ============ Chapter: Settings ============
+        new("Settings", "", null, "⚙️", "Settings",
+            "Every feature in the app is a toggle — tune it to how you sing.", IsIntro: true),
+        new("Settings", "settings", "settings-features", "⚙️", "Make it yours",
+            "Each section here toggles a feature area — auto-fill, Tonight, lyrics, album art, update checks and more. Turn off anything you don't want."),
+        new("Settings", "settings", "settings-danger", "⚠️", "Danger zone",
+            "Need a fresh start? Clear your lyrics cache or wipe your whole song list from here."),
+
+        new("", "", null, "✅", "You're all set!",
+            "Add your first song or import a playlist — and you're ready for the mic. Replay this tour anytime from Settings → Help. 🎤"),
     ];
 
     private List<Step> Steps => AllSteps
         .Where(s => (!s.NeedsTonight || Settings.TonightEnabled) && (!s.NeedsTags || Settings.TagsEnabled))
         .ToList();
+
+    // ---- Chapter helpers (grouping, per-chapter dots + numbering, skip-a-chapter) ----
+    private List<string> Chapters => Steps.Where(s => s.Chapter.Length > 0).Select(s => s.Chapter).Distinct().ToList();
+    private List<Step> ContentSteps(string chapter) => Steps.Where(s => s.Chapter == chapter && !s.IsIntro).ToList();
+
+    // Dots for the current chapter's content cards (empty for the chapter-less Welcome/outro; an intro shows them all unlit).
+    private List<Step> ChapterDots => Current.Chapter.Length == 0 ? [] : ContentSteps(Current.Chapter);
+
+    private string ChapterEyebrow
+    {
+        get
+        {
+            var chapter = Current.Chapter;
+            if (chapter.Length == 0)
+                return "";
+            if (Current.IsIntro)
+                return $"Chapter {Chapters.IndexOf(chapter) + 1} of {Chapters.Count}";
+            var content = ContentSteps(chapter);
+            return $"{chapter} · {content.IndexOf(Current) + 1} of {content.Count}";
+        }
+    }
+
+    private string NextLabel => IsLast ? "Done" : Current.IsIntro ? "Start" : "Next";
+
+    // Jump to the next chapter's first card (its intro), or finish if this is the last chapter.
+    private Task SkipChapterAsync()
+    {
+        var steps = Steps;
+        var chapter = Current.Chapter;
+        for (var i = _index + 1; i < steps.Count; i++)
+            if (steps[i].Chapter != chapter)
+                return GoToAsync(i);
+        return FinishAsync();
+    }
 
     private bool _active;
     private bool _started;
@@ -186,6 +256,10 @@
         _index = Math.Clamp(index, 0, steps.Count - 1);
         var step = steps[_index];
 
+        // Drive the Venues detail sheet for cards that spotlight inside it (set BEFORE navigating so the page reflects
+        // it as it mounts); cleared for every other step so the sheet closes again when we move on.
+        Session.SetTutorialVenueDetail(step.VenueDetail ? _tourVenueId : null);
+
         // Navigate to the step's page if we're not already there (the overlay persists across the nav).
         var currentPath = Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].TrimEnd('/');
         if (!string.Equals(currentPath, step.Route.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
@@ -208,7 +282,17 @@
             if (!_active || _index != steps.IndexOf(step))
                 return;   // superseded by another step / dismissed while we waited
             if (await JS.InvokeAsync<bool>("khTutorial.position", _hole, _caret, _tip, selector))
+            {
+                // A bottom sheet the tour just opened is still sliding up when the target is first found, so the
+                // measured rect is mid-animation — let it settle, then re-place the spotlight on its final position.
+                if (step.VenueDetail)
+                {
+                    await Task.Delay(280);
+                    if (_active && _index == steps.IndexOf(step))
+                        await JS.InvokeAsync<bool>("khTutorial.position", _hole, _caret, _tip, selector);
+                }
                 return;
+            }
         }
 
         // Target never appeared (feature off / not on this page) → fall back to a centered explain card.
@@ -251,10 +335,15 @@
         new("5a3f7e01-0000-4000-8000-000000000005"),
     ];
 
+    // Fixed id for the sample venue the Venues chapter opens + spotlights; the sample songs' performances are tagged
+    // to it so its history/go-to-songs render.
+    private static readonly Guid SampleVenueId = new("5a3f7e01-0000-4000-8000-0000000000a1");
+
     // How many songs get queued onto an empty Tonight set so its page has rows to spotlight.
     private const int SampleTonightCount = 3;
 
     private bool _seededSongs;
+    private Guid? _tourVenueId;   // the venue the Venues chapter opens (the sample, or the user's own)
     private readonly List<Guid> _seededTonightSongIds = [];
 
     private static List<SongListItem> BuildSampleSongs()
@@ -276,7 +365,8 @@
             Status = howItWent.Length > 0 ? SongListItemStatus.Sang : SongListItemStatus.WantToSing,
             MetadataLookedUp = true,
             ArtworkLookedUp = true,
-            Performances = [.. howItWent.Select(h => new Performance { Date = now.AddDays(-i - 1), HowItWent = h })],
+            // Tag performances to the sample venue so its history/go-to-songs have something to show.
+            Performances = [.. howItWent.Select(h => new Performance { Date = now.AddDays(-i - 1), HowItWent = h, VenueId = SampleVenueId })],
         };
         return
         [
@@ -287,6 +377,18 @@
             Make(4, "Sweet Caroline", "Neil Diamond", "Pop", 1969, 4, false, 3),
         ];
     }
+
+    private static Venue BuildSampleVenue() => new()
+    {
+        Id = SampleVenueId,
+        Name = "The Mockingbird",
+        Glyph = "🎤",
+        KaraFunVenueId = "000000",
+        IsFavorite = true,
+        ShowInSwitcher = true,
+        Notes = "Thursday karaoke — a great crowd.",
+        AddedAt = DateTimeOffset.Now,
+    };
 
     private async Task SeedSampleDataAsync()
     {
@@ -318,6 +420,20 @@
                 if (_seededTonightSongIds.Count > 0)
                     await Tonight.SetCompletedAsync(_seededTonightSongIds[0], true);
             }
+
+            // A venue for the Venues chapter to open + spotlight (KaraFun catalog, toggles, history). Seed a sample
+            // when there are none; otherwise point at the user's own, preferring one WITH a KaraFun id so the catalog
+            // spotlight has a target.
+            var venues = await VenueStore.GetAllAsync();
+            if (venues.Count == 0)
+            {
+                await VenueStore.AddAsync(BuildSampleVenue());   // AddAsync keeps our fixed id
+                _tourVenueId = SampleVenueId;
+            }
+            else
+            {
+                _tourVenueId = (venues.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v.KaraFunVenueId)) ?? venues[0]).Id;
+            }
         }
         catch { /* best-effort: the tour still runs; empty-target steps just fall back to centered cards */ }
     }
@@ -328,18 +444,21 @@
     {
         try
         {
+            Session.SetTutorialVenueDetail(null);   // close any tour-opened venue detail before removing the venue
             foreach (var id in _seededTonightSongIds)
                 await Tonight.RemoveAsync(id);
             foreach (var id in SampleSongIds)
                 await Tonight.RemoveAsync(id);   // sample-song Tonight rows from a prior interrupted run
             foreach (var id in SampleSongIds)
                 await Songs.RemoveAsync(id);
+            await VenueStore.RemoveAsync(SampleVenueId);   // fixed id → also clears a prior interrupted run's sample venue
         }
         catch { /* best-effort cleanup */ }
         finally
         {
             _seededTonightSongIds.Clear();
             _seededSongs = false;
+            _tourVenueId = null;
         }
     }
 

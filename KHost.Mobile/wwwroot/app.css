@@ -1857,6 +1857,16 @@ body.kh-sheet-open { overflow: hidden; }
 .tutorial__title { font-size: 1.05rem; font-weight: 800; margin: 0 0 0.3rem; }
 .tutorial__body { font-size: 0.9rem; line-height: 1.5; color: var(--kh-text-muted); margin: 0 0 0.8rem; }
 
+/* Chapter header: the section eyebrow + a per-chapter skip, above the badge. */
+.tutorial__chaprow { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.55rem; }
+.tutorial__eyebrow { font-size: 0.64rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--kh-primary); }
+.tutorial__skipchap {
+    flex: 0 0 auto; font-size: 0.7rem; font-weight: 700; white-space: nowrap; cursor: pointer;
+    color: var(--kh-text-muted); background: var(--kh-surface-2);
+    border: 1px solid var(--kh-border); border-radius: 999px; padding: 0.18rem 0.55rem;
+}
+.tutorial__skipchap:active { background: color-mix(in srgb, var(--kh-primary) 12%, var(--kh-surface)); }
+
 .tutorial__dots { display: flex; gap: 0.35rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
 .tutorial__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--kh-border); }
 .tutorial__dot.is-on { background: var(--kh-primary); }

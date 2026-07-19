@@ -51,4 +51,17 @@ public interface IAppSession
     /// <summary>Raised after <see cref="ActiveVenueId"/> changes (manual switch, geo re-check, or a delete that
     /// clears it). Lets the header chip and any open venue view refresh without polling.</summary>
     event EventHandler? ActiveVenueChanged;
+
+    /// <summary>The venue whose detail sheet the first-run tour wants open (or null to close it). Set only by the
+    /// tutorial so its Venues-chapter steps can spotlight controls inside the detail sheet (the KaraFun catalog,
+    /// the toggles, the history); the Venues page listens via <see cref="TutorialVenueDetailChanged"/> and reflects
+    /// it. Purely a transient tour affordance — never persisted.</summary>
+    Guid? TutorialVenueDetailId { get; }
+
+    /// <summary>Set (or clear, with null) <see cref="TutorialVenueDetailId"/> and raise
+    /// <see cref="TutorialVenueDetailChanged"/> so the Venues page opens or closes that venue's detail.</summary>
+    void SetTutorialVenueDetail(Guid? venueId);
+
+    /// <summary>Raised when the tutorial asks the Venues page to open or close a venue's detail sheet.</summary>
+    event EventHandler? TutorialVenueDetailChanged;
 }

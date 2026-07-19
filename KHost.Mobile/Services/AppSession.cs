@@ -30,4 +30,19 @@ public sealed class AppSession : IAppSession
         if (venueChanged)
             ActiveVenueChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <inheritdoc />
+    public Guid? TutorialVenueDetailId { get; private set; }
+
+    /// <inheritdoc />
+    public event EventHandler? TutorialVenueDetailChanged;
+
+    /// <inheritdoc />
+    public void SetTutorialVenueDetail(Guid? venueId)
+    {
+        if (TutorialVenueDetailId == venueId)
+            return;
+        TutorialVenueDetailId = venueId;
+        TutorialVenueDetailChanged?.Invoke(this, EventArgs.Empty);
+    }
 }
