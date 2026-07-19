@@ -13,13 +13,15 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 
 <p align="center">
   <img src="docs/screenshots/tutorial.png" width="200" alt="Guided tour — a first-run walkthrough spotlights each key control one step at a time" />
-  <img src="docs/screenshots/my-songs.png" width="200" alt="My List — your karaoke wishlist as sortable, swipeable cards with album-art covers, and the Tonight tab in the bottom bar" />
+  <img src="docs/screenshots/my-songs.png" width="200" alt="My List — your karaoke wishlist as sortable, swipeable cards with album-art covers; a single search box with advanced filters behind a funnel, and the Tonight tab in the bottom bar" />
   <img src="docs/screenshots/tonight.png" width="200" alt="Tonight — the on-deck set list on its own tab: drag to reorder and check each song off as you sing it" />
   <br />
   <img src="docs/screenshots/song-detail.png" width="200" alt="Song detail — the album cover behind the title, per-performance ratings, enjoyment, sung history, and quick links to YouTube, Spotify, and KaraFun" />
   <img src="docs/screenshots/lyrics.png" width="200" alt="Lyrics — looked up in-app from LRCLIB" />
-  <img src="docs/screenshots/settings.png" width="200" alt="Settings — feature toggles grouped by what they affect, in collapsible sections" />
+  <img src="docs/screenshots/venues.png" width="200" alt="Venue detail — each place you sing builds its own history (sings, average, go-to songs), with a one-tap KaraFun catalog and Active / Favorite toggles" />
   <br />
+  <img src="docs/screenshots/venue-switcher.png" width="200" alt="Venue switcher — tap the header chip to jump between your venues, set the active one, and choose auto-detect or a pinned pick" />
+  <img src="docs/screenshots/settings.png" width="200" alt="Settings — feature toggles grouped by what they affect, in collapsible sections" />
   <img src="docs/screenshots/import-export.png" width="200" alt="Import & Export — pull songs from a Spotify or YouTube Music playlist or a KHost Cue file, and export your list back out" />
 </p>
 
@@ -27,7 +29,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 
 - **Tonight set list** — build an on-deck set for the venue on its own tab: add songs, drag to reorder, and check each one off as you sing it, with live *“X of Y done”* progress. It's kept separate from your wishlist, so a song you sang earlier today stays unchecked until you check it off here. Your place in the list is kept as you switch tabs and come back.
 - **Venues** — keep a list of the places you sing, each with its own icon, optional KaraFun ID, notes, and location. An **active-venue chip** in the header shows where you are and switches with a tap; the active venue **opens its KaraFun catalog** in one tap and **tags every song you log there**, so each venue builds up its own history — your go-to songs and recent sings at that spot. Add a venue by hand or by **scanning its KaraFun QR code**. It **auto-switches to the nearest saved venue** as you move between them (on by default, foreground only; a manual pick stays pinned until you resume auto-detect — toggle **Auto / Pinned** right in the switcher). Turn auto-switch off in Settings → *Venues*. Rarely-used venues can be **hidden from quick switch** (they stay on the Venues page and keep working) so the quick list stays short.
-- **My Songs** — a personal wishlist of songs to sing, as a swipeable card list with sorting and multi-select filters (text, genre, tags, year, how-it-went / enjoyment rating). Your filters, sort, and scroll position stick as you switch tabs and come back. One tap on a card adds a song straight to tonight's set.
+- **My Songs** — a personal wishlist of songs to sing, as a swipeable card list. One search box matches a song's title *or* artist; the rest of the filters (genre, tags, year, how-it-went / enjoyment rating) tuck behind a funnel button that opens them in a sheet — and each active one shows as a removable pill above the list. Sort by title, artist, rating, or date added. Your search, filters, sort, and scroll position stick as you switch tabs and come back. One tap on a card adds a song straight to tonight's set.
 - **Ratings & history** — rate *every* performance (a "how it went" score that averages over time) plus a separate **enjoyment** rating, jot per-performance notes, and keep a running sung-history for each song.
 - **Lyrics** — look a song's lyrics up in-app from **[LRCLIB](https://lrclib.net/)** (no account needed) and cache them on-device so they open instantly next time.
 - **Surprise me** — can't decide what to sing? One tap picks a random song for you — and it can skip anything you've already sung today.
