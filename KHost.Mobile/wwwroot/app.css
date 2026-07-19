@@ -1422,6 +1422,106 @@ body.kh-sheet-open { overflow: hidden; }
 .filters__field--wide { grid-column: 1 / -1; }   /* year slider + genre multi-select span the full filter width */
 .filters__clear { margin-top: 0.85rem; }
 
+/* ---- Single search bar + funnel (basic mode) ---------------------------- */
+.filter-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--kh-surface-2);
+    border: 1px solid var(--kh-border);
+    border-radius: 0.7rem;
+    padding: 0.45rem 0.55rem;
+}
+.filter-search:focus-within { border-color: var(--kh-primary); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18); }
+.filter-search__icon { flex: 0 0 auto; color: var(--kh-text-muted); font-size: 0.95rem; line-height: 1; }
+.filter-search__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--kh-text);
+    font-size: 0.95rem;
+}
+.filter-search__input::placeholder { color: var(--kh-text-muted); }
+.filter-search__clear {
+    flex: 0 0 auto;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: var(--kh-border);
+    color: var(--kh-text-muted);
+    font-size: 0.7rem;
+    cursor: pointer;
+}
+.filter-funnel {
+    position: relative;
+    flex: 0 0 auto;
+    width: 2.3rem;
+    height: 2.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--kh-border);
+    border-radius: 0.55rem;
+    background: var(--kh-surface);
+    color: var(--kh-text);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.filter-funnel svg { width: 1.15rem; height: 1.15rem; fill: currentColor; }
+.filter-funnel:active { transform: scale(0.95); }
+.filter-funnel.is-on {
+    color: var(--kh-primary);
+    border-color: color-mix(in srgb, var(--kh-primary) 45%, var(--kh-border));
+    background: color-mix(in srgb, var(--kh-primary) 12%, var(--kh-surface));
+}
+.filter-funnel__dot {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 50%;
+    background: #e1477e;
+    border: 2px solid var(--kh-surface);
+}
+
+/* Active advanced filters, echoed under the search bar as removable pills. */
+.filter-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+.filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.3rem 0.25rem 0.6rem;
+    border: none;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--kh-primary) 14%, var(--kh-surface));
+    color: var(--kh-primary-strong);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.filter-pill__x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--kh-primary) 22%, transparent);
+    font-size: 0.62rem;
+}
+
+/* Advanced filters in a bottom sheet (opened from the funnel). */
+.filter-sheet__title { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.filter-sheet__clear { flex: 0 0 auto; font-size: 0.85rem; font-weight: 700; padding: 0.2rem 0.4rem; }
+.filter-sheet__grid { margin-top: 1rem; }
+
 /* ---- Multi-select filter (native <details>/<summary> + checkboxes) ------- */
 /* Native disclosure so mobile WebViews render it reliably. The panel floats over the content below
    (absolute) instead of pushing the rest of the page down. */

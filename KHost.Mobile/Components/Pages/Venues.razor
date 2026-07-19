@@ -246,7 +246,7 @@
     private string SubLine(Venue v)
     {
         var count = _songs.SelectMany(s => s.Performances).Count(p => p.VenueId == v.Id);
-        return count == 0 ? "" : $"{count} sing{(count == 1 ? "" : "s")} here";
+        return count == 0 ? "" : $"Sang {count} song{(count == 1 ? "" : "s")} here";
     }
 
     private void OnChanged(object? sender, EventArgs e) => _ = ReloadOnUiAsync();

@@ -80,30 +80,58 @@
 
 @if (_items.Count > 0)
 {
-    <div class="card">
-        <button type="button" class="filters-toggle" @onclick="() => _filtersOpen = !_filtersOpen" aria-expanded="@_filtersOpen">
-            <span class="filters-toggle__label">
-                Filter
-                @if (AnyFilterActive)
+    <div class="card filter-card">
+        @* One bar searches song OR artist — the common case. The rest of the filters live behind the funnel. *@
+        <div class="filter-search">
+            <span class="filter-search__icon" aria-hidden="true">🔍</span>
+            <input class="filter-search__input" placeholder="Search songs or artists"
+                   aria-label="Search songs or artists"
+                   @bind="_filterSearch" @bind:event="oninput" />
+            @if (!string.IsNullOrEmpty(_filterSearch))
+            {
+                <button type="button" class="filter-search__clear" aria-label="Clear search"
+                        @onclick="() => _filterSearch = string.Empty">✕</button>
+            }
+            <button type="button" class="filter-funnel @(AnyHiddenFilterActive ? "is-on" : "")"
+                    aria-label="More filters" aria-expanded="@_filterSheetOpen" @onclick="OpenFilterSheet">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8.5V21l-4-2v-5.5z" /></svg>
+                @if (AnyHiddenFilterActive)
                 {
-                    <span class="filters-badge">active</span>
+                    <span class="filter-funnel__dot" aria-hidden="true"></span>
                 }
-            </span>
-            <span class="filters-toggle__chevron @(_filtersOpen ? "is-open" : "")">▾</span>
-        </button>
-        @if (_filtersOpen)
+            </button>
+        </div>
+        @{ var pills = FilterPills(); }
+        @if (pills.Count > 0)
         {
-        <div class="filters__grid" style="margin-top:0.85rem">
-            <div class="field filters__field">
-                <label class="field__label" for="f-name">Name</label>
-                <input id="f-name" class="input input--sm" placeholder="Any title"
-                       @bind="_filterName" @bind:event="oninput" />
+            <div class="filter-pills">
+                @foreach (var pill in pills)
+                {
+                    <button type="button" class="filter-pill" @onclick="pill.Remove"
+                            aria-label="@($"Remove {pill.Label} filter")">
+                        <span class="filter-pill__label">@pill.Label</span>
+                        <span class="filter-pill__x" aria-hidden="true">✕</span>
+                    </button>
+                }
             </div>
-            <div class="field filters__field">
-                <label class="field__label" for="f-artist">Artist</label>
-                <input id="f-artist" class="input input--sm" placeholder="Any artist"
-                       @bind="_filterArtist" @bind:event="oninput" />
-            </div>
+        }
+    </div>
+}
+
+@* Advanced filters open in a bottom sheet from the funnel; each active one also shows as a removable pill above. *@
+@if (_filterSheetOpen)
+{
+    <div class="sheet-backdrop" @onclick="CloseFilterSheet"></div>
+    <div class="sheet filter-sheet" role="dialog" aria-modal="true" @ref="_filterSheet">
+        <button type="button" class="sheet__close" @onclick="CloseFilterSheet" aria-label="Close">✕</button>
+        <div class="sheet__title filter-sheet__title">
+            <span>Filters</span>
+            @if (AnyHiddenFilterActive)
+            {
+                <button type="button" class="btn-link filter-sheet__clear" @onclick="ClearAdvancedFilters">Clear all</button>
+            }
+        </div>
+        <div class="filters__grid filter-sheet__grid">
             @* Multi-select filters use a native <details>/<summary> + checkboxes — no custom popover, so mobile
                WebViews render them reliably. Multiple picks within a filter are OR'd; filters still AND together. *@
             <div class="field filters__field filters__field--wide">
@@ -234,11 +262,6 @@
                 </div>
             }
         </div>
-        @if (AnyFilterActive)
-        {
-            <button class="btn-link filters__clear" @onclick="ClearFilters">Clear filters</button>
-        }
-        }
     </div>
 }
 
@@ -700,8 +723,7 @@ else
     private const int CardTagLimit = 3;
 
     // Filters. Genre / rating / enjoyment are multi-select: an empty set = no filter, otherwise the picks are OR'd.
-    private string _filterName = string.Empty;
-    private string _filterArtist = string.Empty;
+    private string _filterSearch = string.Empty;   // one box, matched against title OR artist
     private readonly HashSet<string> _filterGenres = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<int> _filterRatings = [];      // "how it went" rounded average(s): 0 Not rated, 1-5 stars
     private readonly HashSet<int> _filterEnjoyments = [];   // enjoyment rating(s): 0 Not rated, 1-5 stars
@@ -711,7 +733,9 @@ else
     // The six rating choices shared by the "how it went" and "enjoyment" multi-selects.
     private static readonly (int val, string label)[] RatingOptions =
         [(0, "Not rated"), (1, "★"), (2, "★★"), (3, "★★★"), (4, "★★★★"), (5, "★★★★★")];
-    private bool _filtersOpen;   // collapsed by default so the filter bar stays compact
+    private bool _filterSheetOpen;   // the advanced-filters bottom sheet (opened from the funnel); transient, not persisted
+    private ElementReference _filterSheet;
+    private bool _filterSheetBound;
     private bool _addOpen;   // the add-song form; collapsed by default to declutter, expand to add
 
     // Year range slider. Handles are null until the user drags them, then they follow the selection;
@@ -894,7 +918,7 @@ else
 
     // A cheap fingerprint of the active filter + sort; when it changes, the render rewinds infinite scroll to page 1.
     private string FilterSortSignature() => string.Join("",
-        _filterName, _filterArtist,
+        _filterSearch,
         string.Join(",", _filterGenres.OrderBy(g => g, StringComparer.Ordinal)),
         string.Join(",", _filterRatings.OrderBy(r => r)),
         string.Join(",", _filterEnjoyments.OrderBy(e => e)),
@@ -912,8 +936,12 @@ else
     }
 
     private bool AnyFilterActive =>
-        !string.IsNullOrWhiteSpace(_filterName) ||
-        !string.IsNullOrWhiteSpace(_filterArtist) ||
+        !string.IsNullOrWhiteSpace(_filterSearch) ||
+        AnyHiddenFilterActive;
+
+    // The filters behind the funnel — the search bar shows its own text, so the funnel's dot (and the pills
+    // above the list) reflect only these.
+    private bool AnyHiddenFilterActive =>
         _filterGenres.Count > 0 ||
         _filterRatings.Count > 0 ||
         _filterEnjoyments.Count > 0 ||
@@ -930,8 +958,7 @@ else
         if (!s.Initialized)
             return;
 
-        _filterName = s.FilterName;
-        _filterArtist = s.FilterArtist;
+        _filterSearch = s.FilterSearch;
         _filterGenres.Clear();
         foreach (var g in s.FilterGenres) _filterGenres.Add(g);
         _filterRatings.Clear();
@@ -945,7 +972,6 @@ else
         _filterYearHi = s.FilterYearHi;
         _sort = (SortColumn)s.Sort;
         _sortDescending = s.SortDescending;
-        _filtersOpen = s.FiltersOpen;
         // Restore the paged count so the returning list rebuilds to the same height (scroll.js can then land the
         // saved scroll). Seed _lastListSig to the restored filter/sort so the first render doesn't rewind to page 1.
         _renderCount = Math.Max(PageSize, s.RenderCount);
@@ -955,8 +981,7 @@ else
     private void SaveViewState()
     {
         var s = Session.MySongsView;
-        s.FilterName = _filterName;
-        s.FilterArtist = _filterArtist;
+        s.FilterSearch = _filterSearch;
         s.FilterGenres = new HashSet<string>(_filterGenres, StringComparer.OrdinalIgnoreCase);
         s.FilterRatings = [.. _filterRatings];
         s.FilterEnjoyments = [.. _filterEnjoyments];
@@ -966,19 +991,62 @@ else
         s.FilterYearHi = _filterYearHi;
         s.Sort = (int)_sort;
         s.SortDescending = _sortDescending;
-        s.FiltersOpen = _filtersOpen;
         s.RenderCount = _renderCount;
         s.Initialized = true;
     }
 
+    // Full reset — search text and every funnel filter (the "No matches" empty state).
     private void ClearFilters()
     {
-        _filterName = _filterArtist = string.Empty;
+        _filterSearch = string.Empty;
+        ClearAdvancedFilters();
+    }
+
+    // Just the funnel filters (genre / how it went / enjoyment / tags / year); the search text is left alone.
+    private void ClearAdvancedFilters()
+    {
         _filterGenres.Clear();
         _filterRatings.Clear();
         _filterEnjoyments.Clear();
         _filterTags.Clear();
         _filterYearLo = _filterYearHi = null;
+    }
+
+    // ---- The funnel's active filters as removable pills ----
+    private sealed record FilterPill(string Label, Action Remove);
+
+    // One pill per pick (genre / how it went / enjoyment / tag), plus a single span for the year range. Removing a
+    // pill only mutates local filter state — the @onclick re-renders — so there's no store write.
+    private List<FilterPill> FilterPills()
+    {
+        var pills = new List<FilterPill>();
+        foreach (var g in _filterGenres.OrderBy(g => g, StringComparer.OrdinalIgnoreCase))
+            pills.Add(new FilterPill(g, () => _filterGenres.Remove(g)));
+        foreach (var r in _filterRatings.OrderByDescending(r => r))
+            pills.Add(new FilterPill(r == 0 ? "How it went · unrated" : $"How it went {RatingOptionLabel(r)}",
+                () => _filterRatings.Remove(r)));
+        foreach (var en in _filterEnjoyments.OrderByDescending(e => e))
+            pills.Add(new FilterPill(en == 0 ? "Enjoyment · unrated" : $"Enjoyment {RatingOptionLabel(en)}",
+                () => _filterEnjoyments.Remove(en)));
+        foreach (var t in _filterTags.OrderBy(t => t, StringComparer.OrdinalIgnoreCase))
+            pills.Add(new FilterPill(t, () => _filterTags.Remove(t)));
+        if (YearFilterActive)
+            pills.Add(new FilterPill($"{YearLo}–{YearHi}", () => { _filterYearLo = _filterYearHi = null; }));
+        return pills;
+    }
+
+    private static string RatingOptionLabel(int val) => RatingOptions.First(o => o.val == val).label;
+
+    private void OpenFilterSheet() => _filterSheetOpen = true;
+
+    private void CloseFilterSheet() => _filterSheetOpen = false;
+
+    // Pull-down-to-dismiss from khSheet (the filter sheet already animated off-screen).
+    [JSInvokable]
+    public void CloseFilterSheetFromSwipe()
+    {
+        CloseFilterSheet();
+        StateHasChanged();
     }
 
     // ---- Multi-select filter helpers ----
@@ -1022,10 +1090,13 @@ else
     {
         IEnumerable<SongListItem> q = _items;
 
-        if (!string.IsNullOrWhiteSpace(_filterName))
-            q = q.Where(i => i.Title.Contains(_filterName.Trim(), StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(_filterArtist))
-            q = q.Where(i => i.Artist.Contains(_filterArtist.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(_filterSearch))
+        {
+            // One box matches either field — title OR artist.
+            var term = _filterSearch.Trim();
+            q = q.Where(i => i.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
+                          || i.Artist.Contains(term, StringComparison.OrdinalIgnoreCase));
+        }
         if (_filterGenres.Count > 0)
             q = q.Where(i => i.Genre is not null && _filterGenres.Contains(i.Genre));
         if (_filterRatings.Count > 0)
@@ -1198,10 +1269,24 @@ else
             _lyricsSheetBound = false;
         }
 
+        // Filter sheet: pull down to dismiss; it can scroll (year slider + long genre lists), so the same
+        // scroll-aware, stronger swipe as the other tall sheets.
+        if (_filterSheetOpen && !_filterSheetBound)
+        {
+            _swipeRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSheet.register", _filterSheet, _swipeRef,
+                new { closeMethod = "CloseFilterSheetFromSwipe", closePx = 150 });
+            _filterSheetBound = true;
+        }
+        else if (!_filterSheetOpen)
+        {
+            _filterSheetBound = false;
+        }
+
         // Reconcile the page-scroll lock straight from sheet state every render, so it can never get stranded
         // on a close path that skips cleanup (e.g. a touch swipe-dismiss). Only touch JS when it actually flips.
         var anySheetOpen = _detailItem is not null || _historyItem is not null || _ratingPromptItem is not null
-            || _lyricsItem is not null;
+            || _lyricsItem is not null || _filterSheetOpen;
         if (anySheetOpen != _pageLocked)
         {
             _pageLocked = anySheetOpen;
@@ -1210,7 +1295,7 @@ else
 
         // Bind the anti-cross clamp whenever the year slider is on screen. It unmounts when the
         // filter is collapsed or drops below 2 distinct years, so re-bind the fresh inputs on return.
-        var sliderPresent = _items.Count > 0 && _filtersOpen && ShowYearFilter;
+        var sliderPresent = _items.Count > 0 && _filterSheetOpen && ShowYearFilter;
         if (sliderPresent && !_rangeBound)
         {
             await JS.InvokeVoidAsync("khRange.register");
@@ -1533,6 +1618,7 @@ else
         if (_ratingPromptItem is not null) { CloseRatingPrompt(); return true; }
         if (_historyItem is not null) { CloseHistory(); return true; }
         if (_lyricsItem is not null) { CloseLyrics(); return true; }
+        if (_filterSheetOpen) { CloseFilterSheet(); return true; }
         if (_detailItem is not null) { CloseDetail(); return true; }
         return false;
     }

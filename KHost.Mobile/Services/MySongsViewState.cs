@@ -15,8 +15,8 @@ public sealed class MySongsViewState
     /// </summary>
     public bool Initialized { get; set; }
 
-    public string FilterName { get; set; } = string.Empty;
-    public string FilterArtist { get; set; } = string.Empty;
+    /// <summary>The single search box, matched against a song's title OR artist.</summary>
+    public string FilterSearch { get; set; } = string.Empty;
     public HashSet<string> FilterGenres { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<int> FilterRatings { get; set; } = [];
     public HashSet<int> FilterEnjoyments { get; set; } = [];
@@ -31,7 +31,6 @@ public sealed class MySongsViewState
     /// <summary>The active sort column, stored as the page's private <c>SortColumn</c> enum value (cast to int).</summary>
     public int Sort { get; set; }
     public bool SortDescending { get; set; }
-    public bool FiltersOpen { get; set; }
 
     /// <summary>How many cards the infinite-scroll list had rendered when the tab was left. Restored so the returning
     /// page rebuilds to the same height and <c>scroll.js</c> can put the saved scroll position back.</summary>
