@@ -1,0 +1,152 @@
+@page "/singers"
+@layout MainLayout
+@inject ISingerStore Store
+@inject IAppSession Session
+@inject IAppSettings Settings
+@inject NavigationManager Nav
+@inject IBackButtonService BackButton
+@implements IDisposable
+
+@* The Singers page — manage the people who share this device. Reached from the header ⋮ menu (below Venues) and the
+   "Manage singers" link in the header avatar switcher. Each singer keeps their own My List + Tonight set; the Venues
+   list is shared. The filled dot marks the active singer (whose lists the app is showing); tap another to switch.
+   Tapping a row opens its edit sheet (rename, recolor, delete). *@
+<section class="singers">
+    <div class="page-head">
+        <NavLink class="page-back" href="" aria-label="Back to my songs">←</NavLink>
+        <h1 class="page-title">Singers</h1>
+        <button type="button" class="btn btn-secondary singers__add" @onclick="OpenAdd">＋ Add</button>
+    </div>
+
+    <div class="singer-list">
+        @foreach (var s in _singers)
+        {
+            <div class="singer-row @(IsActive(s) ? "is-active" : "")" @key="s.Id">
+                <span class="singer-av" style="background:@s.Color;">@s.Avatar</span>
+                <div class="singer-row__main" @onclick="() => OpenEdit(s)">
+                    <div class="singer-row__name">
+                        @s.Name
+                        @if (IsActive(s))
+                        {
+                            <span class="singer-row__badge">Active</span>
+                        }
+                    </div>
+                </div>
+                @* Radio = single-select: the filled dot is the active singer. Tapping it switches without opening
+                   the edit sheet (which the rest of the row does). *@
+                <button type="button" class="singer-row__radio @(IsActive(s) ? "is-on" : "")"
+                        @onclick="() => SetActive(s)" @onclick:stopPropagation="true"
+                        role="radio" aria-checked="@IsActive(s)"
+                        aria-label="@(IsActive(s) ? $"{s.Name} — active singer" : $"Switch to {s.Name}")"></button>
+            </div>
+        }
+    </div>
+</section>
+
+@* ---- Add / edit sheet ---- *@
+<SingerEditSheet Editing="_editing" IsNew="_editingIsNew" CanDelete="_singers.Count > 1"
+                 OnSave="SaveAsync" OnDelete="DeleteAsync" OnClose="CloseEdit" />
+
+@code {
+    private IReadOnlyList<Singer> _singers = [];
+    private Singer? _editing;
+    private bool _editingIsNew;
+    private BackButtonOverlayGuard? _backGuard;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _backGuard = new BackButtonOverlayGuard(BackButton,
+            closeTopMost: TryCloseTopOverlay,
+            notifyStateChanged: StateHasChanged);
+        Store.Changed += OnChanged;
+        Session.ActiveSingerChanged += OnChanged;
+        await ReloadAsync();
+
+        // Deep-link from the switcher's "＋ Add" (singers?add=1) opens the add sheet straight away.
+        if (new Uri(Nav.Uri).Query.Contains("add=1", StringComparison.Ordinal))
+            OpenAdd();
+    }
+
+    private bool IsActive(Singer s) => Session.ActiveSingerId == s.Id;
+
+    private void OnChanged(object? sender, EventArgs e) => _ = ReloadOnUiAsync();
+
+    private async Task ReloadOnUiAsync()
+    {
+        try { await InvokeAsync(ReloadAsync); }
+        catch { /* best-effort refresh */ }
+    }
+
+    private async Task ReloadAsync()
+    {
+        _singers = await Store.GetAllAsync();
+        StateHasChanged();
+    }
+
+    private void SetActive(Singer s)
+    {
+        Session.SetActiveSinger(s.Id);
+        Settings.LastActiveSingerId = s.Id.ToString();   // remember for next launch
+    }
+
+    // ---- Add / edit ----
+    private void OpenAdd()
+    {
+        _editing = new Singer { Color = SingerColors.Default };
+        _editingIsNew = true;
+    }
+
+    // Edit a COPY so Cancel leaves the stored singer untouched; the store replaces by id on save.
+    private void OpenEdit(Singer s)
+    {
+        _editing = Clone(s);
+        _editingIsNew = false;
+    }
+
+    private void CloseEdit() => _editing = null;
+
+    private async Task SaveAsync(Singer s)
+    {
+        if (_editingIsNew)
+            await Store.AddAsync(s);
+        else
+            await Store.UpdateAsync(s);
+        _editing = null;
+    }
+
+    private async Task DeleteAsync(Singer s)
+    {
+        _editing = null;
+        if (_singers.Count <= 1)
+            return;   // never remove the last singer
+
+        // Deleting the active singer: hand active off to another first, so the app never points at a gone singer
+        // (and the store drops the deleted singer's files cleanly).
+        if (Session.ActiveSingerId == s.Id)
+            SetActive(_singers.First(x => x.Id != s.Id));
+
+        await Store.RemoveAsync(s.Id);
+    }
+
+    private bool TryCloseTopOverlay()
+    {
+        if (_editing is not null) { CloseEdit(); return true; }
+        return false;
+    }
+
+    private static Singer Clone(Singer s) => new()
+    {
+        Id = s.Id,
+        Name = s.Name,
+        Color = s.Color,
+        Order = s.Order,
+        AddedAt = s.AddedAt,
+    };
+
+    public void Dispose()
+    {
+        _backGuard?.Dispose();
+        Store.Changed -= OnChanged;
+        Session.ActiveSingerChanged -= OnChanged;
+    }
+}

@@ -51,6 +51,11 @@ public static class MauiProgram
         // pointer on IAppSession, not persisted here.
         builder.Services.AddSingleton<IVenueStore, JsonFileVenueStore>();
 
+        // Roster of singers who share this device. Its own JSON-file store; singleton so its list + Changed event
+        // are shared app-wide. The active singer (whose My List + Tonight the app shows) is a separate ephemeral
+        // pointer on IAppSession; the per-singer song/tonight stores above read it to pick each singer's file.
+        builder.Services.AddSingleton<ISingerStore, JsonFileSingerStore>();
+
         // Device location + the venue auto-selector behind it. ILocationProvider wraps MAUI Geolocation (best-effort,
         // permission-gated); IVenueLocator turns a fix into the nearest saved venue and sets it active. Both singleton.
         builder.Services.AddSingleton<ILocationProvider, MauiLocationProvider>();

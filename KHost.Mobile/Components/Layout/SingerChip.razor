@@ -1,0 +1,124 @@
+@inject ISingerStore Store
+@inject IAppSession Session
+@inject IAppSettings Settings
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject IBackButtonService BackButton
+@implements IDisposable
+
+@* The active-singer avatar + "Who's singing?" quick switcher, mounted top-right in the header by MainLayout. The
+   avatar shows the active singer (their color + initial); tapping it opens a dropdown to switch who's singing or
+   jump to the Singers page. Switching sets the active singer (session) and remembers it for next launch; the app
+   chrome re-tints to the new singer's color (see OnAfterRenderAsync → khSinger.apply). Reflects live changes via
+   the store's Changed event and IAppSession's ActiveSingerChanged. *@
+<div class="singer-chip-host">
+    <button type="button" class="singer-chip" @onclick="Toggle" aria-haspopup="true" aria-expanded="@_open"
+            style="@AvatarStyle(_active)"
+            aria-label="@(_active is null ? "Choose singer" : $"Singing as {_active.Name}. Switch singer")">
+        @(_active?.Avatar ?? "?")
+    </button>
+
+    @if (_open)
+    {
+        <div class="singer-switcher__scrim" @onclick="Close"></div>
+        <div class="singer-switcher" role="menu">
+            <div class="singer-switcher__head">Who's singing?</div>
+            <div class="singer-switcher__list">
+                @foreach (var s in _singers)
+                {
+                    <button type="button" class="singer-switcher__row @(IsActive(s) ? "is-active" : "")"
+                            role="menuitemradio" aria-checked="@IsActive(s)" @onclick="() => Activate(s)">
+                        <span class="singer-av" style="@AvatarStyle(s)">@s.Avatar</span>
+                        <span class="singer-switcher__name">@s.Name</span>
+                        @if (IsActive(s))
+                        {
+                            <span class="singer-switcher__check">✓</span>
+                        }
+                    </button>
+                }
+            </div>
+            <div class="singer-switcher__foot">
+                <button type="button" class="singer-switcher__action" @onclick="ManageSingers">Manage singers ›</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<Singer> _singers = [];
+    private Singer? _active;
+    private bool _open;
+    private string? _appliedColor;   // the color last pushed to khSinger.apply, so we only re-tint on a real change
+    private BackButtonOverlayGuard? _backGuard;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _backGuard = new BackButtonOverlayGuard(BackButton,
+            closeTopMost: TryCloseSwitcher,
+            notifyStateChanged: StateHasChanged);
+        Store.Changed += OnChanged;
+        Session.ActiveSingerChanged += OnChanged;
+        await ReloadAsync();
+    }
+
+    private bool IsActive(Singer s) => Session.ActiveSingerId == s.Id;
+
+    private void OnChanged(object? sender, EventArgs e) => _ = ReloadOnUiAsync();
+
+    private async Task ReloadOnUiAsync()
+    {
+        try { await InvokeAsync(ReloadAsync); }
+        catch { /* best-effort: a stale avatar is harmless */ }
+    }
+
+    private async Task ReloadAsync()
+    {
+        _singers = await Store.GetAllAsync();
+        _active = _singers.FirstOrDefault(s => s.Id == Session.ActiveSingerId);
+        StateHasChanged();
+    }
+
+    // Re-tint the app chrome to the active singer's color whenever it changes (initial load + every switch). JS
+    // interop, so it lives here rather than in the render path; guarded so we only call on a real color change.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var color = _active?.Color;
+        if (color != _appliedColor)
+        {
+            _appliedColor = color;
+            try { await JS.InvokeVoidAsync("khSinger.apply", color); }
+            catch { /* best-effort: the un-tinted brand color is a fine fallback */ }
+        }
+    }
+
+    private void Toggle() => _open = !_open;
+    private void Close() => _open = false;
+
+    private bool TryCloseSwitcher()
+    {
+        if (_open) { Close(); return true; }
+        return false;
+    }
+
+    private void Activate(Singer s)
+    {
+        Session.SetActiveSinger(s.Id);
+        Settings.LastActiveSingerId = s.Id.ToString();   // remember for next launch
+        Close();
+    }
+
+    private void ManageSingers()
+    {
+        Close();
+        Nav.NavigateTo("singers");
+    }
+
+    private static string AvatarStyle(Singer? s) => s is null ? "" : $"background:{s.Color};";
+
+    public void Dispose()
+    {
+        _backGuard?.Dispose();
+        Store.Changed -= OnChanged;
+        Session.ActiveSingerChanged -= OnChanged;
+    }
+}

@@ -28,6 +28,7 @@ public sealed class MauiAppSettings : IAppSettings
     private const string RatePerformancesKey = "settings.rate_performances";
     private const string UpdateCheckKey = "settings.update_check";
     private const string TutorialCompletedKey = "settings.tutorial_completed";
+    private const string LastActiveSingerIdKey = "settings.last_active_singer_id";
 
     public bool AutoFillMetadata
     {
@@ -45,6 +46,13 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(SurpriseKey, true);
         set => Preferences.Default.Set(SurpriseKey, value);
+    }
+
+    // Empty default means "no remembered singer yet"; the bootstrap then picks the first singer.
+    public string LastActiveSingerId
+    {
+        get => Preferences.Default.Get(LastActiveSingerIdKey, string.Empty);
+        set => Preferences.Default.Set(LastActiveSingerIdKey, value);
     }
 
     public bool YouTubeSearchEnabled

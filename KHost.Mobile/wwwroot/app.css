@@ -2046,17 +2046,6 @@ body.kh-sheet-open { overflow: hidden; }
 .venue-detail__edit { width: 100%; margin-top: 1.1rem; }
 .venue-detail__delete { width: 100%; margin-top: 0.5rem; }
 
-/* Add/edit sheet — glyph tile beside the name; tapping it reveals the curated picker (the WebView emoji
-   keyboard is unreliable, so we ship a fixed grid rather than opening the OS keyboard). */
-.venue-id-row { display: flex; gap: 0.6rem; align-items: stretch; }
-.venue-glyph-btn {
-    flex: 0 0 3.2rem; width: 3.2rem;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem; line-height: 1;
-    background: var(--kh-surface-2); border: 1px solid var(--kh-border);
-    border-radius: 0.6rem; cursor: pointer; -webkit-tap-highlight-color: transparent;
-}
-.venue-glyph-btn.is-open { border-color: #e1477e; background: rgba(225, 71, 126, 0.12); }
 .venue-name { flex: 1 1 auto; min-width: 0; }
 .glyph-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr)); gap: 0.4rem; margin-top: 0.6rem; }
 .glyph-grid__item {
@@ -2081,3 +2070,151 @@ body.kh-sheet-open { overflow: hidden; }
 
 /* Settings — venue re-check interval select */
 .venue-recheck { flex: 0 0 auto; width: auto; padding-top: 0.4rem; padding-bottom: 0.4rem; }
+
+/* ============================================================================
+   Singers — the active-singer avatar + "Who's singing?" switcher in the header,
+   the Singers page (roster), and the add/edit sheet. Multiple singers share one
+   device; each keeps their own My List + Tonight, and the active singer's color
+   tints the whole app chrome (see js/singer.js). See SingerChip.razor,
+   Components/Pages/Singers.razor, Components/SingerEditSheet.razor.
+   ============================================================================ */
+
+/* Header re-layout for the two chips: venue centered, singer avatar top-right by the ⋮.
+   Both are absolutely positioned (like the original venue chip), so no flow reshuffle. */
+.venue-chip-host { left: 50%; right: auto; transform: translateX(-50%); }
+.venue-switcher { left: 50%; right: auto; transform: translateX(-50%); }
+.singer-chip-host {
+    position: absolute;
+    right: 3.3rem;   /* just left of the ⋮ menu (right: 0.75rem) */
+    top: calc(env(safe-area-inset-top) + (var(--kh-header-h) - 2rem) / 2);
+}
+
+/* Round avatar button in the header — the active singer's color + initial, ringed white on the gradient. */
+.singer-chip {
+    width: 2rem; height: 2rem; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 0.85rem; line-height: 1;
+    background: var(--kh-primary);   /* overridden inline per singer */
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.singer-chip:active { transform: scale(0.94); }
+
+/* Avatar used in the switcher rows, the Singers page, and the edit hero. */
+.singer-av {
+    flex: 0 0 auto; width: 2rem; height: 2rem; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 0.85rem; line-height: 1;
+    background: var(--kh-primary);   /* overridden inline per singer */
+}
+
+/* "Who's singing?" dropdown — mirrors .venue-switcher. */
+.singer-switcher__scrim { position: fixed; inset: 0; z-index: 1; }
+.singer-switcher {
+    position: absolute; top: calc(100% + 0.4rem); right: 0; z-index: 2;
+    min-width: 14rem; max-width: 78vw; padding: 0.3rem;
+    background: var(--kh-surface); border: 1px solid var(--kh-border);
+    border-radius: 0.6rem; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    animation: sheet-fade 0.12s ease;
+    display: flex; flex-direction: column;
+    max-height: calc(100dvh - var(--kh-header-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1rem);
+}
+.singer-switcher__head {
+    font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--kh-text-muted); padding: 0.5rem 0.6rem 0.4rem;
+}
+.singer-switcher__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.singer-switcher__row {
+    display: flex; align-items: center; gap: 0.6rem; width: 100%;
+    padding: 0.5rem 0.6rem; border: none; border-radius: 0.45rem;
+    background: none; color: var(--kh-text); font-size: 0.95rem; font-weight: 600; text-align: left; cursor: pointer;
+}
+.singer-switcher__row:hover { background: var(--kh-surface-2); }
+.singer-switcher__row.is-active { background: color-mix(in srgb, var(--kh-primary) 12%, var(--kh-surface)); }
+.singer-switcher__name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.singer-switcher__check { color: var(--kh-primary); font-weight: 800; }
+.singer-switcher__foot { flex: 0 0 auto; border-top: 1px solid var(--kh-border); margin-top: 0.2rem; padding-top: 0.2rem; }
+.singer-switcher__action {
+    display: flex; align-items: center; width: 100%; text-align: left;
+    padding: 0.55rem 0.7rem; border: none; background: none;
+    color: var(--kh-primary); font-size: 0.9rem; font-weight: 700; cursor: pointer; border-radius: 0.5rem;
+}
+.singer-switcher__action:hover { background: var(--kh-surface-2); }
+
+/* Boot splash while the singer bootstrap runs (MainLayout gates the shell on it). */
+.app-boot {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: var(--kh-bg); color: var(--kh-primary);
+}
+.brand-lockup--boot { gap: 0.25rem; }
+.brand-lockup--boot .brand-lockup__kh { font-size: 2.4rem; }
+.brand-lockup--boot .brand-lockup__cue { font-size: 1.2rem; }
+
+/* Singers page — roster */
+.singers__add { flex: 0 0 auto; margin-left: auto; padding: 0.45rem 0.85rem; }
+.singer-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.singer-row {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem 0.85rem; background: var(--kh-surface); border: 1px solid var(--kh-border);
+    border-radius: var(--kh-radius); cursor: pointer;
+}
+.singer-row.is-active { border-color: var(--kh-primary); background: color-mix(in srgb, var(--kh-primary) 8%, var(--kh-surface)); }
+.singer-row .singer-av { width: 2.5rem; height: 2.5rem; font-size: 1rem; }
+.singer-row__main { flex: 1 1 auto; min-width: 0; }
+.singer-row__name { font-weight: 700; display: flex; align-items: center; gap: 0.4rem; }
+.singer-row__badge {
+    font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;
+    color: #fff; background: var(--kh-primary); border-radius: 999px; padding: 0.1rem 0.45rem;
+}
+/* Active-singer selector: a radio dot (filled = active), matching the Venues page radio. */
+.singer-row__radio {
+    flex: 0 0 auto; width: 2.5rem; height: 2.5rem; margin: -0.4rem -0.2rem -0.4rem 0;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.singer-row__radio::before {
+    content: ""; box-sizing: border-box; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+    border: 2px solid var(--kh-border); transition: transform 0.06s ease;
+}
+.singer-row__radio.is-on::before {
+    border-color: var(--kh-primary); background: var(--kh-primary);
+    box-shadow: inset 0 0 0 0.28rem var(--kh-surface);
+}
+.singer-row__radio:active::before { transform: scale(0.9); }
+
+/* Add/edit sheet — name input + delete/hint (the color + emoji picker is the shared IconPicker below). */
+.singer-edit__name { flex: 1 1 auto; min-width: 0; }
+.singer-edit__delete { width: 100%; margin-top: 1rem; }
+.singer-edit__hint { margin-top: 1rem; font-size: 0.82rem; color: var(--kh-text-muted); text-align: center; }
+.color-grid { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.55rem; }
+.color-grid__item {
+    width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 2px solid transparent;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.color-grid__item.is-sel { box-shadow: 0 0 0 2px var(--kh-surface), 0 0 0 4px var(--kh-text); }
+
+/* ---- IconPicker (Components/IconPicker.razor) — shared color + emoji/letter picker for singers and venues ----
+   A tappable preview (a colored avatar for singers, a surface tile for venues) that toggles a collapsible panel of
+   choices. Collapsed by default; the name input sits beside the preview on its row. */
+.icon-picker__row { display: flex; gap: 0.6rem; align-items: stretch; }
+.icon-picker__preview {
+    flex: 0 0 3.2rem; width: 3.2rem; min-height: 3.2rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.icon-picker__preview:active { transform: scale(0.96); }
+.icon-picker__preview--tile { background: var(--kh-surface-2); border: 1px solid var(--kh-border); border-radius: 0.6rem; }
+.icon-picker__preview--tile.is-open { border-color: #e1477e; background: rgba(225, 71, 126, 0.12); }
+.icon-picker__preview--avatar { border-radius: 50%; border: 2px solid transparent; color: #fff; font-weight: 800; }
+.icon-picker__preview--avatar.is-open { box-shadow: 0 0 0 2px var(--kh-surface), 0 0 0 4px var(--kh-primary); }
+.icon-picker__panel { margin-top: 0.6rem; display: flex; flex-direction: column; gap: 0.6rem; }
+/* The grids bring their own top margin for the standalone case; inside the panel, its gap handles the spacing. */
+.icon-picker__panel .color-grid, .icon-picker__panel .glyph-grid { margin-top: 0; }
+/* Letter ("Aa") tile — a touch smaller/bolder than an emoji so it reads as a text option. */
+.glyph-grid__item--letter { font-size: 1rem; font-weight: 800; }
+/* Singer picker selections track the active accent (--kh-primary); the venue picker keeps the default pink. */
+.icon-picker__glyphs--accent .glyph-grid__item.is-sel {
+    border-color: var(--kh-primary);
+    background: color-mix(in srgb, var(--kh-primary) 15%, var(--kh-surface));
+}

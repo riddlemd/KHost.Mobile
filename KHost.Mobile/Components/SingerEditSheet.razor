@@ -1,0 +1,124 @@
+@* Add / edit a singer. Shown when @Editing is set (pass a fresh Singer() to add, or a working copy to edit — the
+   host owns whether it's new). Collects the name + accent color, writes them onto the passed instance, and raises
+   OnSave with it. Delete is offered on an existing singer via OnDelete, unless this is the only singer (CanDelete
+   false). Uses --history stacking so it sits above any page content, matching VenueEditSheet. *@
+@inject IJSRuntime JS
+@implements IDisposable
+@if (Editing is not null)
+{
+    <div class="sheet-backdrop sheet-backdrop--history" @onclick="OnClose"></div>
+    <div class="sheet sheet--history" role="dialog" aria-modal="true" @ref="_sheet">
+        <button type="button" class="sheet__close" @onclick="OnClose" aria-label="Close">✕</button>
+        <div class="sheet__title">@(IsNew ? "Add singer" : "Edit singer")</div>
+
+        @* Tap the avatar to open the color + emoji picker (collapsed by default). *@
+        <IconPicker @bind-Glyph="_glyph" @bind-Color="_color"
+                    AvailableGlyphs="SingerGlyphs.All" AvailableColors="SingerColors.All" LetterFallback="@Initial">
+            <input class="input singer-edit__name" placeholder="Singer name" maxlength="16" aria-label="Singer name"
+                   @bind="_name" @bind:event="oninput" />
+        </IconPicker>
+
+        <div class="sheet__actions" style="margin-top:1rem">
+            <button class="btn btn-secondary" @onclick="OnClose">Cancel</button>
+            <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(string.IsNullOrWhiteSpace(_name))">Save</button>
+        </div>
+
+        @if (!IsNew && CanDelete)
+        {
+            <button type="button" class="btn btn-danger singer-edit__delete" @onclick="DeleteAsync">Delete singer</button>
+        }
+        else if (!IsNew && !CanDelete)
+        {
+            <div class="singer-edit__hint">This is your only singer — add another before removing this one.</div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The singer being added/edited. Null hides the sheet. The host passes a fresh <see cref="Singer"/> to
+    /// add or a working copy to edit; on save its fields are written and it's handed back via <see cref="OnSave"/>.</summary>
+    [Parameter] public Singer? Editing { get; set; }
+
+    /// <summary>Whether this is a brand-new singer (drives the title and hides delete). The host knows.</summary>
+    [Parameter] public bool IsNew { get; set; }
+
+    /// <summary>Whether delete is allowed — false when this is the only singer, so the last one can't be removed.</summary>
+    [Parameter] public bool CanDelete { get; set; }
+
+    /// <summary>Raised with the populated singer when the user saves (name guaranteed non-blank).</summary>
+    [Parameter] public EventCallback<Singer> OnSave { get; set; }
+
+    /// <summary>Raised with the singer when the user confirms delete (only offered when <see cref="CanDelete"/>).</summary>
+    [Parameter] public EventCallback<Singer> OnDelete { get; set; }
+
+    /// <summary>Raised when the sheet is dismissed without saving (✕ / Cancel / backdrop / swipe).</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string _name = string.Empty;
+    private string _color = SingerColors.Default;
+    private string _glyph = string.Empty;   // empty = use the first letter; otherwise the chosen emoji
+    private Guid? _seededFor;   // the singer id the buffers belong to; a change means a fresh open → reseed
+
+    private bool HasGlyph => !string.IsNullOrWhiteSpace(_glyph);
+
+    // The letter shown on the avatar (and the picker's "use letter" tile) when no emoji is chosen.
+    private string Initial =>
+        string.IsNullOrWhiteSpace(_name) ? "?" : char.ToUpperInvariant(_name.TrimStart()[0]).ToString();
+
+    private ElementReference _sheet;
+    private DotNetObjectReference<SingerEditSheet>? _selfRef;
+    private bool _bound;
+
+    // A fresh open (different singer id) reseeds the buffers, else edits from a prior open would leak across.
+    protected override void OnParametersSet()
+    {
+        if (Editing is { } s && s.Id != _seededFor)
+        {
+            _seededFor = s.Id;
+            _name = s.Name;
+            _color = string.IsNullOrWhiteSpace(s.Color) ? SingerColors.Default : s.Color;
+            _glyph = s.Glyph ?? string.Empty;
+        }
+    }
+
+    // Bind pull-down-to-dismiss while shown (same interop as the venue sheets); a swipe closes without saving.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Editing is not null && !_bound)
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSheet.register", _sheet, _selfRef, new { closeMethod = "DismissFromSwipe" });
+            _bound = true;
+        }
+        else if (Editing is null)
+        {
+            _bound = false;
+        }
+    }
+
+    [JSInvokable]
+    public async Task DismissFromSwipe()
+    {
+        await OnClose.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (Editing is not { } s || string.IsNullOrWhiteSpace(_name))
+            return;
+
+        s.Name = _name.Trim();
+        s.Color = string.IsNullOrWhiteSpace(_color) ? SingerColors.Default : _color;
+        s.Glyph = HasGlyph ? _glyph : null;
+        await OnSave.InvokeAsync(s);
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (Editing is { } s)
+            await OnDelete.InvokeAsync(s);
+    }
+
+    public void Dispose() => _selfRef?.Dispose();
+}

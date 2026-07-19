@@ -20,6 +20,13 @@ public interface IAppSettings
     /// </summary>
     bool TonightEnabled { get; set; }
 
+    /// <summary>
+    /// The id (as a string) of the singer that was active when the app last closed, so the same singer's lists
+    /// re-open on the next launch. Empty when never set; the bootstrap falls back to the first singer when it's
+    /// empty or names a singer that no longer exists. String-typed to sit in the same key/value store as the rest.
+    /// </summary>
+    string LastActiveSingerId { get; set; }
+
     /// <summary>When true, the song detail sheet shows the "Find on YouTube" button.</summary>
     bool YouTubeSearchEnabled { get; set; }
 

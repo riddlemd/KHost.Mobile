@@ -32,8 +32,17 @@
     <Compile Include="..\KHost.Mobile\Models\LyricsCacheEntry.cs" Link="Linked\Models\LyricsCacheEntry.cs" />
     <Compile Include="..\KHost.Mobile\Models\Venue.cs" Link="Linked\Models\Venue.cs" />
     <Compile Include="..\KHost.Mobile\Models\VenueGlyphs.cs" Link="Linked\Models\VenueGlyphs.cs" />
+    <Compile Include="..\KHost.Mobile\Models\Singer.cs" Link="Linked\Models\Singer.cs" />
+    <Compile Include="..\KHost.Mobile\Models\SingerColors.cs" Link="Linked\Models\SingerColors.cs" />
 
     <Compile Include="..\KHost.Mobile\Services\IAppDataDirectory.cs" Link="Linked\Services\IAppDataDirectory.cs" />
+    <Compile Include="..\KHost.Mobile\Services\IAppSession.cs" Link="Linked\Services\IAppSession.cs" />
+    <Compile Include="..\KHost.Mobile\Services\AppSession.cs" Link="Linked\Services\AppSession.cs" />
+    <Compile Include="..\KHost.Mobile\Services\MySongsViewState.cs" Link="Linked\Services\MySongsViewState.cs" />
+    <Compile Include="..\KHost.Mobile\Services\SingerDataFiles.cs" Link="Linked\Services\SingerDataFiles.cs" />
+    <Compile Include="..\KHost.Mobile\Services\ISingerStore.cs" Link="Linked\Services\ISingerStore.cs" />
+    <Compile Include="..\KHost.Mobile\Services\JsonFileSingerStore.cs" Link="Linked\Services\JsonFileSingerStore.cs" />
+    <Compile Include="..\KHost.Mobile\Services\SingerJsonContext.cs" Link="Linked\Services\SingerJsonContext.cs" />
     <Compile Include="..\KHost.Mobile\Services\ISongListStore.cs" Link="Linked\Services\ISongListStore.cs" />
     <Compile Include="..\KHost.Mobile\Services\JsonFileSongListStore.cs" Link="Linked\Services\JsonFileSongListStore.cs" />
     <Compile Include="..\KHost.Mobile\Services\SongListJsonContext.cs" Link="Linked\Services\SongListJsonContext.cs" />

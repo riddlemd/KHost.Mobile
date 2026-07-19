@@ -1,0 +1,100 @@
+@* A tappable identity preview that toggles a collapsible picker — an optional color row and an emoji/glyph grid
+   (with an optional "use the first letter" tile). Collapsed by default; tapping the preview opens it. Shared by the
+   singer editor (color + emoji + letter fallback → a colored avatar preview) and the venue editor (emoji only → a
+   surface-tile preview). The name input is passed as ChildContent so it sits on the preview's row. Two-way binds
+   Glyph, and Color when a palette is supplied. *@
+
+<div class="icon-picker">
+    <div class="icon-picker__row">
+        <button type="button"
+                class="icon-picker__preview @(HasColor ? "icon-picker__preview--avatar" : "icon-picker__preview--tile") @(_open ? "is-open" : "")"
+                style="@(HasColor ? $"background:{Color};" : "")"
+                @onclick="Toggle" aria-haspopup="true" aria-expanded="@_open" aria-label="Change icon" title="Change icon">
+            @Preview
+        </button>
+        @ChildContent
+    </div>
+
+    @if (_open)
+    {
+        <div class="icon-picker__panel">
+            @if (HasColorPalette)
+            {
+                <div class="color-grid" role="radiogroup" aria-label="Color">
+                    @foreach (var c in AvailableColors!)
+                    {
+                        <button type="button" class="color-grid__item @(c == Color ? "is-sel" : "")"
+                                style="background:@c;" role="radio" aria-checked="@(c == Color)"
+                                @onclick="() => SelectColorAsync(c)" aria-label="Color option"></button>
+                    }
+                </div>
+            }
+            <div class="glyph-grid @(HasColorPalette ? "icon-picker__glyphs--accent" : "")" role="radiogroup" aria-label="Icon">
+                @* The letter tile keeps the name's first letter (clears the glyph); only offered when a fallback is given. *@
+                @if (LetterFallback is not null)
+                {
+                    <button type="button" class="glyph-grid__item glyph-grid__item--letter @(string.IsNullOrEmpty(Glyph) ? "is-sel" : "")"
+                            role="radio" aria-checked="@(string.IsNullOrEmpty(Glyph))" @onclick="() => SelectGlyphAsync(string.Empty)"
+                            aria-label="Use first letter">@LetterFallback</button>
+                }
+                @foreach (var g in AvailableGlyphs)
+                {
+                    <button type="button" class="glyph-grid__item @(g == Glyph ? "is-sel" : "")"
+                            role="radio" aria-checked="@(g == Glyph)" @onclick="() => SelectGlyphAsync(g)" aria-label="Icon option">@g</button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The selected glyph. When <see cref="LetterFallback"/> is set, an empty string means "use the letter".</summary>
+    [Parameter] public string Glyph { get; set; } = string.Empty;
+
+    /// <summary>Raised with the new glyph when a glyph (or the letter tile) is picked.</summary>
+    [Parameter] public EventCallback<string> GlyphChanged { get; set; }
+
+    /// <summary>The pickable emoji/glyph set.</summary>
+    [Parameter] public IReadOnlyList<string> AvailableGlyphs { get; set; } = [];
+
+    /// <summary>The selected color (hex), or null for a glyph-only picker (renders a surface tile, no color row).</summary>
+    [Parameter] public string? Color { get; set; }
+
+    /// <summary>Raised with the new color when a color is picked (only when <see cref="AvailableColors"/> is supplied).</summary>
+    [Parameter] public EventCallback<string> ColorChanged { get; set; }
+
+    /// <summary>The color palette; null/empty hides the color row (and renders a tile preview instead of an avatar).</summary>
+    [Parameter] public IReadOnlyList<string>? AvailableColors { get; set; }
+
+    /// <summary>When non-null, a "use the first letter" option is offered (clearing the glyph) and the preview shows
+    /// this letter whenever the glyph is empty. Pass the name's initial; leave null for a glyph-always picker.</summary>
+    [Parameter] public string? LetterFallback { get; set; }
+
+    /// <summary>Content placed beside the preview on its row — typically the name input.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _open;
+
+    private bool HasColor => !string.IsNullOrWhiteSpace(Color);
+    private bool HasColorPalette => AvailableColors is { Count: > 0 };
+
+    // The preview shows the chosen glyph, or the letter fallback when the glyph is empty (singer), or "?" if neither.
+    private string Preview => !string.IsNullOrWhiteSpace(Glyph) ? Glyph : (LetterFallback ?? "?");
+
+    private void Toggle() => _open = !_open;
+
+    // Picking a glyph is the primary choice — collapse the panel after (matches the venue picker's quick flow).
+    private async Task SelectGlyphAsync(string g)
+    {
+        Glyph = g;
+        await GlyphChanged.InvokeAsync(g);
+        _open = false;
+    }
+
+    // Picking a color leaves the panel open so a glyph can still be chosen in the same pass.
+    private Task SelectColorAsync(string c)
+    {
+        Color = c;
+        return ColorChanged.InvokeAsync(c);
+    }
+}

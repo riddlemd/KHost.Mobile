@@ -16,23 +16,11 @@
 
         <div class="field" style="margin-top:0.85rem">
             <label class="field__label" for="venue-name">Name</label>
-            <div class="venue-id-row">
-                <button type="button" class="venue-glyph-btn @(_glyphOpen ? "is-open" : "")"
-                        @onclick="() => _glyphOpen = !_glyphOpen" aria-label="Change icon" aria-expanded="@_glyphOpen"
-                        title="Change icon">@_glyph</button>
+            @* Tap the glyph tile to open the icon picker (collapsed by default). *@
+            <IconPicker @bind-Glyph="_glyph" AvailableGlyphs="VenueGlyphs.All">
                 <input id="venue-name" class="input venue-name" placeholder="Venue name" aria-label="Venue name"
                        maxlength="16" @bind="_name" @bind:event="oninput" />
-            </div>
-            @if (_glyphOpen)
-            {
-                <div class="glyph-grid" role="radiogroup" aria-label="Venue icon">
-                    @foreach (var g in VenueGlyphs.All)
-                    {
-                        <button type="button" class="glyph-grid__item @(g == _glyph ? "is-sel" : "")"
-                                role="radio" aria-checked="@(g == _glyph)" @onclick="() => SelectGlyph(g)">@g</button>
-                    }
-                </div>
-            }
+            </IconPicker>
         </div>
 
         <div class="field">
@@ -126,7 +114,6 @@
     private string _notes = string.Empty;
     private bool _isFavorite;
     private bool _showInSwitcher = true;
-    private bool _glyphOpen;   // the icon grid is collapsed until the glyph tile is tapped
     private double? _lat;
     private double? _lng;
     private bool _capturing;
@@ -157,7 +144,6 @@
             _showInSwitcher = v.ShowInSwitcher;
             _lat = v.Latitude;
             _lng = v.Longitude;
-            _glyphOpen = false;
             _scanError = null;
             _locError = null;
         }
@@ -184,13 +170,6 @@
     }
 
     private void ClearLocation() => (_lat, _lng) = (null, null);
-
-    // Pick a glyph and collapse the grid — the tile then shows the choice next to the name.
-    private void SelectGlyph(string g)
-    {
-        _glyph = g;
-        _glyphOpen = false;
-    }
 
     // Bind pull-down-to-dismiss while shown (same interop as the song detail / rating sheets); a swipe closes
     // without saving, like Cancel. The sheet element remounts on each open, so re-bind then and reset when hidden.

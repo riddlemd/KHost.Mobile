@@ -11,16 +11,45 @@ namespace KHost.Mobile.Services;
 /// truth once loaded; every mutation rewrites the file. Guarded by a <see cref="SemaphoreSlim"/> so concurrent UI
 /// actions can't corrupt the file or the cache.
 /// </summary>
-public sealed class JsonFileSongListStore(IAppDataDirectory paths, ILogger<JsonFileSongListStore>? logger = null) : ISongListStore
+public sealed class JsonFileSongListStore : ISongListStore
 {
-    private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "song-list.json");
+    private readonly IAppDataDirectory _paths;
+    private readonly IAppSession? _session;
     private readonly SemaphoreSlim _gate = new(1, 1);
-    // Optional so the integration tests can `new` the store without a logging stack; DI supplies the real logger.
-    private readonly ILogger _log = logger ?? NullLogger<JsonFileSongListStore>.Instance;
+    private readonly ILogger _log;
 
     private List<SongListItem>? _items;
+    private Guid? _loadedFor;   // the singer whose file _items was loaded from (null = the legacy no-singer file)
+
+    /// <summary>
+    /// The song list is per-singer: it reads/writes the active singer's file (<see cref="IAppSession.ActiveSingerId"/>).
+    /// <paramref name="session"/> is optional so the integration tests can <c>new</c> the store without wiring a
+    /// session — it then reads the single legacy file, exactly as before multi-singer support. The optional logger
+    /// keeps those tests loggerless; DI supplies both.
+    /// </summary>
+    public JsonFileSongListStore(IAppDataDirectory paths, IAppSession? session = null, ILogger<JsonFileSongListStore>? logger = null)
+    {
+        _paths = paths;
+        _session = session;
+        _log = logger ?? NullLogger<JsonFileSongListStore>.Instance;
+        if (_session is not null)
+            _session.ActiveSingerChanged += OnActiveSingerChanged;
+    }
 
     public event EventHandler? Changed;
+
+    // A singer switch invalidates the cache (see LoadAsync's _loadedFor check) and must refresh every subscriber, so
+    // re-raise Changed — the UI then reloads this singer's list exactly as it would after any mutation.
+    private void OnActiveSingerChanged(object? sender, EventArgs e) => Changed?.Invoke(this, EventArgs.Empty);
+
+    // The active singer's song-list file, or the legacy single-user file when no singer is active (pre-seed, or the
+    // session-less test path).
+    private string CurrentPath()
+    {
+        var id = _session?.ActiveSingerId;
+        var name = id is null ? SingerDataFiles.LegacySongList : SingerDataFiles.SongList(id.Value);
+        return Path.Combine(_paths.AppDataDirectory, name);
+    }
 
     public async Task<IReadOnlyList<SongListItem>> GetAllAsync()
     {
@@ -236,25 +265,31 @@ public sealed class JsonFileSongListStore(IAppDataDirectory paths, ILogger<JsonF
     // Callers must hold _gate.
     private async Task<List<SongListItem>> LoadAsync()
     {
-        if (_items is not null)
+        var singer = _session?.ActiveSingerId;
+        if (_items is not null && _loadedFor == singer)
             return _items;
 
-        if (!File.Exists(_filePath))
+        // First load, or the active singer changed out from under the cache → (re)load from that singer's file.
+        _items = null;
+        _loadedFor = singer;
+        var path = CurrentPath();
+
+        if (!File.Exists(path))
         {
-            _log.LogDebug("Song list file not found at {Path}; starting with an empty list", _filePath);
+            _log.LogDebug("Song list file not found at {Path}; starting with an empty list", path);
             return _items = [];
         }
 
         try
         {
-            await using var stream = File.OpenRead(_filePath);
+            await using var stream = File.OpenRead(path);
             _items = await JsonSerializer.DeserializeAsync(stream, SongListJsonContext.Default.ListSongListItem) ?? [];
-            _log.LogDebug("Song list loaded: {Count} songs from {Path}", _items.Count, _filePath);
+            _log.LogDebug("Song list loaded: {Count} songs from {Path}", _items.Count, path);
         }
         catch (JsonException ex)
         {
             // Corrupt file (e.g. interrupted write on a prior version) — start clean rather than crash the app.
-            _log.LogWarning(ex, "Song list file at {Path} is corrupt; starting with an empty list", _filePath);
+            _log.LogWarning(ex, "Song list file at {Path} is corrupt; starting with an empty list", path);
             _items = [];
         }
 
@@ -302,8 +337,10 @@ public sealed class JsonFileSongListStore(IAppDataDirectory paths, ILogger<JsonF
     private async Task SaveAsync(List<SongListItem> items)
     {
         _items = items;
-        await using var stream = File.Create(_filePath);
+        _loadedFor = _session?.ActiveSingerId;
+        var path = CurrentPath();
+        await using var stream = File.Create(path);
         await JsonSerializer.SerializeAsync(stream, items, SongListJsonContext.Default.ListSongListItem);
-        _log.LogDebug("Song list saved: {Count} songs to {Path}", items.Count, _filePath);
+        _log.LogDebug("Song list saved: {Count} songs to {Path}", items.Count, path);
     }
 }

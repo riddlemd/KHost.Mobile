@@ -22,11 +22,13 @@ public interface IAppSession
     bool TutorialResolved { get; set; }
 
     /// <summary>
-    /// The My Songs list's filter + sort state, kept here so it survives leaving and returning to the tab within a
-    /// launch (the page component is disposed on navigation, so its own fields would otherwise reset). One shared
-    /// instance for the process; the page restores from it on init and writes back on dispose.
+    /// The My Songs list's filter + sort + scroll state <em>for a given singer</em>, kept here so it survives
+    /// leaving and returning to the tab within a launch (the page component is disposed on navigation, so its own
+    /// fields would otherwise reset) — and so switching singers restores each person's own filters, sort, paging and
+    /// scroll position. One instance per singer id, created on first ask; <paramref name="singerId"/> null returns a
+    /// shared fallback (the session-less / pre-seed path). Never persisted.
     /// </summary>
-    MySongsViewState MySongsView { get; }
+    MySongsViewState MySongsViewFor(Guid? singerId);
 
     /// <summary>
     /// The venue the singer is "at" right now — where performances get tagged and which catalog the header chip
@@ -51,6 +53,23 @@ public interface IAppSession
     /// <summary>Raised after <see cref="ActiveVenueId"/> changes (manual switch, geo re-check, or a delete that
     /// clears it). Lets the header chip and any open venue view refresh without polling.</summary>
     event EventHandler? ActiveVenueChanged;
+
+    /// <summary>
+    /// The singer whose personal lists (My List + Tonight) the app is currently showing. Multiple singers share the
+    /// device; this ephemeral pointer selects whose data the per-singer stores read/write. Re-resolved each launch
+    /// (from <see cref="IAppSettings.LastActiveSingerId"/> when still valid, else the first singer) and never
+    /// persisted here. The bootstrap sets it before any personal page loads, so it is expected non-null in the UI.
+    /// Set via <see cref="SetActiveSinger"/> so <see cref="ActiveSingerChanged"/> can fire.
+    /// </summary>
+    Guid? ActiveSingerId { get; }
+
+    /// <summary>Set the <see cref="ActiveSingerId"/>. Raises <see cref="ActiveSingerChanged"/> only when the singer
+    /// actually changes, so the per-singer stores reload and the header avatar + accent refresh in lock-step.</summary>
+    void SetActiveSinger(Guid? singerId);
+
+    /// <summary>Raised after <see cref="ActiveSingerId"/> changes (a switch in the header, or a delete that
+    /// re-points it). The per-singer stores listen to reload their file; the header chip re-tints the app.</summary>
+    event EventHandler? ActiveSingerChanged;
 
     /// <summary>The venue whose detail sheet the first-run tour wants open (or null to close it). Set only by the
     /// tutorial so its Venues-chapter steps can spotlight controls inside the detail sheet (the KaraFun catalog,

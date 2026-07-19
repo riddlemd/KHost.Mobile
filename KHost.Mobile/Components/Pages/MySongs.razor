@@ -797,9 +797,13 @@ else
     private bool _rangeBound;   // anti-cross clamp bound to the current year-slider inputs
     private string? _scrollToSongId;   // set on favorite-toggle; the next render scrolls this card into view
 
-    // Filter + sort are held on IAppSession, and scroll on scroll.js, so they survive a tab change — the page
-    // component is disposed on navigation and its own fields would otherwise reset.
-    private const string ScrollKey = "mysongs";
+    // Filter + sort + paging live on IAppSession (one view-state per singer), and scroll on scroll.js keyed per
+    // singer, so they survive a tab change AND a singer switch — each singer's My List keeps its own filters, sort,
+    // paged height and scroll position. The page component is disposed on navigation and its own fields would
+    // otherwise reset; a singer switch keeps the page mounted but is detected in RefreshAsync (see below).
+    private Guid? _viewSinger;   // the singer whose view state is currently loaded into this page's fields
+    private string ScrollKey => ScrollKeyFor(_viewSinger);
+    private static string ScrollKeyFor(Guid? singerId) => singerId is { } id ? $"mysongs:{id:N}" : "mysongs";
     private bool _scrollRestored;
 
     // Song detail / edit sheet (opened by tapping a card).
@@ -956,7 +960,7 @@ else
     // SaveViewState then seeds the holder on dispose, so the holder never has to know the default sort column.
     private void RestoreViewState()
     {
-        var s = Session.MySongsView;
+        var s = Session.MySongsViewFor(_viewSinger);
         if (!s.Initialized)
             return;
 
@@ -980,9 +984,27 @@ else
         _lastListSig = FilterSortSignature();
     }
 
-    private void SaveViewState()
+    // Reset the page's filter/sort/paging fields to their first-visit defaults — used when switching to a singer
+    // whose view state hasn't been seeded yet, so their list starts clean instead of inheriting the last singer's.
+    private void ResetViewBuffers()
     {
-        var s = Session.MySongsView;
+        _filterSearch = string.Empty;
+        _filterGenres.Clear();
+        _filterRatings.Clear();
+        _filterEnjoyments.Clear();
+        _filterTags.Clear();
+        _tagFilterAll = false;
+        _filterYearLo = null;
+        _filterYearHi = null;
+        _sort = SortColumn.Title;
+        _sortDescending = false;
+        _renderCount = PageSize;
+        _lastListSig = FilterSortSignature();   // seed so the first render after a switch doesn't rewind paging
+    }
+
+    private void SaveViewState(Guid? singer)
+    {
+        var s = Session.MySongsViewFor(singer);
         s.FilterSearch = _filterSearch;
         s.FilterGenres = new HashSet<string>(_filterGenres, StringComparer.OrdinalIgnoreCase);
         s.FilterRatings = [.. _filterRatings];
@@ -1134,6 +1156,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        _viewSinger = Session.ActiveSingerId;   // whose view state we're loading (keys RestoreViewState + scroll)
         RestoreViewState();   // before the first render, so restored filters/sort show immediately
         _backGuard = new BackButtonOverlayGuard(BackButton,
             closeTopMost: TryCloseTopOverlay,
@@ -2019,6 +2042,21 @@ else
 
     private async Task RefreshAsync()
     {
+        // A singer switch keeps this page mounted but fires the store's Changed (its file changed under it). Detect
+        // it here: stash the outgoing singer's view state + stop tracking its scroll (its last position is already
+        // committed under its own key), then load the incoming singer's — defaults overlaid with their saved state —
+        // and re-arm the scroll restore so OnAfterRender lands their position once the new list paints.
+        var current = Session.ActiveSingerId;
+        if (current != _viewSinger)
+        {
+            SaveViewState(_viewSinger);
+            _ = JS.InvokeVoidAsync("khScroll.untrack", ScrollKeyFor(_viewSinger));
+            _viewSinger = current;
+            ResetViewBuffers();
+            RestoreViewState();
+            _scrollRestored = false;
+        }
+
         _items = await Store.GetAllAsync();
         RecomputeYearBounds();
         // Drop any tonight entries whose song was deleted (orphan pruning), then reload the joined set.
@@ -2103,7 +2141,7 @@ else
 
     public void Dispose()
     {
-        SaveViewState();
+        SaveViewState(_viewSinger);
         _ = JS.InvokeVoidAsync("khScroll.untrack", ScrollKey);
         _ = JS.InvokeVoidAsync("khInfinite.disconnect");
         Store.Changed -= OnStoreChanged;

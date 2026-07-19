@@ -3,8 +3,15 @@
 @inject IAppSettings Settings
 @inject NavigationManager Nav
 @inject IBackButtonService BackButton
+@inject ISingerStore Singers
+@inject IAppSession Session
 @implements IDisposable
 
+@* Gate the shell on the singer bootstrap: at least one singer must exist and the active one chosen before any
+   personal page (My List / Tonight) loads its data, since those stores read the active singer. The bootstrap is a
+   couple of file checks, so this is a brief flash at most. *@
+@if (_ready)
+{
 <header class="app-header">
     <div class="app-header__title">
         <span class="brand-lockup" aria-label="KHost Cue">
@@ -13,6 +20,7 @@
         </span>
     </div>
     <VenueChip />
+    <SingerChip />
     <div class="header-menu">
         <button type="button" class="header-menu__btn" data-tut="menu" @onclick="ToggleMenu"
                 aria-haspopup="true" aria-expanded="@_menuOpen" aria-label="Menu">
@@ -29,6 +37,10 @@
                 <NavLink class="header-menu__item" role="menuitem" href="venues" @onclick="CloseMenu">
                     <span class="header-menu__icon">📍</span>
                     Venues
+                </NavLink>
+                <NavLink class="header-menu__item" role="menuitem" href="singers" @onclick="CloseMenu">
+                    <span class="header-menu__icon">👥</span>
+                    Singers
                 </NavLink>
                 <NavLink class="header-menu__item" role="menuitem" href="import-export" @onclick="CloseMenu">
                     <span class="header-menu__icon">🔁</span>
@@ -61,10 +73,21 @@
 }
 
 <TutorialOverlay />
+}
+else
+{
+    <div class="app-boot" aria-hidden="true">
+        <span class="brand-lockup brand-lockup--boot">
+            <span class="brand-lockup__kh">kH</span>
+            <span class="brand-lockup__cue">Cue</span>
+        </span>
+    </div>
+}
 
 @code {
     private string _theme = "light";
     private bool _menuOpen;
+    private bool _ready;   // gates the shell until the singer bootstrap has run (see OnInitializedAsync)
 
     protected override void OnInitialized()
     {
@@ -72,6 +95,24 @@
         _backGuard = new BackButtonOverlayGuard(BackButton,
             closeTopMost: TryCloseTopOverlay,
             notifyStateChanged: StateHasChanged);
+    }
+
+    // Singer bootstrap: make sure a singer exists (seeding the default + migrating any legacy single-user files on
+    // first run), then pick the active singer — the one remembered from last launch when it's still around, else the
+    // first — and set it before the shell (and its personal pages) render.
+    protected override async Task OnInitializedAsync()
+    {
+        await Singers.EnsureSeededAsync();
+        var all = await Singers.GetAllAsync();
+
+        var active = Guid.TryParse(Settings.LastActiveSingerId, out var last)
+            ? all.FirstOrDefault(s => s.Id == last)
+            : null;
+        active ??= all[0];   // EnsureSeededAsync guarantees at least one
+
+        Session.SetActiveSinger(active.Id);
+        Settings.LastActiveSingerId = active.Id.ToString();
+        _ready = true;
     }
 
     // Re-render on navigation so the bottom bar reflects the current Tonight setting (e.g. right after it's
