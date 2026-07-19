@@ -285,12 +285,17 @@ else if (visible.Count == 0)
 else
 {
     <div class="sort-bar">
-        <div class="sort-bar__group">
-            <button type="button" class="sort-bar__btn @(_sort == SortColumn.Title ? "is-on" : "")" @onclick="() => SortBy(SortColumn.Title)">Song <span class="sort-bar__arrow">@Arrow(SortColumn.Title)</span></button>
-            <button type="button" class="sort-bar__btn @(_sort == SortColumn.Artist ? "is-on" : "")" @onclick="() => SortBy(SortColumn.Artist)">Artist <span class="sort-bar__arrow">@Arrow(SortColumn.Artist)</span></button>
-            <button type="button" class="sort-bar__btn @(_sort == SortColumn.HowItWent ? "is-on" : "")" @onclick="() => SortBy(SortColumn.HowItWent)">How it went <span class="sort-bar__arrow">@Arrow(SortColumn.HowItWent)</span></button>
-            <button type="button" class="sort-bar__btn @(_sort == SortColumn.Enjoyment ? "is-on" : "")" @onclick="() => SortBy(SortColumn.Enjoyment)">Enjoyment <span class="sort-bar__arrow">@Arrow(SortColumn.Enjoyment)</span></button>
-        </div>
+        <label class="sort-bar__label" for="song-sort">Sort</label>
+        <select id="song-sort" class="sort-bar__select" value="@_sort" @onchange="OnSortFieldChanged" aria-label="Sort by">
+            <option value="@SortColumn.Title">Song</option>
+            <option value="@SortColumn.Artist">Artist</option>
+            <option value="@SortColumn.HowItWent">How it went</option>
+            <option value="@SortColumn.Enjoyment">Enjoyment</option>
+            <option value="@SortColumn.Added">Added</option>
+        </select>
+        @* Re-calling SortBy with the current field toggles its direction (same-column branch). *@
+        <button type="button" class="sort-bar__dir" @onclick="() => SortBy(_sort)"
+                aria-label="Toggle sort direction" title="Toggle sort direction">@(_sortDescending ? "▼" : "▲")</button>
     </div>
     <div class="song-cards" @ref="_swipeRoot">
         @foreach (var item in visible)
@@ -815,7 +820,13 @@ else
         }
     }
 
-    private string Arrow(SortColumn column) => _sort == column ? (_sortDescending ? "▼" : "▲") : "";
+    // The <select> only fires onchange on a real field change, so SortBy always hits its new-field branch (applying
+    // that field's sensible default direction); the ▲/▼ button flips direction via SortBy's same-field branch.
+    private void OnSortFieldChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<SortColumn>(e.Value?.ToString(), out var column))
+            SortBy(column);
+    }
 
     // Year filter: only offered when there are 2+ distinct release years to span. The effective handle
     // positions clamp to [min, max]; a null handle sits at the corresponding bound (i.e. not narrowed).
@@ -1741,6 +1752,10 @@ else
             added.Tags = tags;
             await Store.UpdateAsync(added);
         }
+        // Switch to newest-first so the song they just added is right at the top (favorites still float above it).
+        _sort = SortColumn.Added;
+        _sortDescending = true;
+
         _title = _artist = _notes = _genre = string.Empty;    // Store.Changed triggers the list refresh.
         _tags = [];
         _year = null;
