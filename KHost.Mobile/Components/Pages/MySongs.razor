@@ -1760,6 +1760,7 @@ else
         _tags = [];
         _year = null;
         _confirmedDuplicate = false;
+        _addOpen = false;   // collapse the form on a successful add; the new song is now visible at the top
 
         // Fill the new song's blank year/genre in the background so the card populates shortly after it
         // appears — the add returns immediately and doesn't block on the network. Same one-shot lookup the
