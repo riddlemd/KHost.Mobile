@@ -1,15 +1,19 @@
+@using KHost.Mobile.Models
 @inject IJSRuntime JS
 @inject IAppSettings Settings
 @inject IAppSession Session
+@inject ISongListStore Songs
+@inject ITonightStore Tonight
 @inject NavigationManager Nav
 @implements IDisposable
 
 @* First-run coach-marks. Lives in MainLayout so it overlays every page and survives the navigations it drives
-   between My List, Import and Settings. Shows once on a fresh install (IAppSettings.TutorialCompleted defaults
-   false); a per-launch guard (IAppSession.TutorialResolved) stops it re-triggering on every navigation. Each step
-   dims the screen and cuts a spotlight hole over one always-present control — never per-song content — so an empty
-   first-run list is fine; a step whose target isn't on-screen degrades to a centered card. Positioning is done in
-   wwwroot/js/tutorial.js; this component owns the step list, content, and navigation. *@
+   between My List, Tonight, Import and Settings. Shows once on a fresh install (IAppSettings.TutorialCompleted
+   defaults false); a per-launch guard (IAppSession.TutorialResolved) stops it re-triggering on every navigation.
+   Each step dims the screen and cuts a spotlight hole over one control; a step whose target isn't on-screen degrades
+   to a centered card. So the song/Tonight spotlights have something to point at on a fresh install, an empty list is
+   seeded with a few sample rows for the duration of the tour and cleared on finish (see SeedSampleDataAsync).
+   Positioning is done in wwwroot/js/tutorial.js; this component owns the step list, content, and navigation. *@
 @if (_active)
 {
     <div class="tutorial @(_center ? "tutorial--center" : "")">
@@ -82,9 +86,17 @@
         new("", null, "👈", "Swipe to remove",
             "Swipe a song row to the left to remove it — venues too. Changed your mind? Tap Undo before it fades."),
 
-        // ---- Tonight + Venues ----
-        new("", "tonight", "🎤", "Line up tonight",
-            "Queue songs into tonight's set from your list, then check them off as you perform.", NeedsTonight: true),
+        // ---- Tonight (the quick-add on the list, then the set itself over on the Tonight tab) ----
+        new("", "tonight-quick", "🎤", "Queue it for tonight",
+            "Tap the add-to-tonight button on any song to line it up for tonight's set — right from the list, no need to open it.", NeedsTonight: true),
+        new("tonight", "tonight-set", "🌙", "Tonight's set",
+            "This is your on-deck set for the night, with a live progress bar that fills as you go.", NeedsTonight: true),
+        new("tonight", "tonight-reorder", "🔀", "Reorder on the fly",
+            "Drag the ⠿ handle to reshuffle your set as the night unfolds.", NeedsTonight: true),
+        new("tonight", "tonight-check", "☑️", "Check them off",
+            "Tap ✓ as you finish each song — it logs the performance (asking how it went) and moves the progress bar along.", NeedsTonight: true),
+
+        // ---- Venues ----
         new("", "venue", "📍", "Set your venue",
             "Tap here to pick where you're singing. It auto-switches to the nearest saved spot as you move, tags every song you log there, and opens that venue's KaraFun catalog in a tap."),
         new("", null, "🏠", "Every venue remembers",
@@ -152,10 +164,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Start once the overlay's own elements (hole/tip refs) are in the DOM.
+        // Start once the overlay's own elements (hole/tip refs) are in the DOM. Seed sample rows first (a no-op
+        // when the lists aren't empty) so the very next steps have real targets to spotlight.
         if (_active && !_started)
         {
             _started = true;
+            await SeedSampleDataAsync();
             await GoToAsync(0);
         }
     }
@@ -213,12 +227,120 @@
         Settings.TutorialCompleted = true;
         StateHasChanged();
 
+        await RemoveSampleDataAsync();   // drop any sample rows we seeded for the tour
+
         // Elements are gone now; just drop the stored resize context (safe — takes no element refs).
         try { await JS.InvokeVoidAsync("khTutorial.clear"); } catch { /* JS not ready — nothing to clean up */ }
 
         // Land back on My List where the tour began, if we ended on another page.
         if (Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].TrimEnd('/').Length > 0)
             Nav.NavigateTo("/");
+    }
+
+    // ---- Sample data (seeded so the tour's spotlights have real targets on a fresh install) -----
+    // Seeded only when a list is empty and cleared when the tour ends. The sample songs use FIXED ids so cleanup is
+    // deterministic and self-healing: a tour interrupted by an app kill leaves recognizable rows that the next run
+    // removes before re-seeding. (Tonight rows we add on top of the user's OWN songs — the no-seeded-songs case — are
+    // tracked in _seededTonightSongIds instead, since their ids aren't fixed.)
+    private static readonly Guid[] SampleSongIds =
+    [
+        new("5a3f7e01-0000-4000-8000-000000000001"),
+        new("5a3f7e01-0000-4000-8000-000000000002"),
+        new("5a3f7e01-0000-4000-8000-000000000003"),
+        new("5a3f7e01-0000-4000-8000-000000000004"),
+        new("5a3f7e01-0000-4000-8000-000000000005"),
+    ];
+
+    // How many songs get queued onto an empty Tonight set so its page has rows to spotlight.
+    private const int SampleTonightCount = 3;
+
+    private bool _seededSongs;
+    private readonly List<Guid> _seededTonightSongIds = [];
+
+    private static List<SongListItem> BuildSampleSongs()
+    {
+        // Staggered AddedAt so the "Added" sort has a real order; a couple favorited / rated so the cards aren't all
+        // blank. MetadataLookedUp/ArtworkLookedUp are pre-set so a seed never kicks off a network lookup.
+        var now = DateTimeOffset.Now;
+        SongListItem Make(int i, string title, string artist, string genre, int year, int enjoyment, bool fav,
+            params int[] howItWent) => new()
+        {
+            Id = SampleSongIds[i],
+            Title = title,
+            Artist = artist,
+            Genre = genre,
+            Year = year,
+            Enjoyment = enjoyment,
+            IsFavorite = fav,
+            AddedAt = now.AddMinutes(-i),
+            Status = howItWent.Length > 0 ? SongListItemStatus.Sang : SongListItemStatus.WantToSing,
+            MetadataLookedUp = true,
+            ArtworkLookedUp = true,
+            Performances = [.. howItWent.Select(h => new Performance { Date = now.AddDays(-i - 1), HowItWent = h })],
+        };
+        return
+        [
+            Make(0, "Bohemian Rhapsody", "Queen", "Rock", 1975, 5, true, 5, 4),
+            Make(1, "Mr. Brightside", "The Killers", "Alternative", 2003, 4, false),
+            Make(2, "Don't Stop Believin'", "Journey", "Rock", 1981, 5, true, 5),
+            Make(3, "Dancing Queen", "ABBA", "Pop", 1976, 3, false),
+            Make(4, "Sweet Caroline", "Neil Diamond", "Pop", 1969, 4, false, 3),
+        ];
+    }
+
+    private async Task SeedSampleDataAsync()
+    {
+        try
+        {
+            await RemoveSampleDataAsync();   // self-heal: clear leftovers from an interrupted run before deciding
+
+            if ((await Songs.GetAllAsync()).Count == 0)
+            {
+                // RestoreAsync keeps our fixed ids (AddAsync would generate new ones), which is what makes cleanup work.
+                foreach (var song in BuildSampleSongs())
+                    await Songs.RestoreAsync(song);
+                _seededSongs = true;
+            }
+
+            // Fill an empty Tonight set so its page has rows: the seeded samples if we just added them, otherwise the
+            // user's own first few songs (removed again on finish, leaving their set exactly as it was).
+            if (Settings.TonightEnabled && (await Tonight.GetAllAsync()).Count == 0)
+            {
+                var pool = _seededSongs
+                    ? SampleSongIds.ToList()
+                    : (await Songs.GetAllAsync()).Select(s => s.Id).ToList();
+                foreach (var id in pool.Take(SampleTonightCount))
+                {
+                    await Tonight.AddAsync(id);
+                    _seededTonightSongIds.Add(id);
+                }
+                // Complete the first row so the progress bar isn't at zero when it's spotlighted.
+                if (_seededTonightSongIds.Count > 0)
+                    await Tonight.SetCompletedAsync(_seededTonightSongIds[0], true);
+            }
+        }
+        catch { /* best-effort: the tour still runs; empty-target steps just fall back to centered cards */ }
+    }
+
+    // Remove whatever SeedSampleDataAsync added: the Tonight rows we queued, then the fixed-id sample songs. Safe to
+    // call when nothing was seeded — every Remove is a no-op if absent, which is what makes the self-heal work.
+    private async Task RemoveSampleDataAsync()
+    {
+        try
+        {
+            foreach (var id in _seededTonightSongIds)
+                await Tonight.RemoveAsync(id);
+            foreach (var id in SampleSongIds)
+                await Tonight.RemoveAsync(id);   // sample-song Tonight rows from a prior interrupted run
+            foreach (var id in SampleSongIds)
+                await Songs.RemoveAsync(id);
+        }
+        catch { /* best-effort cleanup */ }
+        finally
+        {
+            _seededTonightSongIds.Clear();
+            _seededSongs = false;
+        }
     }
 
     public void Dispose() => Nav.LocationChanged -= OnLocationChanged;

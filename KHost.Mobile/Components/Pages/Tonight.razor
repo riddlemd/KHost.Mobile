@@ -31,7 +31,7 @@ else if (_tonight.Count == 0)
 else
 {
     <div class="card tonight">
-        <div class="tonight__head tonight__head--static">
+        <div class="tonight__head tonight__head--static" data-tut="tonight-set">
             <span class="tonight__mic">🎤</span>
             <span class="tonight__title">Tonight</span>
             <span class="tonight__progress">@ProgressLabel</span>
@@ -40,8 +40,9 @@ else
         <div class="tonight__body" @ref="_list">
             @foreach (var (entry, song) in Rows())
             {
+                @* data-tut anchors are on every row; the tour's querySelector spotlights the first one. *@
                 <div class="setrow @(entry.Completed ? "done" : "")" @key="entry.SongId" data-song-id="@entry.SongId">
-                    <span class="setrow__handle" title="Drag to reorder">⠿</span>
+                    <span class="setrow__handle" title="Drag to reorder" data-tut="tonight-reorder">⠿</span>
                     <span class="setrow__pos">@(entry.Order + 1)</span>
                     <div class="setrow__main">
                         <div class="setrow__title">@song.Title</div>
@@ -50,7 +51,7 @@ else
                             <div class="setrow__artist">@song.Artist</div>
                         }
                     </div>
-                    <button type="button" class="setrow__check" aria-pressed="@entry.Completed"
+                    <button type="button" class="setrow__check" aria-pressed="@entry.Completed" data-tut="tonight-check"
                             title="@(entry.Completed ? "Undo — mark not sung" : "Mark sung")"
                             @onclick="() => ToggleDoneAsync(entry, song)">✓</button>
                     <button type="button" class="setrow__remove" title="Remove from tonight"

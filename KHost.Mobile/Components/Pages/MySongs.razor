@@ -334,7 +334,9 @@ else
                  style="@ArtStyle(item)">
                 @if (Settings.TonightEnabled)
                 {
+                    @* data-tut is on every card's button; the tour's querySelector spotlights the first one. *@
                     <button type="button" class="tonight-add-btn song-card__tonight @(IsInTonight(item) ? "is-on" : "")"
+                            data-tut="tonight-quick"
                             title="@(IsInTonight(item) ? "In tonight's set — tap to remove" : "Add to tonight")"
                             aria-pressed="@IsInTonight(item)"
                             @onclick="() => QuickToggleTonightAsync(item)">
