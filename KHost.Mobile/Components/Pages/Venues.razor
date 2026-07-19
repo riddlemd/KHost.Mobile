@@ -92,18 +92,18 @@
             {
                 <button class="btn btn-primary" @onclick="() => OpenCatalogAsync(d)">Open KaraFun Catalog</button>
             }
-            <label class="setting venue-detail__toggle">
-                <span class="setting__text"><span class="setting__title">Favorite</span></span>
-                <span class="switch">
-                    <input class="switch__input" type="checkbox" checked="@d.IsFavorite" @onchange="() => ToggleFavoriteAsync(d)" />
-                    <span class="switch__track"><span class="switch__thumb"></span></span>
-                </span>
-            </label>
             @* Flipping Active off clears the active venue (not-at-a-venue), same as picking "Not at a venue" elsewhere. *@
             <label class="setting venue-detail__toggle">
                 <span class="setting__text"><span class="setting__title">Active</span></span>
                 <span class="switch">
                     <input class="switch__input" type="checkbox" checked="@IsActive(d)" @onchange="() => ToggleActive(d)" />
+                    <span class="switch__track"><span class="switch__thumb"></span></span>
+                </span>
+            </label>
+            <label class="setting venue-detail__toggle">
+                <span class="setting__text"><span class="setting__title">Favorite</span></span>
+                <span class="switch">
+                    <input class="switch__input" type="checkbox" checked="@d.IsFavorite" @onchange="() => ToggleFavoriteAsync(d)" />
                     <span class="switch__track"><span class="switch__thumb"></span></span>
                 </span>
             </label>
