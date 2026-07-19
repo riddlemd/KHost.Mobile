@@ -32,4 +32,8 @@ public sealed class MySongsViewState
     public int Sort { get; set; }
     public bool SortDescending { get; set; }
     public bool FiltersOpen { get; set; }
+
+    /// <summary>How many cards the infinite-scroll list had rendered when the tab was left. Restored so the returning
+    /// page rebuilds to the same height and <c>scroll.js</c> can put the saved scroll position back.</summary>
+    public int RenderCount { get; set; }
 }

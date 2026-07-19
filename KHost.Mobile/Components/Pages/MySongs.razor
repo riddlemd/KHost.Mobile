@@ -243,6 +243,12 @@
 
 @{
     var visible = Sorted().ToList();
+    _visibleCount = visible.Count;
+    // Any filter/sort change (a new signature) rewinds the infinite list to the first page. Favoriting / removing a
+    // song doesn't change the signature, so paging holds its place. Done here (not in each handler) so it's automatic.
+    var listSig = FilterSortSignature();
+    if (listSig != _lastListSig) { _renderCount = PageSize; _lastListSig = listSig; }
+    var page = visible.Take(_renderCount).ToList();
     _listRendered = !_loading && visible.Count > 0;
 }
 
@@ -298,7 +304,7 @@ else
                 aria-label="Toggle sort direction" title="Toggle sort direction">@(_sortDescending ? "▼" : "▲")</button>
     </div>
     <div class="song-cards" @ref="_swipeRoot">
-        @foreach (var item in visible)
+        @foreach (var item in page)
         {
             <div class="song-card @(HasArt(item) ? "song-card--art" : "")" @key="item.Id" data-song-id="@item.Id"
                  style="@ArtStyle(item)">
@@ -382,6 +388,14 @@ else
             </div>
         }
     </div>
+    @* Infinite-scroll sentinel: while more songs remain, khInfinite watches this and loads the next page as it nears
+       the viewport. Rendered only when there's more to show, so reaching it means the whole list is on screen. *@
+    @if (_renderCount < _visibleCount)
+    {
+        <div class="song-cards__more" @ref="_sentinel" role="status" aria-label="Loading more songs">
+            <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+    }
 }
 
 @if (_undoItem is not null)
@@ -719,6 +733,16 @@ else
     private bool _listRendered;
     private bool _swipeBound;
 
+    // Infinite scroll: render only _renderCount of the filtered/sorted list and grow by PageSize as the sentinel
+    // nears the viewport, so a 500+ song list paints ~20 cards instead of all of them. _lastListSig rewinds paging
+    // to the first page whenever the filter/sort changes; _visibleCount is the full filtered count (set each render).
+    private const int PageSize = 20;
+    private int _renderCount = PageSize;
+    private int _visibleCount;
+    private string _lastListSig = "";
+    private ElementReference _sentinel;
+    private bool _infiniteBound;
+
     // Detail-sheet drag-to-dismiss (pull down to close; the page behind is locked while it's open).
     private ElementReference _detailSheet;
     private bool _sheetBound;
@@ -869,6 +893,25 @@ else
         }
     }
 
+    // A cheap fingerprint of the active filter + sort; when it changes, the render rewinds infinite scroll to page 1.
+    private string FilterSortSignature() => string.Join("",
+        _filterName, _filterArtist,
+        string.Join(",", _filterGenres.OrderBy(g => g, StringComparer.Ordinal)),
+        string.Join(",", _filterRatings.OrderBy(r => r)),
+        string.Join(",", _filterEnjoyments.OrderBy(e => e)),
+        string.Join(",", _filterTags.OrderBy(t => t, StringComparer.Ordinal)),
+        _tagFilterAll, _filterYearLo, _filterYearHi, _sort, _sortDescending);
+
+    // Grow the window by a page when the sentinel scrolls into range (invoked from khInfinite's IntersectionObserver).
+    [JSInvokable]
+    public void LoadMore()
+    {
+        if (_renderCount >= _visibleCount)
+            return;
+        _renderCount = Math.Min(_renderCount + PageSize, _visibleCount);
+        StateHasChanged();
+    }
+
     private bool AnyFilterActive =>
         !string.IsNullOrWhiteSpace(_filterName) ||
         !string.IsNullOrWhiteSpace(_filterArtist) ||
@@ -904,6 +947,10 @@ else
         _sort = (SortColumn)s.Sort;
         _sortDescending = s.SortDescending;
         _filtersOpen = s.FiltersOpen;
+        // Restore the paged count so the returning list rebuilds to the same height (scroll.js can then land the
+        // saved scroll). Seed _lastListSig to the restored filter/sort so the first render doesn't rewind to page 1.
+        _renderCount = Math.Max(PageSize, s.RenderCount);
+        _lastListSig = FilterSortSignature();
     }
 
     private void SaveViewState()
@@ -921,6 +968,7 @@ else
         s.Sort = (int)_sort;
         s.SortDescending = _sortDescending;
         s.FiltersOpen = _filtersOpen;
+        s.RenderCount = _renderCount;
         s.Initialized = true;
     }
 
@@ -1081,6 +1129,21 @@ else
         {
             // Card list unmounted (list emptied) — the next mount is a fresh container that needs rebinding.
             _swipeBound = false;
+        }
+
+        // Observe the load-more sentinel while there's more to show; disconnect once everything's rendered (the
+        // sentinel unmounts then) or the list is gone, and re-observe when a filter change brings it back.
+        var wantSentinel = _listRendered && _renderCount < _visibleCount;
+        if (wantSentinel && !_infiniteBound)
+        {
+            _swipeRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khInfinite.observe", _sentinel, _swipeRef);
+            _infiniteBound = true;
+        }
+        else if (!wantSentinel && _infiniteBound)
+        {
+            await JS.InvokeVoidAsync("khInfinite.disconnect");
+            _infiniteBound = false;
         }
 
         // Detail sheet: bind pull-down-to-dismiss + lock the page behind it. Re-bind on each open.
@@ -1808,7 +1871,14 @@ else
         item.IsFavorite = !item.IsFavorite;
         // Set before the await so the render triggered by the store change carries the pending scroll.
         if (Settings.ScrollToFavorited)
+        {
             _scrollToSongId = item.Id.ToString();
+            // Un-favoriting drops the song to its sorted position, which may be past the paged window; grow the
+            // window to include it so the card exists in the DOM for khScroll.toSong to reach.
+            var idx = Sorted().ToList().FindIndex(i => i.Id == item.Id);
+            if (idx >= _renderCount)
+                _renderCount = idx + 1;
+        }
         await Store.UpdateAsync(item);
     }
 
@@ -1941,6 +2011,7 @@ else
     {
         SaveViewState();
         _ = JS.InvokeVoidAsync("khScroll.untrack", ScrollKey);
+        _ = JS.InvokeVoidAsync("khInfinite.disconnect");
         Store.Changed -= OnStoreChanged;
         Tonight.Changed -= OnTonightChanged;
         _backGuard?.Dispose();

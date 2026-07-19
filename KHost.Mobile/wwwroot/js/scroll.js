@@ -43,3 +43,23 @@ window.khScroll = {
         if (y != null) window.scrollTo({ top: y, behavior: 'instant' });
     },
 };
+
+// Infinite scroll: watch a sentinel element at the end of the list and, as it nears the viewport, ask .NET to
+// render the next page. rootMargin pre-loads before the user hits the very bottom so growth feels seamless. One
+// observer at a time (the page has a single list); re-observing swaps the target, disconnect stops it on unmount.
+window.khInfinite = {
+    _observer: null,
+
+    observe(sentinel, dotNetRef) {
+        this.disconnect();
+        if (!sentinel) return;
+        this._observer = new IntersectionObserver((entries) => {
+            if (entries.some(e => e.isIntersecting)) dotNetRef.invokeMethodAsync('LoadMore');
+        }, { rootMargin: '600px 0px' });
+        this._observer.observe(sentinel);
+    },
+
+    disconnect() {
+        if (this._observer) { this._observer.disconnect(); this._observer = null; }
+    },
+};

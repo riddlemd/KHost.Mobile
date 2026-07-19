@@ -1150,6 +1150,8 @@ body.kh-sheet-open { overflow: hidden; }
     flex-direction: column;
     gap: 0.6rem;
 }
+/* Infinite-scroll load-more sentinel: a centered pulse while the next page streams in. */
+.song-cards__more { display: flex; justify-content: center; padding: 0.7rem 0 1.4rem; }
 
 /* A single song card. position:relative anchors the favorite button; opaque bg so a swiped card
    doesn't reveal the one beneath it. Vertical scroll stays native via pan-y; swipe.js captures horizontal. */
