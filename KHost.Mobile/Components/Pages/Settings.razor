@@ -206,7 +206,8 @@
             <span class="setting__text">
                 <span class="setting__title">“Find on KaraFun” button</span>
                 <span class="setting__desc">
-                    Show a button on a song's detail sheet that opens your venue's KaraFun search. Needs a venue ID (below).
+                    Show a button on a song's detail sheet that opens the active venue's KaraFun search. Set a KaraFun
+                    ID on a venue (Venues → edit a venue) for it to appear.
                 </span>
             </span>
             <span class="switch">
@@ -214,26 +215,6 @@
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
-
-        <div class="kf-venue">
-            <span class="setting__title">KaraFun Venue ID</span>
-            @if (string.IsNullOrWhiteSpace(Prefs.KaraFunVenueId))
-            {
-                <p class="setting__desc" style="margin:0.35rem 0 0.7rem">
-                    Not set yet. Add your venue's ID and “Find on KaraFun” opens its search — the button will also
-                    ask the first time you tap it.
-                </p>
-                <button type="button" class="btn btn-secondary settings__clear" @onclick="OpenKaraFunPrompt">Set KaraFun Venue ID</button>
-            }
-            else
-            {
-                <div class="kf-venue__row">
-                    <span class="kf-venue__chip">🎤 @Prefs.KaraFunVenueId</span>
-                    <button type="button" class="btn btn-secondary" @onclick="OpenKaraFunPrompt">Change</button>
-                    <button type="button" class="btn btn-danger" @onclick="ClearKaraFunVenue">Clear</button>
-                </div>
-            }
-        </div>
         }
     </div>
 
@@ -390,9 +371,6 @@
     </div>
 }
 
-<KaraFunVenueSheet Show="_karaFunPromptOpen" CurrentId="@Prefs.KaraFunVenueId"
-                   OnSave="SaveKaraFunVenue" OnClose="CloseKaraFunPrompt" />
-
 @code {
     // The clear buttons are gated on / labeled with their live counts, so track both and refresh on any change.
     private int _songCount;
@@ -424,7 +402,6 @@
     private bool TryCloseTopOverlay()
     {
         if (_confirmClear) { CancelClear(); return true; }
-        if (_karaFunPromptOpen) { CloseKaraFunPrompt(); return true; }
         return false;
     }
 
@@ -462,21 +439,6 @@
         if (_songCount > 0)
             _confirmClear = true;
     }
-
-    // ---- KaraFun venue ID ---------------------------------------------------------------------
-    private bool _karaFunPromptOpen;
-
-    private void OpenKaraFunPrompt() => _karaFunPromptOpen = true;
-    private void CloseKaraFunPrompt() => _karaFunPromptOpen = false;
-
-    private void SaveKaraFunVenue(string venueId)
-    {
-        Prefs.KaraFunVenueId = venueId;
-        _karaFunPromptOpen = false;
-    }
-
-    // Instant, no confirm — a venue ID re-enters trivially, like the recoverable cache clears above.
-    private void ClearKaraFunVenue() => Prefs.KaraFunVenueId = string.Empty;
 
     private void CancelClear() => _confirmClear = false;
 

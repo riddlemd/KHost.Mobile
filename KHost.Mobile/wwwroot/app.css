@@ -761,18 +761,6 @@ body.kh-sheet-open { overflow: hidden; }
     background: #b52e5d;
     transform: scale(0.99);
 }
-/* KaraFun venue ID row (Settings) + the parsed-ID confirmation inside the set-venue sheet. */
-.kf-venue { padding-top: 0.55rem; }
-.kf-venue__row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
-.kf-venue__row .btn { flex: 0 0 auto; padding: 0.45rem 0.85rem; }
-.kf-venue__chip {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    background: rgba(225, 71, 126, 0.14); color: var(--kh-text);
-    border: 1px solid #e1477e; border-radius: 999px;
-    padding: 0.3rem 0.75rem; font-weight: 700; font-size: 0.9rem;
-}
-.kf-venue__ok { margin-top: 0.7rem; font-size: 0.9rem; color: var(--kh-text-muted); }
-.kf-venue__ok b { color: #e1477e; }
 /* Venue-link field with a trailing QR-scan button (Android/iOS). The input flexes; the button matches its height. */
 .kf-venue__input-row { display: flex; align-items: center; gap: 0.5rem; }
 .kf-venue__input-row .input { flex: 1 1 auto; min-width: 0; }

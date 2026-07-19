@@ -14,6 +14,7 @@
 @inject IAlbumArtCache AlbumArt
 @inject IAppSettings Settings
 @inject IAppSession Session
+@inject IVenueStore Venues
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject IBackButtonService BackButton
@@ -542,7 +543,8 @@ else
                     Find on Spotify
                 </button>
             }
-            @if (Settings.KaraFunEnabled)
+            @* KaraFun search is per-venue: shown only when the active venue has a KaraFun ID to search under. *@
+            @if (Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))
             {
                 <button class="btn sheet__karafun" @onclick="OpenKaraFunAsync">🎙 Find on KaraFun</button>
             }
@@ -606,9 +608,6 @@ else
 
 <RatingPromptSheet Item="_ratingPromptItem" RatePerformances="Settings.RatePerformances"
                    OnCommit="OnRatingCommitAsync" OnCancel="CloseRatingPrompt" />
-
-<KaraFunVenueSheet Show="_karaFunPromptOpen" CurrentId="@Settings.KaraFunVenueId"
-                   OnSave="OnKaraFunVenueSavedAsync" OnClose="CloseKaraFunPrompt" />
 
 @if (_lyricsItem is not null)
 {
@@ -779,7 +778,6 @@ else
 
     // Song detail / edit sheet (opened by tapping a card).
     private SongListItem? _detailItem;
-    private bool _karaFunPromptOpen;   // "set your KaraFun venue" prompt, opened from the detail sheet's KaraFun button
     private bool _editing;
     private bool _editFieldsBound;   // khNumeric bound to the edit-form year input
     private bool _addFieldsBound;    // khNumeric bound to the add-form year input (re-bind when the form reopens)
@@ -1069,6 +1067,10 @@ else
             notifyStateChanged: StateHasChanged);
         Store.Changed += OnStoreChanged;
         Tonight.Changed += OnTonightChanged;
+        // Track the active venue's KaraFun ID so the detail-sheet "Find on KaraFun" button follows it.
+        Session.ActiveVenueChanged += OnVenueContextChanged;
+        Venues.Changed += OnVenueContextChanged;
+        await RefreshActiveVenueKaraFunAsync();
 
         // Initial load: show the equalizer loader (not the "No songs yet" empty state) while the on-device
         // list deserializes. Hold it for a ~250ms minimum so a fast load doesn't flash it, then reveal the list.
@@ -1199,7 +1201,7 @@ else
         // Reconcile the page-scroll lock straight from sheet state every render, so it can never get stranded
         // on a close path that skips cleanup (e.g. a touch swipe-dismiss). Only touch JS when it actually flips.
         var anySheetOpen = _detailItem is not null || _historyItem is not null || _ratingPromptItem is not null
-            || _lyricsItem is not null || _karaFunPromptOpen;
+            || _lyricsItem is not null;
         if (anySheetOpen != _pageLocked)
         {
             _pageLocked = anySheetOpen;
@@ -1528,7 +1530,6 @@ else
     private bool TryCloseTopOverlay()
     {
         if (_historyConfirmIndex is not null) { CancelRemoveSungDate(); return true; }
-        if (_karaFunPromptOpen) { CloseKaraFunPrompt(); return true; }
         if (_ratingPromptItem is not null) { CloseRatingPrompt(); return true; }
         if (_historyItem is not null) { CloseHistory(); return true; }
         if (_lyricsItem is not null) { CloseLyrics(); return true; }
@@ -1718,31 +1719,26 @@ else
             ? Task.CompletedTask
             : Links.OpenAsync(SpotifySearch.UrlFor(_detailItem.Title, _detailItem.Artist));
 
-    // KaraFun search is per-venue, so with no venue ID yet we open the "set venue" prompt instead of firing a dead
-    // link; OnKaraFunVenueSavedAsync then launches the search once it's saved.
-    private Task OpenKaraFunAsync()
-    {
-        if (_detailItem is null)
-            return Task.CompletedTask;
-        if (string.IsNullOrWhiteSpace(Settings.KaraFunVenueId))
-        {
-            _karaFunPromptOpen = true;
-            StateHasChanged();
-            return Task.CompletedTask;
-        }
-        return Links.OpenAsync(KaraFunSearch.UrlFor(Settings.KaraFunVenueId, _detailItem.Title, _detailItem.Artist));
-    }
+    // Search the active venue's KaraFun catalog. The button only renders when _activeVenueKaraFunId is set, so it's
+    // always present here.
+    private Task OpenKaraFunAsync() =>
+        _detailItem is null || string.IsNullOrWhiteSpace(_activeVenueKaraFunId)
+            ? Task.CompletedTask
+            : Links.OpenAsync(KaraFunSearch.UrlFor(_activeVenueKaraFunId, _detailItem.Title, _detailItem.Artist));
 
-    private void CloseKaraFunPrompt() => _karaFunPromptOpen = false;
+    // The active venue's KaraFun ID (null when there's no active venue or it has none). Tracked reactively so the
+    // "Find on KaraFun" button appears/disappears as the venue is switched or its KaraFun ID is edited.
+    private string? _activeVenueKaraFunId;
+    private void OnVenueContextChanged(object? sender, EventArgs e) => _ = RefreshActiveVenueKaraFunAsync();
 
-    // Finish the tap that opened the prompt: once the venue's saved, launch the search the user was actually after.
-    // The song's detail sheet is still open behind the prompt, so _detailItem is the right song.
-    private async Task OnKaraFunVenueSavedAsync(string venueId)
+    private async Task RefreshActiveVenueKaraFunAsync()
     {
-        Settings.KaraFunVenueId = venueId;
-        _karaFunPromptOpen = false;
-        if (_detailItem is not null)
-            await Links.OpenAsync(KaraFunSearch.UrlFor(venueId, _detailItem.Title, _detailItem.Artist));
+        var venue = Session.ActiveVenueId is { } id ? await Venues.GetAsync(id) : null;
+        var kf = string.IsNullOrWhiteSpace(venue?.KaraFunVenueId) ? null : venue!.KaraFunVenueId;
+        if (kf == _activeVenueKaraFunId)
+            return;
+        _activeVenueKaraFunId = kf;
+        await InvokeAsync(StateHasChanged);
     }
 
     // ---- Lyrics sheet (LRCLIB) ---------------------------------------------------------------
@@ -2024,6 +2020,8 @@ else
         _ = JS.InvokeVoidAsync("khInfinite.disconnect");
         Store.Changed -= OnStoreChanged;
         Tonight.Changed -= OnTonightChanged;
+        Session.ActiveVenueChanged -= OnVenueContextChanged;
+        Venues.Changed -= OnVenueContextChanged;
         _backGuard?.Dispose();
         // Safety net: never leave the page-scroll lock on if this page is torn down with a sheet open.
         if (_pageLocked)

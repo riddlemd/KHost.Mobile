@@ -51,8 +51,9 @@ public interface IAppSettings
     int VenueRecheckMinutes { get; set; }
 
     /// <summary>
-    /// The KaraFun venue ID that "Find on KaraFun" links search under, or empty if not set yet. KaraFun search is
-    /// per-venue, so the button prompts for this the first time it's tapped without one.
+    /// Legacy single global KaraFun venue ID. KaraFun is now per-venue (each <c>Venue</c> carries its own ID and the
+    /// "Find on KaraFun" button follows the active venue), so this is no longer set from the UI — it's kept only so
+    /// the one-time upgrade migration can seed a venue from an older install's value.
     /// </summary>
     string KaraFunVenueId { get; set; }
 
