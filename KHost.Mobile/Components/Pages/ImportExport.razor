@@ -55,7 +55,7 @@
     <div class="card">
         <div class="section-title">Export songs</div>
         <p class="ie__lead">Save your whole list to a file you can back up or move to another device.</p>
-        <div class="ie-actions">
+        <div class="ie-actions" data-tut="export">
             <button type="button" class="ie-action" @onclick="ExportToFileAsync" disabled="@(_exportBusy || _songCount == 0)">
                 <span class="ie-action__icon" aria-hidden="true">📤</span>
                 <span class="ie-action__text">

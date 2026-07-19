@@ -82,7 +82,7 @@
 {
     <div class="card filter-card">
         @* One bar searches song OR artist — the common case. The rest of the filters live behind the funnel. *@
-        <div class="filter-search">
+        <div class="filter-search" data-tut="search">
             <span class="filter-search__icon" aria-hidden="true">🔍</span>
             <input class="filter-search__input" placeholder="Search songs or artists"
                    aria-label="Search songs or artists"
@@ -92,7 +92,7 @@
                 <button type="button" class="filter-search__clear" aria-label="Clear search"
                         @onclick="() => _filterSearch = string.Empty">✕</button>
             }
-            <button type="button" class="filter-funnel @(AnyHiddenFilterActive ? "is-on" : "")"
+            <button type="button" class="filter-funnel @(AnyHiddenFilterActive ? "is-on" : "")" data-tut="filter"
                     aria-label="More filters" aria-expanded="@_filterSheetOpen" @onclick="OpenFilterSheet">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8.5V21l-4-2v-5.5z" /></svg>
                 @if (AnyHiddenFilterActive)
@@ -314,7 +314,7 @@ else if (visible.Count == 0)
 }
 else
 {
-    <div class="sort-bar">
+    <div class="sort-bar" data-tut="sort">
         <label class="sort-bar__label" for="song-sort">Sort</label>
         <select id="song-sort" class="sort-bar__select" value="@_sort" @onchange="OnSortFieldChanged" aria-label="Sort by">
             <option value="@SortColumn.Title">Song</option>

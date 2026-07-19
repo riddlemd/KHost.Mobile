@@ -42,33 +42,73 @@
 
 @code {
     // One tour step. Route is the target page's base-relative path ("" = My List). Anchor is the data-tut value of
-    // the control to spotlight, or null for a centered explain-only card. NeedsTonight steps drop out when the
-    // Tonight feature is off (their target — the Tonight tab — wouldn't be rendered).
-    private sealed record Step(string Route, string? Anchor, string Badge, string Title, string Body, bool NeedsTonight = false);
+    // the control to spotlight, or null for a centered explain-only card. A step whose anchor isn't on-screen (a
+    // feature that's off, or a control that only appears once the list has songs) degrades to a centered card, so
+    // features that live on song cards / the detail sheet are written as centered cards. NeedsTonight/NeedsTags
+    // steps drop out entirely when that feature is disabled (their target wouldn't render at all).
+    private sealed record Step(string Route, string? Anchor, string Badge, string Title, string Body,
+        bool NeedsTonight = false, bool NeedsTags = false);
 
     private static readonly Step[] AllSteps =
     [
         new("", null, "🎤", "Welcome to KHost Cue",
             "Your karaoke wishlist and tonight's set — all on your phone. Here's the quick tour."),
+
+        // ---- My List: the always-present controls (spotlit when the list has songs, else a centered card) ----
         new("", "add", "➕", "Build your list",
-            "Tap here to add any song you'd like to sing. We'll auto-fill the year and genre for you."),
+            "Tap here to add any song you'd like to sing — we'll auto-fill the year and genre for you."),
+        new("", "search", "🔍", "Find it fast",
+            "One search box matches a song's title or artist, so you can jump to anything in a long list."),
+        new("", "filter", "⛃", "Filter your list",
+            "Narrow the list by genre, rating, year or tags. Active filters show as chips you can tap to clear."),
+        new("", "sort", "↕️", "Sort your way",
+            "Order the list by song, artist, how it went, enjoyment, or when you added it."),
+
+        // ---- Features that live on song cards / the detail sheet — centered explain cards (work on an empty list) ----
+        new("", null, "⭐", "Star your favorites",
+            "Tap a song's star to favorite it — favorites always float to the top of your list."),
+        new("", null, "💿", "Covers, automatically",
+            "We fetch each song's album art and use it as the card background. Prefer plain cards? Turn it off in Settings."),
+        new("", null, "🎶", "Rate & remember",
+            "Tap any song to open it — mark it sung, rate how each performance went, set how much you enjoy it, and browse its full sung history."),
+        new("", null, "📖", "Lyrics on tap",
+            "Pull up a song's lyrics right inside the app — no account needed."),
+        new("", null, "🔗", "Find it anywhere",
+            "From a song's sheet, jump straight to it on YouTube, Spotify, or your venue's KaraFun catalog."),
+        new("", null, "🏷️", "Your own labels",
+            "Tag songs — duet, closer, needs practice — and filter by them later. Toggle tags in Settings.", NeedsTags: true),
+        new("", null, "🎲", "Can't decide?",
+            "Hit “Surprise me” and we'll pick a song for you — it can even skip anything you've already sung today."),
+        new("", null, "👈", "Swipe to remove",
+            "Swipe a song row to the left to remove it — venues too. Changed your mind? Tap Undo before it fades."),
+
+        // ---- Tonight + Venues ----
         new("", "tonight", "🎤", "Line up tonight",
             "Queue songs into tonight's set from your list, then check them off as you perform.", NeedsTonight: true),
         new("", "venue", "📍", "Set your venue",
             "Tap here to pick where you're singing. It auto-switches to the nearest saved spot as you move, tags every song you log there, and opens that venue's KaraFun catalog in a tap."),
+        new("", null, "🏠", "Every venue remembers",
+            "Each place builds its own history — your go-to songs and recent sings there. Tap the chip anytime to switch venues or add a new one."),
+
+        // ---- The menu, Import/Export, and Settings ----
         new("", "menu", "⋮", "More lives here",
-            "Import, Settings, themes and About all live in this menu. Let's peek at the big one."),
+            "Import, Export, Settings, themes and About all live in this menu. Let's peek at the big ones."),
         new("import-export", "import", "📥", "Import a whole playlist",
             "Already have a playlist? Pick a source, paste a public link, and every track lands in your list — no retyping."),
+        new("import-export", "export", "📤", "Export anytime",
+            "Back up your whole list — or move it to another device — by exporting it to a file you can re-import later."),
         new("settings", "settings-features", "⚙️", "Make it yours",
-            "Every feature is a toggle — auto-fill, Tonight, lyrics, update checks and more. Turn off anything you don't want."),
+            "Every feature is a toggle — auto-fill, Tonight, lyrics, album art, update checks and more. Turn off anything you don't want."),
         new("settings", "settings-replay", "↺", "Replay anytime",
             "Want this tour again later? It's right here under Settings."),
+
         new("", null, "✅", "You're all set!",
             "Add your first song or import a playlist — and you're ready for the mic. 🎤"),
     ];
 
-    private List<Step> Steps => AllSteps.Where(s => !s.NeedsTonight || Settings.TonightEnabled).ToList();
+    private List<Step> Steps => AllSteps
+        .Where(s => (!s.NeedsTonight || Settings.TonightEnabled) && (!s.NeedsTags || Settings.TagsEnabled))
+        .ToList();
 
     private bool _active;
     private bool _started;
