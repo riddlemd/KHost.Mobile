@@ -1,0 +1,13 @@
+{
+  "name": "khost-mobile-automation",
+  "version": "1.0.0",
+  "description": "Playwright-based UI automation for driving the KHost Cue WebView on a device or the Windows head.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "walk-tutorial": "node walk_tutorial.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.61.1"
+  }
+}

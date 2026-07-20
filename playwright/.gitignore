@@ -1,0 +1,5 @@
+# Installed by `npm install` (see README) — pinned via package-lock.json, not committed.
+node_modules/
+
+# Generated screenshots from the walkers.
+shots/
