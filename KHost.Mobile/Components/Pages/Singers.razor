@@ -19,14 +19,15 @@
     <div class="page-head">
         <NavLink class="page-back" href="" aria-label="Back to my songs">←</NavLink>
         <h1 class="page-title">Singers</h1>
-        <button type="button" class="btn btn-secondary singers__add" @onclick="OpenAdd">＋ Add</button>
+        <button type="button" class="btn btn-secondary singers__add" data-tut="singer-add" @onclick="OpenAdd">＋ Add</button>
     </div>
 
     <div class="list-hint">Press and hold a singer to switch to them.</div>
     <div class="singer-list" @ref="_gestureRoot">
         @foreach (var s in _singers)
         {
-            <div class="singer-row @(IsActive(s) ? "is-active" : "")" @key="s.Id" data-singer-id="@s.Id">
+            @* data-tut is on every row; the tour's querySelector spotlights the first one. *@
+            <div class="singer-row @(IsActive(s) ? "is-active" : "")" @key="s.Id" data-singer-id="@s.Id" data-tut="singer-hold">
                 <span class="singer-av" style="background:@s.Color;">@s.Avatar</span>
                 <div class="singer-row__main">
                     <div class="singer-row__name">

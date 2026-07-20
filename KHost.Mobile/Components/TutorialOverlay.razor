@@ -5,6 +5,7 @@
 @inject ISongListStore Songs
 @inject ITonightStore Tonight
 @inject IVenueStore VenueStore
+@inject ISingerStore SingerStore
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -12,8 +13,8 @@
    between My Songs, Tonight, Import and Settings. Shows once on a fresh install (IAppSettings.TutorialCompleted
    defaults false); a per-launch guard (IAppSession.TutorialResolved) stops it re-triggering on every navigation.
    Each step dims the screen and cuts a spotlight hole over one control; a step whose target isn't on-screen degrades
-   to a centered card. So the song/Tonight spotlights have something to point at on a fresh install, an empty list is
-   seeded with a few sample rows for the duration of the tour and cleared on finish (see SeedSampleDataAsync).
+   to a centered card. So the song/Tonight/venue/singer spotlights have something to point at on a fresh install,
+   sample rows are seeded for the duration of the tour and cleared on finish (see SeedSampleDataAsync).
    Positioning is done in wwwroot/js/tutorial.js; this component owns the step list, content, and navigation. *@
 @if (_active)
 {
@@ -125,6 +126,8 @@
             "The chip switches venues with a tap, and can auto-detect the nearest saved spot as you move (pin one to stay put)."),
         new("Venues", "", null, "🎙️", "KaraFun integration",
             "KHost Cue works with KaraFun, the karaoke catalog: give a venue its KaraFun id and you can open its whole song list — and “Find on KaraFun” appears on every song."),
+        new("Venues", "venues", "venue-hold", "👇", "Press and hold to activate",
+            "On the Venues page, press and hold a venue to make it the active one — a little buzz confirms it took. A plain tap opens the venue instead, and its Active toggle does the same job."),
         new("Venues", "venues", "venue-karafun", "🎫", "Its KaraFun catalog",
             "One tap on a venue opens its KaraFun catalog, so you can line up what the room can actually play.", VenueDetail: true),
         new("Venues", "venues", "venue-history", "🏠", "Every venue remembers",
@@ -133,6 +136,18 @@
             "Favorite the spots you sing most so they lead the list; you can also hide a rarely-used venue from the quick switcher (Edit → Show in quick switch).", VenueDetail: true),
         new("Venues", "venues", "venue-add", "➕", "Add a venue",
             "Add the places you sing from here — type the details, or scan the venue's KaraFun QR code to fill them in."),
+
+        // ============ Chapter: Singers ============
+        new("Singers", "", null, "👥", "Singers",
+            "Passing the phone around the table? Everyone who sings from it gets their own list.", IsIntro: true),
+        new("Singers", "", "singer-chip", "🙋", "Who's singing?",
+            "Tap the avatar to switch singer — no login, no accounts. The whole app re-tints to that person's color, so a glance tells you whose turn it is."),
+        new("Singers", "", null, "🗂️", "Everyone's own list",
+            "Each singer keeps their own My Songs, their own Tonight set — even their own filters, sort and place in the list. The venues you sing at are shared by everyone."),
+        new("Singers", "singers", "singer-hold", "👇", "Press and hold to switch",
+            "Same gesture as venues: press and hold a singer here to switch to them, with a buzz to confirm. Tap instead to edit their name, color and emoji avatar — that sheet can switch and remove them too."),
+        new("Singers", "singers", "singer-add", "➕", "Add everyone",
+            "Add a singer for each person at the table. Your last singer is remembered, so the app opens on their list next launch."),
 
         // ============ Chapter: Import & Export ============
         new("Import & Export", "", null, "📥", "Import & Export",
@@ -339,11 +354,16 @@
     // to it so its history/go-to-songs render.
     private static readonly Guid SampleVenueId = new("5a3f7e01-0000-4000-8000-0000000000a1");
 
+    // Fixed id for the second singer the Singers chapter needs: a roster of one (the default "Me") makes "switch
+    // singer" meaningless, so the tour adds a companion to hold and switch to, then takes them away again.
+    private static readonly Guid SampleSingerId = new("5a3f7e01-0000-4000-8000-0000000000b1");
+
     // How many songs get queued onto an empty Tonight set so its page has rows to spotlight.
     private const int SampleTonightCount = 3;
 
     private bool _seededSongs;
     private Guid? _tourVenueId;   // the venue the Venues chapter opens (the sample, or the user's own)
+    private Guid? _tourStartSingerId;   // who was singing when the tour began, so a hold on the sample can be undone
     private readonly List<Guid> _seededTonightSongIds = [];
 
     private static List<SongListItem> BuildSampleSongs()
@@ -378,6 +398,15 @@
         ];
     }
 
+    private static Singer BuildSampleSinger() => new()
+    {
+        Id = SampleSingerId,
+        Name = "Sam",
+        Color = SingerColors.All[1],   // not the brand violet, so the two avatars read as different people
+        Glyph = "🎸",
+        AddedAt = DateTimeOffset.Now,
+    };
+
     private static Venue BuildSampleVenue() => new()
     {
         Id = SampleVenueId,
@@ -395,6 +424,10 @@
         try
         {
             await RemoveSampleDataAsync();   // self-heal: clear leftovers from an interrupted run before deciding
+
+            // Remember who's singing before anything is seeded: the Singers chapter invites a hold on the sample
+            // singer, and switching away would point the stores at another singer's files mid-tour.
+            _tourStartSingerId = Session.ActiveSingerId;
 
             if ((await Songs.GetAllAsync()).Count == 0)
             {
@@ -434,6 +467,10 @@
             {
                 _tourVenueId = (venues.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v.KaraFunVenueId)) ?? venues[0]).Id;
             }
+
+            // A one-person roster gives the Singers chapter nothing to switch between, so add a companion to hold.
+            if ((await SingerStore.GetAllAsync()).Count == 1)
+                await SingerStore.AddAsync(BuildSampleSinger());   // AddAsync keeps our fixed id
         }
         catch { /* best-effort: the tour still runs; empty-target steps just fall back to centered cards */ }
     }
@@ -445,6 +482,11 @@
         try
         {
             Session.SetTutorialVenueDetail(null);   // close any tour-opened venue detail before removing the venue
+
+            // Put the original singer back BEFORE touching the song/tonight stores — those files are per-singer, so
+            // a tour that ended on the sample singer would otherwise clean up the wrong list.
+            await RestoreTourSingerAsync();
+
             foreach (var id in _seededTonightSongIds)
                 await Tonight.RemoveAsync(id);
             foreach (var id in SampleSongIds)
@@ -452,6 +494,10 @@
             foreach (var id in SampleSongIds)
                 await Songs.RemoveAsync(id);
             await VenueStore.RemoveAsync(SampleVenueId);   // fixed id → also clears a prior interrupted run's sample venue
+            // Never below one singer: the roster must always have someone (RemoveAsync itself doesn't guard that).
+            var singers = await SingerStore.GetAllAsync();
+            if (singers.Count > 1 && singers.Any(s => s.Id == SampleSingerId))
+                await SingerStore.RemoveAsync(SampleSingerId);
         }
         catch { /* best-effort cleanup */ }
         finally
@@ -459,7 +505,25 @@
             _seededTonightSongIds.Clear();
             _seededSongs = false;
             _tourVenueId = null;
+            _tourStartSingerId = null;
         }
+    }
+
+    // Undo a switch onto the sample singer (the Singers chapter invites exactly that). Falls back to any real singer
+    // when the tour started with none resolved, so we never leave the sample as the active one — it's about to go.
+    private async Task RestoreTourSingerAsync()
+    {
+        if (Session.ActiveSingerId != SampleSingerId)
+            return;
+
+        var singers = await SingerStore.GetAllAsync();
+        var restore = singers.FirstOrDefault(s => s.Id == _tourStartSingerId)
+                      ?? singers.FirstOrDefault(s => s.Id != SampleSingerId);
+        if (restore is null)
+            return;
+
+        Session.SetActiveSinger(restore.Id);
+        Settings.LastActiveSingerId = restore.Id.ToString();
     }
 
     public void Dispose() => Nav.LocationChanged -= OnLocationChanged;

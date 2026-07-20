@@ -12,7 +12,7 @@
    chrome re-tints to the new singer's color (see OnAfterRenderAsync → khSinger.apply). Reflects live changes via
    the store's Changed event and IAppSession's ActiveSingerChanged. *@
 <div class="singer-chip-host">
-    <button type="button" class="singer-chip" @onclick="Toggle" aria-haspopup="true" aria-expanded="@_open"
+    <button type="button" class="singer-chip" data-tut="singer-chip" @onclick="Toggle" aria-haspopup="true" aria-expanded="@_open"
             style="@AvatarStyle(_active)"
             aria-label="@(_active is null ? "Choose singer" : $"Singing as {_active.Name}. Switch singer")">
         @(_active?.Avatar ?? "?")

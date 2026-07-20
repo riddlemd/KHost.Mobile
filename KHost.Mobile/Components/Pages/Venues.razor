@@ -45,7 +45,8 @@
         <div class="venue-list" @ref="_swipeRoot">
             @foreach (var v in Ordered())
             {
-                <div class="venue-row @(IsActive(v) ? "is-active" : "")" @key="v.Id" data-venue-id="@v.Id">
+                @* data-tut is on every row; the tour's querySelector spotlights the first one. *@
+                <div class="venue-row @(IsActive(v) ? "is-active" : "")" @key="v.Id" data-venue-id="@v.Id" data-tut="venue-hold">
                     <span class="venue-row__pin">@v.Glyph</span>
                     <div class="venue-row__main">
                         <div class="venue-row__name">
