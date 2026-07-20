@@ -8,7 +8,7 @@ public enum SongListItemStatus
     /// <summary>On the "songs I'd like to sing" list.</summary>
     WantToSing,
 
-    /// <summary>Already performed — reserved for the future "sang songs" history integration.</summary>
+    /// <summary>Performed at least once — set automatically whenever the song's <c>Performances</c> list is non-empty.</summary>
     Sang,
 }
 

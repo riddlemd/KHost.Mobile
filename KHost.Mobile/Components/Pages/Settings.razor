@@ -397,7 +397,7 @@
     // Routes the Android back button to close the top-most overlay instead of navigating; active only while one is open.
     private BackButtonOverlayGuard? _backGuard;
 
-    // Closes the single top-most open overlay, matching the CSS stacking order (confirm pop-up > the venue sheet).
+    // Closes the confirm-clear pop-up — the only overlay this page has.
     private bool TryCloseTopOverlay()
     {
         if (_confirmClear) { CancelClear(); return true; }

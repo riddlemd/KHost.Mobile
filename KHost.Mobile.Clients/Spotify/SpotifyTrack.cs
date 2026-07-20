@@ -1,7 +1,7 @@
 namespace KHost.Mobile.Clients.Spotify;
 
-/// <summary>
-/// One track read from a public Spotify playlist. Title + artist are all a karaoke singer
-/// needs; <see cref="SpotifyTrackId"/> is kept for a future de-dupe / library-linking step.
-/// </summary>
+/// <summary>One track read from a public Spotify playlist.</summary>
+/// <param name="Title">Song title.</param>
+/// <param name="Artist">Performing artist.</param>
+/// <param name="SpotifyTrackId">Kept for a future de-dupe / library-linking step.</param>
 public sealed record SpotifyTrack(string Title, string Artist, string? SpotifyTrackId);

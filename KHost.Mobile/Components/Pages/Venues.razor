@@ -252,8 +252,8 @@
 
     private bool IsActive(Venue v) => Session.ActiveVenueId == v.Id;
 
-    // Always plain A→Z by name (not favorites-first, not active-pinned): the radio dot marks the active venue and the
-    // star marks favorites, so nothing needs to float — a fixed order keeps rows from jumping as you activate/favorite.
+    // Always plain A→Z by name (not favorites-first, not active-pinned): the Active badge marks the active venue and
+    // the star marks favorites, so nothing needs to float — a fixed order keeps rows from jumping as you activate/favorite.
     private IEnumerable<Venue> Ordered()
     {
         IEnumerable<Venue> matches = string.IsNullOrWhiteSpace(_search)
@@ -421,7 +421,7 @@
     // A manual pick pins the venue so the periodic geo re-check won't override it.
     private void SetActive(Venue v) => Session.SetActiveVenue(v.Id, pinned: true);
 
-    // Pinned either way (a manual pick), same as the list radio.
+    // Pinned either way (a manual pick), same as a press-and-hold on the list row.
     private void ToggleActive(Venue v) => Session.SetActiveVenue(IsActive(v) ? null : v.Id, pinned: true);
 
     private Task OpenCatalogAsync(Venue v) =>

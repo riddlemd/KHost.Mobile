@@ -3,13 +3,17 @@ using System.Net;
 namespace KHost.Mobile.Clients.Spotify;
 
 /// <inheritdoc />
+/// <remarks>
+/// Backend: the public embed page (<c>open.spotify.com/embed/playlist/…</c>), which renders its tracklist
+/// server-side. It serves a stripped page to non-browser clients, so every request presents a normal browser
+/// User-Agent (set per-request, so the injected <see cref="HttpClient"/> needs no special configuration).
+/// No API key — read-only scrape of a public page.
+/// </remarks>
 public sealed class SpotifyImportService(HttpClient httpClient) : ISpotifyImportService
 {
     private const string EmbedUrlFormat = "https://open.spotify.com/embed/playlist/{0}";
 
-    // The embed renders its tracklist server-side, but is served a stripped page to non-browser
-    // clients — so we present a normal browser User-Agent. Set per-request so the service works
-    // regardless of how the injected HttpClient was configured.
+    // Set per-request (see <remarks>) so the service works regardless of how the injected HttpClient was configured.
     private const string BrowserUserAgent =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 

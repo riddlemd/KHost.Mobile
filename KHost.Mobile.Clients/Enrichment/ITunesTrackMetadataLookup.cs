@@ -27,6 +27,9 @@ public sealed class ITunesTrackMetadataLookup(HttpClient httpClient) : ITrackMet
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
+            // A genuine caller cancellation rethrows as OperationCanceledException; only a real network failure
+            // (or a request-timeout TaskCanceledException) maps to the domain error. Mirrors the sibling lookups.
+            cancellationToken.ThrowIfCancellationRequested();
             throw new MetadataLookupException("Couldn't reach the lookup service. Check your connection and try again.", ex);
         }
 

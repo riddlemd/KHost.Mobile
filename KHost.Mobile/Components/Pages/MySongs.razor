@@ -1124,8 +1124,8 @@ else
             q = q.Where(i => _filterEnjoyments.Contains(i.Enjoyment));
         if (_filterTags.Count > 0)
             q = _tagFilterAll
-                ? q.Where(i => _filterTags.All(f => i.Tags.Contains(f, StringComparer.OrdinalIgnoreCase)))  // AND
-                : q.Where(i => i.Tags.Any(t => _filterTags.Contains(t)));                                   // OR
+                ? q.Where(i => _filterTags.All(f => i.Tags.Contains(f, StringComparer.OrdinalIgnoreCase)))
+                : q.Where(i => i.Tags.Any(t => _filterTags.Contains(t)));
         if (YearFilterActive)
             q = q.Where(i => i.Year.HasValue && i.Year.Value >= YearLo && i.Year.Value <= YearHi);
 
@@ -1744,7 +1744,7 @@ else
     // ---- Sung history sheet ------------------------------------------------------------------
 
     private SongListItem? _historyItem;
-    private int? _historyConfirmIndex;   // index (into SungDates) whose X is armed for confirm; null = none
+    private int? _historyConfirmIndex;   // index (into Performances) whose X is armed for confirm; null = none
 
     private void OpenHistory()
     {

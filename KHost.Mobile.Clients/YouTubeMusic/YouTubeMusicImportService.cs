@@ -1,6 +1,12 @@
 namespace KHost.Mobile.Clients.YouTubeMusic;
 
 /// <inheritdoc />
+/// <remarks>
+/// Backend: the public playlist page (<c>music.youtube.com/playlist?list=…</c>), whose initial data is parsed
+/// out of the returned HTML. It serves a stripped page to non-browser clients, so every request presents a
+/// normal browser User-Agent (set per-request, so the injected <see cref="HttpClient"/> needs no special
+/// configuration). No API key — read-only scrape of a public page.
+/// </remarks>
 public sealed class YouTubeMusicImportService(HttpClient httpClient) : IYouTubeMusicImportService
 {
     private const string PlaylistUrlFormat = "https://music.youtube.com/playlist?list={0}";
