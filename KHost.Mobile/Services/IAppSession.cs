@@ -30,6 +30,10 @@ public interface IAppSession
     /// </summary>
     MySongsViewState MySongsViewFor(Guid? singerId);
 
+    /// <summary>Drop a singer's My Songs view state — called when the singer is removed from the roster, so the
+    /// per-singer map doesn't keep entries for people who no longer exist. No-op if none was created.</summary>
+    void ClearMySongsView(Guid singerId);
+
     /// <summary>
     /// The venue the singer is "at" right now — where performances get tagged and which catalog the header chip
     /// reflects. Ephemeral like the rest of the session: it is re-resolved each launch (manually via the switcher

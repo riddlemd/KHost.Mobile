@@ -117,6 +117,18 @@ public class AppSessionTests
         Assert.Equal(0, fired);
     }
 
+    [Fact]
+    public void ClearMySongsView_forgets_that_singers_view_state()
+    {
+        var session = new AppSession();
+        var singer = Guid.NewGuid();
+        var view = session.MySongsViewFor(singer);
+
+        session.ClearMySongsView(singer);
+
+        Assert.NotSame(view, session.MySongsViewFor(singer));   // a fresh state, not the removed singer's old one
+    }
+
     // ---- Tutorial signals ----
 
     [Fact]

@@ -184,6 +184,7 @@
             SetActive(_singers.First(x => x.Id != s.Id));
 
         await Store.RemoveAsync(s.Id);
+        Session.ClearMySongsView(s.Id);   // their per-singer view state has nothing to belong to now
     }
 
     private bool TryCloseTopOverlay()

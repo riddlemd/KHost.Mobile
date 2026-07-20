@@ -63,7 +63,10 @@ public sealed class LoggingHttpMessageHandler(ILogger<LoggingHttpMessageHandler>
 
         try
         {
-            await response.Content.LoadIntoBufferAsync().ConfigureAwait(false);   // re-readable for the caller
+            // Pass the cap explicitly: ContentLength is null for chunked/decompressed responses (the usual case on
+            // the native Android stack), so the header check above can't be the only guard. Oversize throws
+            // HttpRequestException, which the catch below degrades to a single note.
+            await response.Content.LoadIntoBufferAsync(MaxBufferBytes).ConfigureAwait(false);   // re-readable for the caller
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             logger.LogDebug("HTTP body {Method} {Uri}: {Body}", request.Method, request.RequestUri, Truncate(body));
         }

@@ -118,4 +118,12 @@ public interface IAppSettings
     /// again after. Set back to <c>false</c> (from Settings → "Replay tutorial") to see the tour again.
     /// </summary>
     bool TutorialCompleted { get; set; }
+
+    /// <summary>
+    /// Comma-joined ids of the user's OWN songs the tutorial queued onto an empty Tonight set (the tour's
+    /// no-seeded-songs path), persisted so a tour interrupted by an app kill can still remove exactly those rows
+    /// on its next run — the in-memory tracking list doesn't survive a restart, and those rows aren't the fixed-id
+    /// samples the self-heal already knows. Empty when no tour seeding is outstanding.
+    /// </summary>
+    string TutorialSeededTonightIds { get; set; }
 }

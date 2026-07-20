@@ -33,6 +33,9 @@ public sealed class ITunesTrackMetadataLookup(HttpClient httpClient) : ITrackMet
             throw new MetadataLookupException("Couldn't reach the lookup service. Check your connection and try again.", ex);
         }
 
+        // Dispose on every exit (including the throw paths) so the pooled connection is released.
+        using var _ = response;
+
         if (response.StatusCode == HttpStatusCode.Forbidden || (int)response.StatusCode == 429)
             throw new MetadataLookupException("Lookups are rate-limited right now — wait a moment and try again.");
 

@@ -30,6 +30,9 @@ public sealed class DeezerCoverArtLookup(HttpClient httpClient) : ICoverArtLooku
             throw new DeezerCoverArtException("Couldn't reach Deezer for cover art.", ex);
         }
 
+        // Dispose on every exit (including the throw paths) so the pooled connection is released.
+        using var _ = response;
+
         if ((int)response.StatusCode == 429)
             throw new DeezerCoverArtException("Deezer cover-art lookups are rate-limited right now.");
 

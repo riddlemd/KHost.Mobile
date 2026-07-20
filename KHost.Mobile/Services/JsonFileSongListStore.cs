@@ -42,12 +42,13 @@ public sealed class JsonFileSongListStore : ISongListStore
     // re-raise Changed — the UI then reloads this singer's list exactly as it would after any mutation.
     private void OnActiveSingerChanged(object? sender, EventArgs e) => Changed?.Invoke(this, EventArgs.Empty);
 
-    // The active singer's song-list file, or the legacy single-user file when no singer is active (pre-seed, or the
-    // session-less test path).
-    private string CurrentPath()
+    // The given singer's song-list file, or the legacy single-user file when no singer is active (pre-seed, or the
+    // session-less test path). Takes the singer explicitly — LoadAsync captures ActiveSingerId ONCE and SaveAsync
+    // writes to the singer the data was LOADED for, so a singer switch landing mid-operation (between LoadAsync's
+    // await and the save) can't write one singer's list into another singer's file.
+    private string PathFor(Guid? singerId)
     {
-        var id = _session?.ActiveSingerId;
-        var name = id is null ? SingerDataFiles.LegacySongList : SingerDataFiles.SongList(id.Value);
+        var name = singerId is null ? SingerDataFiles.LegacySongList : SingerDataFiles.SongList(singerId.Value);
         return Path.Combine(_paths.AppDataDirectory, name);
     }
 
@@ -310,7 +311,7 @@ public sealed class JsonFileSongListStore : ISongListStore
         // First load, or the active singer changed out from under the cache → (re)load from that singer's file.
         _items = null;
         _loadedFor = singer;
-        var path = CurrentPath();
+        var path = PathFor(singer);
 
         if (!File.Exists(path))
         {
@@ -371,12 +372,12 @@ public sealed class JsonFileSongListStore : ISongListStore
         return true;
     }
 
-    // Callers must hold _gate.
+    // Callers must hold _gate. Writes to the singer the items were LOADED for (_loadedFor, set by LoadAsync before
+    // any await) — never re-reads ActiveSingerId, which may have moved on while this operation was in flight.
     private async Task SaveAsync(List<SongListItem> items)
     {
         _items = items;
-        _loadedFor = _session?.ActiveSingerId;
-        var path = CurrentPath();
+        var path = PathFor(_loadedFor);
         await using var stream = File.Create(path);
         await JsonSerializer.SerializeAsync(stream, items, SongListJsonContext.Default.ListSongListItem);
         _log.LogDebug("Song list saved: {Count} songs to {Path}", items.Count, path);

@@ -32,8 +32,14 @@ public sealed class SpotifyImportService(HttpClient httpClient) : ISpotifyImport
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
+            // A genuine caller cancellation rethrows as OperationCanceledException; only a real network failure
+            // (or a request-timeout TaskCanceledException) maps to the domain error. Mirrors the sibling clients.
+            cancellationToken.ThrowIfCancellationRequested();
             throw new SpotifyImportException("Couldn't reach Spotify. Check your connection and try again.", ex);
         }
+
+        // Dispose on every exit (including the throw paths) so the pooled connection is released.
+        using var _ = response;
 
         if (response.StatusCode == HttpStatusCode.NotFound)
             throw new SpotifyImportException("That playlist couldn't be found — make sure it's public.");

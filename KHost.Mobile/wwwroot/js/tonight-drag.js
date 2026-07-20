@@ -21,6 +21,7 @@ window.khTonight = {
         };
 
         container.addEventListener('pointerdown', (e) => {
+            if (drag) return;   // one drag at a time — a second finger must not hijack the state machine
             const handle = e.target.closest('.setrow__handle');
             if (!handle) return;
             const row = handle.closest('.setrow');
@@ -43,7 +44,7 @@ window.khTonight = {
         });
 
         container.addEventListener('pointermove', (e) => {
-            if (!drag) return;
+            if (!drag || e.pointerId !== drag.pointerId) return;   // not the finger that owns the drag
             const dy = e.clientY - drag.startY;
             drag.row.style.transform = `translateY(${dy}px)`;
 
@@ -63,8 +64,8 @@ window.khTonight = {
             });
         });
 
-        const finish = () => {
-            if (!drag) return;
+        const finish = (e) => {
+            if (!drag || e.pointerId !== drag.pointerId) return;   // not the finger that owns the drag
             const d = drag;
             drag = null;
 

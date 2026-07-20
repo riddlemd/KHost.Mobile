@@ -454,6 +454,11 @@
                 // Complete the first row so the progress bar isn't at zero when it's spotlighted.
                 if (_seededTonightSongIds.Count > 0)
                     await Tonight.SetCompletedAsync(_seededTonightSongIds[0], true);
+
+                // Persist which rows we queued: when they're the user's OWN songs (not the fixed-id samples), an
+                // app kill mid-tour would otherwise leak them forever — the in-memory list doesn't survive a
+                // restart, and the fixed-id self-heal can't recognize them. The next run's cleanup reads this back.
+                Settings.TutorialSeededTonightIds = string.Join(",", _seededTonightSongIds);
             }
 
             // A venue for the Venues chapter to open + spotlight (KaraFun catalog, toggles, history). Seed a sample
@@ -489,8 +494,17 @@
             // a tour that ended on the sample singer would otherwise clean up the wrong list.
             await RestoreTourSingerAsync();
 
-            foreach (var id in _seededTonightSongIds)
+            // The rows this run queued, UNION the persisted ids from a prior run that was killed mid-tour (its
+            // in-memory list is gone, but the setting survived — see SeedSampleDataAsync).
+            var seededTonight = new HashSet<Guid>(_seededTonightSongIds);
+            foreach (var part in Settings.TutorialSeededTonightIds.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (Guid.TryParse(part, out var persisted))
+                    seededTonight.Add(persisted);
+            }
+            foreach (var id in seededTonight)
                 await Tonight.RemoveAsync(id);
+            Settings.TutorialSeededTonightIds = string.Empty;   // nothing outstanding once removed
             foreach (var id in SampleSongIds)
                 await Tonight.RemoveAsync(id);   // sample-song Tonight rows from a prior interrupted run
             foreach (var id in SampleSongIds)
@@ -499,7 +513,10 @@
             // Never below one singer: the roster must always have someone (RemoveAsync itself doesn't guard that).
             var singers = await SingerStore.GetAllAsync();
             if (singers.Count > 1 && singers.Any(s => s.Id == SampleSingerId))
+            {
                 await SingerStore.RemoveAsync(SampleSingerId);
+                Session.ClearMySongsView(SampleSingerId);   // in case the tour's hold step switched to the sample
+            }
         }
         catch { /* best-effort cleanup */ }
         finally

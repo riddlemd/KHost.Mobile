@@ -67,9 +67,14 @@ window.khSwipe = {
             // Let taps on the interactive controls (favorite, rating, inputs) work normally.
             if (e.target.closest('button, input, select, a, label')) return;
 
-            // A second finger landing before the first lifts would orphan the previous row's hold timer — it would
-            // still fire, for a row the user is no longer pressing, and leave that row's tint stuck on.
-            cancelHold(active);
+            // One gesture at a time: a second finger landing before the first lifts must not hijack the state
+            // machine (it would strand the first row mid-drag and resolve the release against the wrong row).
+            // Kill the first gesture's hold timer so it can't fire for a row nobody is pressing, then ignore
+            // the new pointer entirely — the first finger keeps ownership until it lifts or cancels.
+            if (active) {
+                cancelHold(active);
+                return;
+            }
 
             const rect = row.getBoundingClientRect();
             active = {
@@ -100,7 +105,7 @@ window.khSwipe = {
         });
 
         container.addEventListener('pointermove', (e) => {
-            if (!active) return;
+            if (!active || e.pointerId !== active.pointerId) return;   // not the finger that owns the gesture
             const dx = e.clientX - active.startX;
             const dy = e.clientY - active.startY;
 
@@ -129,7 +134,7 @@ window.khSwipe = {
         });
 
         const finish = (e) => {
-            if (!active) return;
+            if (!active || e.pointerId !== active.pointerId) return;   // not the finger that owns the gesture
             const a = active;
             active = null;
             cancelHold(a);
@@ -145,7 +150,9 @@ window.khSwipe = {
                 return;
             }
 
-            if (a.dragging && Math.abs(a.dx) > a.rect.width * COMMIT_FRACTION) {
+            // Commit the removal only on a real release: a pointercancel (OS notification shade, palm rejection,
+            // the browser reclaiming the gesture) is not the user choosing to delete — snap the row back instead.
+            if (e.type === 'pointerup' && Math.abs(a.dx) > a.rect.width * COMMIT_FRACTION) {
                 showLabel(a.rect, -a.rect.width, true);
                 a.row.style.transition = `transform ${SLIDE_MS}ms ease, opacity ${SLIDE_MS}ms ease`;
                 a.row.style.transform = `translateX(-${a.rect.width}px)`;

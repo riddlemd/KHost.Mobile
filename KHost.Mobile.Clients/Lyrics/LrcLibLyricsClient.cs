@@ -31,6 +31,9 @@ public sealed class LrcLibLyricsClient(HttpClient httpClient) : ILyricsClient
             throw new LyricsLookupException("Couldn't reach the lyrics service. Check your connection and try again.", ex);
         }
 
+        // Dispose on every exit (the 404 fast path is the COMMON outcome) so the pooled connection is released.
+        using var _ = response;
+
         if (response.StatusCode == HttpStatusCode.NotFound)
             return null;   // no match — not an error
 

@@ -28,6 +28,7 @@ public sealed class MauiAppSettings : IAppSettings
     private const string RatePerformancesKey = "settings.rate_performances";
     private const string UpdateCheckKey = "settings.update_check";
     private const string TutorialCompletedKey = "settings.tutorial_completed";
+    private const string TutorialSeededTonightIdsKey = "settings.tutorial_seeded_tonight_ids";
     private const string LastActiveSingerIdKey = "settings.last_active_singer_id";
 
     public bool AutoFillMetadata
@@ -152,5 +153,11 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(TutorialCompletedKey, false);
         set => Preferences.Default.Set(TutorialCompletedKey, value);
+    }
+
+    public string TutorialSeededTonightIds
+    {
+        get => Preferences.Default.Get(TutorialSeededTonightIdsKey, string.Empty);
+        set => Preferences.Default.Set(TutorialSeededTonightIdsKey, value);
     }
 }

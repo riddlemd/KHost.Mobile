@@ -30,8 +30,14 @@ public sealed class YouTubeMusicImportService(HttpClient httpClient) : IYouTubeM
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
+            // A genuine caller cancellation rethrows as OperationCanceledException; only a real network failure
+            // (or a request-timeout TaskCanceledException) maps to the domain error. Mirrors the sibling clients.
+            cancellationToken.ThrowIfCancellationRequested();
             throw new YouTubeMusicImportException("Couldn't reach YouTube Music. Check your connection and try again.", ex);
         }
+
+        // Dispose on every exit (including the throw path) so the pooled connection is released.
+        using var _ = response;
 
         // A private/invalid playlist still returns 200 with an error state in the page — the parser's
         // "no tracks" check handles that; a non-200 here is a genuine transport/service problem.

@@ -42,12 +42,13 @@ public sealed class JsonFileTonightStore : ITonightStore
     // re-raise Changed — the UI then reloads this singer's set exactly as it would after any mutation.
     private void OnActiveSingerChanged(object? sender, EventArgs e) => Changed?.Invoke(this, EventArgs.Empty);
 
-    // The active singer's tonight file, or the legacy single-user file when no singer is active (pre-seed, or the
-    // session-less test path).
-    private string CurrentPath()
+    // The given singer's tonight file, or the legacy single-user file when no singer is active (pre-seed, or the
+    // session-less test path). Takes the singer explicitly — LoadAsync captures ActiveSingerId ONCE and SaveAsync
+    // writes to the singer the data was LOADED for, so a singer switch landing mid-operation can't write one
+    // singer's set into another singer's file.
+    private string PathFor(Guid? singerId)
     {
-        var id = _session?.ActiveSingerId;
-        var name = id is null ? SingerDataFiles.LegacyTonight : SingerDataFiles.Tonight(id.Value);
+        var name = singerId is null ? SingerDataFiles.LegacyTonight : SingerDataFiles.Tonight(singerId.Value);
         return Path.Combine(_paths.AppDataDirectory, name);
     }
 
@@ -239,7 +240,7 @@ public sealed class JsonFileTonightStore : ITonightStore
         // First load, or the active singer changed out from under the cache → (re)load from that singer's file.
         _entries = null;
         _loadedFor = singer;
-        var path = CurrentPath();
+        var path = PathFor(singer);
 
         if (!File.Exists(path))
         {
@@ -263,12 +264,12 @@ public sealed class JsonFileTonightStore : ITonightStore
         return _entries;
     }
 
-    // Callers must hold _gate.
+    // Callers must hold _gate. Writes to the singer the entries were LOADED for (_loadedFor, set by LoadAsync before
+    // any await) — never re-reads ActiveSingerId, which may have moved on while this operation was in flight.
     private async Task SaveAsync(List<TonightEntry> entries)
     {
         _entries = entries;
-        _loadedFor = _session?.ActiveSingerId;
-        var path = CurrentPath();
+        var path = PathFor(_loadedFor);
         await using var stream = File.Create(path);
         await JsonSerializer.SerializeAsync(stream, entries, TonightJsonContext.Default.ListTonightEntry);
         _log.LogDebug("Tonight set saved: {Count} entries to {Path}", entries.Count, path);

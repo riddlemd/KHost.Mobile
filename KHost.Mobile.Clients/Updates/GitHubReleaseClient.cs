@@ -27,6 +27,9 @@ public sealed class GitHubReleaseClient(HttpClient httpClient) : IUpdateClient
             return null;
         }
 
+        // Dispose on every exit (including the not-success early return) so the pooled connection is released.
+        using var _ = response;
+
         if (!response.IsSuccessStatusCode)
             return null;
 

@@ -24,6 +24,9 @@ public sealed class AppSession : IAppSession
     }
 
     /// <inheritdoc />
+    public void ClearMySongsView(Guid singerId) => _mySongsViews.Remove(singerId);
+
+    /// <inheritdoc />
     public Guid? ActiveVenueId { get; private set; }
 
     /// <inheritdoc />
