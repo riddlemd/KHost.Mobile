@@ -27,7 +27,7 @@
                 <span class="setting__title">“Tonight” tab</span>
                 <span class="setting__desc">
                     Show the Tonight tab in the bottom bar — an on-deck set you build from your list, reorder, and
-                    check off as you sing. Turn off to hide the tab; with only My List left there's nothing to tab
+                    check off as you sing. Turn off to hide the tab; with only My Songs left there's nothing to tab
                     between, so the whole bottom bar goes too. Your saved set is kept and comes back when you
                     re-enable it.
                 </span>
@@ -41,11 +41,11 @@
     </div>
 
     <div class="card" data-tut="settings-features">
-        <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("mylist")' aria-expanded="@IsOpen("mylist")">
-            <span class="filters-toggle__label">My List</span>
-            <span class="filters-toggle__chevron @(IsOpen("mylist") ? "is-open" : "")">▾</span>
+        <button type="button" class="filters-toggle settings-section" @onclick='() => Toggle("mysongs")' aria-expanded="@IsOpen("mysongs")">
+            <span class="filters-toggle__label">My Songs</span>
+            <span class="filters-toggle__chevron @(IsOpen("mysongs") ? "is-open" : "")">▾</span>
         </button>
-        @if (IsOpen("mylist"))
+        @if (IsOpen("mysongs"))
         {
         <label class="setting">
             <span class="setting__text">
@@ -271,7 +271,7 @@
             <span class="setting__text">
                 <span class="setting__title">Rate each performance</span>
                 <span class="setting__desc">
-                    Ask “how did it go?” with a star rating whenever you mark a song sung — from My List (“Mark sung”)
+                    Ask “how did it go?” with a star rating whenever you mark a song sung — from My Songs (“Mark sung”)
                     and from the Tonight tab (checking a song off). Turn off if you'd rather just log it (and jot a
                     note) without judging the performance.
                 </span>
@@ -442,7 +442,7 @@
 
     private void CancelClear() => _confirmClear = false;
 
-    // Re-arm the first-run tour: clear the durable "done" flag and the per-launch guard, then land on My List
+    // Re-arm the first-run tour: clear the durable "done" flag and the per-launch guard, then land on My Songs
     // where the tour starts (TutorialOverlay picks the navigation up via LocationChanged and kicks off).
     private void ReplayTutorial()
     {

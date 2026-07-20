@@ -73,7 +73,7 @@
     }
 
     <button class="btn btn-primary" @onclick="AddAsync" disabled="@(!CanAdd)">
-        @(IsDuplicate && _confirmedDuplicate ? "Add anyway" : "Add to my list")
+        @(IsDuplicate && _confirmedDuplicate ? "Add anyway" : "Add to my songs")
     </button>
     }
 </div>
@@ -798,7 +798,7 @@ else
     private string? _scrollToSongId;   // set on favorite-toggle; the next render scrolls this card into view
 
     // Filter + sort + paging live on IAppSession (one view-state per singer), and scroll on scroll.js keyed per
-    // singer, so they survive a tab change AND a singer switch — each singer's My List keeps its own filters, sort,
+    // singer, so they survive a tab change AND a singer switch — each singer's My Songs keeps its own filters, sort,
     // paged height and scroll position. The page component is disposed on navigation and its own fields would
     // otherwise reset; a singer switch keeps the page mounted but is detected in RefreshAsync (see below).
     private Guid? _viewSinger;   // the singer whose view state is currently loaded into this page's fields
@@ -1175,7 +1175,7 @@ else
 
         // Smart landing (once per launch): if a set is queued for tonight, open onto the Tonight tab instead of
         // the wishlist — you walk into the venue and your set is right there. With nothing queued (or Tonight
-        // off) we stay here. Every later navigation is left alone, so tapping "My List" never bounces away.
+        // off) we stay here. Every later navigation is left alone, so tapping "My Songs" never bounces away.
         if (!Session.LandingResolved)
         {
             Session.LandingResolved = true;

@@ -9,7 +9,7 @@
 @implements IDisposable
 
 @* First-run coach-marks. Lives in MainLayout so it overlays every page and survives the navigations it drives
-   between My List, Tonight, Import and Settings. Shows once on a fresh install (IAppSettings.TutorialCompleted
+   between My Songs, Tonight, Import and Settings. Shows once on a fresh install (IAppSettings.TutorialCompleted
    defaults false); a per-launch guard (IAppSession.TutorialResolved) stops it re-triggering on every navigation.
    Each step dims the screen and cuts a spotlight hole over one control; a step whose target isn't on-screen degrades
    to a centered card. So the song/Tonight spotlights have something to point at on a fresh install, an empty list is
@@ -58,7 +58,7 @@
 
 @code {
     // One tour step. Chapter groups steps into a skippable section ("" = the chapter-less Welcome/outro). IsIntro
-    // marks a chapter's opening card. Route is the target page ("" = My List); Anchor is the data-tut value to
+    // marks a chapter's opening card. Route is the target page ("" = My Songs); Anchor is the data-tut value to
     // spotlight (null = a centered explain card, also the graceful fallback when a target isn't on-screen). VenueDetail
     // steps want the Venues detail sheet open (driven via the session signal). NeedsTonight/NeedsTags steps drop out
     // entirely when that feature is off.
@@ -316,7 +316,7 @@
         // Elements are gone now; just drop the stored resize context (safe — takes no element refs).
         try { await JS.InvokeVoidAsync("khTutorial.clear"); } catch { /* JS not ready — nothing to clean up */ }
 
-        // Land back on My List where the tour began, if we ended on another page.
+        // Land back on My Songs where the tour began, if we ended on another page.
         if (Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].TrimEnd('/').Length > 0)
             Nav.NavigateTo("/");
     }

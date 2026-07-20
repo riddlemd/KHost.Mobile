@@ -52,7 +52,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IVenueStore, JsonFileVenueStore>();
 
         // Roster of singers who share this device. Its own JSON-file store; singleton so its list + Changed event
-        // are shared app-wide. The active singer (whose My List + Tonight the app shows) is a separate ephemeral
+        // are shared app-wide. The active singer (whose My Songs + Tonight the app shows) is a separate ephemeral
         // pointer on IAppSession; the per-singer song/tonight stores above read it to pick each singer's file.
         builder.Services.AddSingleton<ISingerStore, JsonFileSingerStore>();
 

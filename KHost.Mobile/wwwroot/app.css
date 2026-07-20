@@ -2074,7 +2074,7 @@ body.kh-sheet-open { overflow: hidden; }
 /* ============================================================================
    Singers — the active-singer avatar + "Who's singing?" switcher in the header,
    the Singers page (roster), and the add/edit sheet. Multiple singers share one
-   device; each keeps their own My List + Tonight, and the active singer's color
+   device; each keeps their own My Songs + Tonight, and the active singer's color
    tints the whole app chrome (see js/singer.js). See SingerChip.razor,
    Components/Pages/Singers.razor, Components/SingerEditSheet.razor.
    ============================================================================ */

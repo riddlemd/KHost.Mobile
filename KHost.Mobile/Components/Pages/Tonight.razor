@@ -10,7 +10,7 @@
 
 @* The "Tonight" on-deck set — its own tab. Drag the ⠿ handle to reorder, tap ✓ to check a song off (which logs
    a performance, prompting for a rating when that's enabled), ✕ to drop it, "End night" to clear the set. When
-   Tonight is switched off in Settings this route has no tab, so it bounces back to My List. *@
+   Tonight is switched off in Settings this route has no tab, so it bounces back to My Songs. *@
 
 @if (_loading)
 {
@@ -24,8 +24,8 @@ else if (_tonight.Count == 0)
     <div class="empty-state tonight-empty">
         <div class="empty-state__icon">🎤</div>
         <div class="empty-state__title">Nothing queued yet</div>
-        <div>Pick songs from My List and tap the 🎤 button to line up your set for tonight.</div>
-        <button class="btn btn-primary tonight-empty__cta" @onclick="GoToMyList">Browse My List</button>
+        <div>Pick songs from My Songs and tap the 🎤 button to line up your set for tonight.</div>
+        <button class="btn btn-primary tonight-empty__cta" @onclick="GoToMySongs">Browse My Songs</button>
     </div>
 }
 else
@@ -122,7 +122,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // No Tonight tab when the feature is off — this route shouldn't be reachable, so bounce to My List.
+        // No Tonight tab when the feature is off — this route shouldn't be reachable, so bounce to My Songs.
         if (!Settings.TonightEnabled)
         {
             Nav.NavigateTo("", replace: true);
@@ -186,7 +186,7 @@ else
         return false;
     }
 
-    private void GoToMyList() => Nav.NavigateTo("");
+    private void GoToMySongs() => Nav.NavigateTo("");
 
     // ---- Set list -----------------------------------------------------------------------------
 

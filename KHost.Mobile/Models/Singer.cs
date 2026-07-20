@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace KHost.Mobile.Models;
 
 /// <summary>
-/// One singer who shares the device — the owner of a personal My List and Tonight set. Multiple singers can be
+/// One singer who shares the device — the owner of a personal My Songs and Tonight set. Multiple singers can be
 /// kept on a single device (a phone passed around the karaoke table); switching the active singer swaps which
 /// personal data the app shows, while the Venues list stays shared across everyone. Identity is a local
 /// <see cref="Id"/> GUID; that id also namespaces the singer's on-device song-list / tonight files (see

@@ -8,8 +8,8 @@ public interface IAppSession
 {
     /// <summary>
     /// Whether the one-time "smart landing" decision has been made this launch. The first time My Songs loads we
-    /// route to the Tonight tab if a set is queued, otherwise stay on My List; every later navigation is left
-    /// alone (so tapping "My List" doesn't bounce back to Tonight). Set once, then never re-evaluated this launch.
+    /// route to the Tonight tab if a set is queued, otherwise stay on My Songs; every later navigation is left
+    /// alone (so tapping "My Songs" doesn't bounce back to Tonight). Set once, then never re-evaluated this launch.
     /// </summary>
     bool LandingResolved { get; set; }
 
@@ -55,7 +55,7 @@ public interface IAppSession
     event EventHandler? ActiveVenueChanged;
 
     /// <summary>
-    /// The singer whose personal lists (My List + Tonight) the app is currently showing. Multiple singers share the
+    /// The singer whose personal lists (My Songs + Tonight) the app is currently showing. Multiple singers share the
     /// device; this ephemeral pointer selects whose data the per-singer stores read/write. Re-resolved each launch
     /// (from <see cref="IAppSettings.LastActiveSingerId"/> when still valid, else the first singer) and never
     /// persisted here. The bootstrap sets it before any personal page loads, so it is expected non-null in the UI.

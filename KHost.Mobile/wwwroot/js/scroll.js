@@ -39,8 +39,26 @@ window.khScroll = {
     },
 
     restore(key) {
-        const y = this._pos[key];
-        if (y != null) window.scrollTo({ top: y, behavior: 'instant' });
+        const target = this._pos[key] || 0;
+
+        // No saved position for this list (e.g. a singer who hasn't scrolled theirs) → show the top. Without this
+        // an unsaved list would keep whatever offset the outgoing list left window.scrollY at.
+        if (target <= 0) {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+            return;
+        }
+
+        // A freshly-rendered list (especially after a singer switch) may not have laid out to full height yet in the
+        // Android WebView, so a single scrollTo lands short. Re-apply across a few animation frames until the target
+        // is actually reachable (window.scrollY catches up) or we give up — then it settles at the true position.
+        let tries = 0;
+        const apply = () => {
+            window.scrollTo({ top: target, behavior: 'instant' });
+            if (Math.abs(window.scrollY - target) > 2 && tries++ < 20) {
+                requestAnimationFrame(apply);
+            }
+        };
+        requestAnimationFrame(apply);
     },
 
     toTop() { window.scrollTo({ top: 0, behavior: 'instant' }); },

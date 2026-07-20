@@ -8,7 +8,7 @@
 @implements IDisposable
 
 @* Gate the shell on the singer bootstrap: at least one singer must exist and the active one chosen before any
-   personal page (My List / Tonight) loads its data, since those stores read the active singer. The bootstrap is a
+   personal page (My Songs / Tonight) loads its data, since those stores read the active singer. The bootstrap is a
    couple of file checks, so this is a brief flash at most. *@
 @if (_ready)
 {
@@ -64,7 +64,7 @@
     @Body
 </main>
 
-@* Bottom tab bar (Tonight + My List). Only shown when Tonight is enabled — with it off there's a single
+@* Bottom tab bar (Tonight + My Songs). Only shown when Tonight is enabled — with it off there's a single
    destination, so the whole bar is hidden and navigation runs through the header menu. Settings has no Changed
    event, so re-read it on every navigation (LocationChanged → StateHasChanged) to reflect a live toggle. *@
 @if (Settings.TonightEnabled)
