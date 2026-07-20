@@ -274,6 +274,7 @@
     if (listSig != _lastListSig) { _renderCount = PageSize; _lastListSig = listSig; _pagingReset = true; }
     var page = visible.Take(_renderCount).ToList();
     _listRendered = !_loading && visible.Count > 0;
+    _artPageSig = $"{listSig}:{_renderCount}";   // OnAfterRender loads art for this page only when the signature changes
 }
 
 @if (!_loading)
@@ -831,6 +832,12 @@ else
     private readonly Dictionary<Guid, string> _artUris = [];
     private CancellationTokenSource? _artCts;   // cancels the in-flight art load when the list reloads / page disposes
 
+    // Art is loaded only for the CURRENTLY-PAGED cards, so memory is bounded by what's on screen rather than by the
+    // whole library. _artPageSig (filter/sort signature + paged count) captures the rendered page; OnAfterRender
+    // kicks a load whenever it changes (a filter, sort, search, or the sentinel growing the page).
+    private string _artPageSig = "";
+    private string _artLoadedSig = " ";   // distinct from any real signature so the first page always loads
+
     // A release year is optional, but when supplied it must be a real year: 1..this year.
     private static int CurrentYear => DateTime.Now.Year;
     private bool YearValid => !_year.HasValue || (_year.Value >= 1 && _year.Value <= CurrentYear);
@@ -1259,6 +1266,15 @@ else
         else if (_detailItem is null)
         {
             _sheetBound = false;
+        }
+
+        // Load album art for the newly-rendered page, once per page change (filter / sort / search / grew a page).
+        // Reloads (RefreshAsync) and single-item autofills trigger LoadArtAsync directly, since those change content
+        // without changing the page signature.
+        if (_artPageSig != _artLoadedSig)
+        {
+            _artLoadedSig = _artPageSig;
+            _ = LoadArtAsync();
         }
 
         // History sheet: same pull-down-to-dismiss, but it has an inner scrolling list — khSheet's scroller
@@ -2074,7 +2090,8 @@ else
         _artCts = new CancellationTokenSource();
         var token = _artCts.Token;
 
-        var pending = _items.Where(i => i.ArtworkUrl is not null && !_artUris.ContainsKey(i.Id)).ToList();
+        // Only the cards currently paged in — art memory is bounded by the visible page, not the whole library.
+        var pending = Sorted().Take(_renderCount).Where(i => i.ArtworkUrl is not null && !_artUris.ContainsKey(i.Id)).ToList();
         foreach (var item in pending)
         {
             if (token.IsCancellationRequested)
