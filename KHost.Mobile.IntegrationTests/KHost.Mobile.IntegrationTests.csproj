@@ -57,6 +57,7 @@
     <Compile Include="..\KHost.Mobile\Services\LyricsCacheJsonContext.cs" Link="Linked\Services\LyricsCacheJsonContext.cs" />
     <Compile Include="..\KHost.Mobile\Services\IAlbumArtCache.cs" Link="Linked\Services\IAlbumArtCache.cs" />
     <Compile Include="..\KHost.Mobile\Services\AlbumArtCache.cs" Link="Linked\Services\AlbumArtCache.cs" />
+    <Compile Include="..\KHost.Mobile\Diagnostics\LoggingHttpMessageHandler.cs" Link="Linked\Diagnostics\LoggingHttpMessageHandler.cs" />
   </ItemGroup>
 
 </Project>
