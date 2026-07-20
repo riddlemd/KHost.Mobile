@@ -5,12 +5,16 @@
 @inject IAppSettings Settings
 @inject NavigationManager Nav
 @inject IBackButtonService BackButton
+@inject IJSRuntime JS
+@inject IHaptics Haptics
 @implements IDisposable
 
 @* The Singers page — manage the people who share this device. Reached from the header ⋮ menu (below Venues) and the
    "Manage singers" link in the header avatar switcher. Each singer keeps their own My Songs + Tonight set; the Venues
-   list is shared. The filled dot marks the active singer (whose lists the app is showing); tap another to switch.
-   Tapping a row opens its edit sheet (rename, recolor, delete). *@
+   list is shared. The "Active" badge marks the singer whose lists the app is showing.
+   Row gestures come from swipe.js (registered with swipeEnabled:false — a singer is removed from the edit sheet,
+   never by swipe): tap opens the edit sheet, press-and-hold switches to that singer. The edit sheet's "Active"
+   toggle is the equivalent a screen reader can reach, since hold has no accessible gesture. *@
 <section class="singers">
     <div class="page-head">
         <NavLink class="page-back" href="" aria-label="Back to my songs">←</NavLink>
@@ -18,12 +22,13 @@
         <button type="button" class="btn btn-secondary singers__add" @onclick="OpenAdd">＋ Add</button>
     </div>
 
-    <div class="singer-list">
+    <div class="list-hint">Press and hold a singer to switch to them.</div>
+    <div class="singer-list" @ref="_gestureRoot">
         @foreach (var s in _singers)
         {
-            <div class="singer-row @(IsActive(s) ? "is-active" : "")" @key="s.Id">
+            <div class="singer-row @(IsActive(s) ? "is-active" : "")" @key="s.Id" data-singer-id="@s.Id">
                 <span class="singer-av" style="background:@s.Color;">@s.Avatar</span>
-                <div class="singer-row__main" @onclick="() => OpenEdit(s)">
+                <div class="singer-row__main">
                     <div class="singer-row__name">
                         @s.Name
                         @if (IsActive(s))
@@ -32,12 +37,6 @@
                         }
                     </div>
                 </div>
-                @* Radio = single-select: the filled dot is the active singer. Tapping it switches without opening
-                   the edit sheet (which the rest of the row does). *@
-                <button type="button" class="singer-row__radio @(IsActive(s) ? "is-on" : "")"
-                        @onclick="() => SetActive(s)" @onclick:stopPropagation="true"
-                        role="radio" aria-checked="@IsActive(s)"
-                        aria-label="@(IsActive(s) ? $"{s.Name} — active singer" : $"Switch to {s.Name}")"></button>
             </div>
         }
     </div>
@@ -45,13 +44,17 @@
 
 @* ---- Add / edit sheet ---- *@
 <SingerEditSheet Editing="_editing" IsNew="_editingIsNew" CanDelete="_singers.Count > 1"
-                 OnSave="SaveAsync" OnDelete="DeleteAsync" OnClose="CloseEdit" />
+                 IsActive="@(_editing is not null && Session.ActiveSingerId == _editing.Id)"
+                 OnSave="SaveAsync" OnDelete="DeleteAsync" OnSetActive="SetActiveFromSheet" OnClose="CloseEdit" />
 
 @code {
     private IReadOnlyList<Singer> _singers = [];
     private Singer? _editing;
     private bool _editingIsNew;
     private BackButtonOverlayGuard? _backGuard;
+    private ElementReference _gestureRoot;
+    private DotNetObjectReference<Singers>? _selfRef;
+    private bool _gesturesBound;
 
     protected override async Task OnInitializedAsync()
     {
@@ -89,6 +92,53 @@
         Settings.LastActiveSingerId = s.Id.ToString();   // remember for next launch
     }
 
+    // Row gestures live in JS so a scroll or a stray drag can't fire them; the rows carry no interactive control
+    // of their own now, so the whole row is the tap/hold surface.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_singers.Count > 0 && !_gesturesBound)
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSwipe.register", _gestureRoot, _selfRef,
+                new { idAttr = "data-singer-id", tapMethod = "OpenEditById", holdMethod = "SetActiveById", swipeEnabled = false });
+            _gesturesBound = true;
+        }
+    }
+
+    // Tap (a stationary pointerup) from swipe.js. Called from JS, so render explicitly.
+    [JSInvokable]
+    public Task OpenEditById(string id)
+    {
+        if (Guid.TryParse(id, out var guid))
+        {
+            var s = _singers.FirstOrDefault(x => x.Id == guid);
+            if (s is not null)
+            {
+                OpenEdit(s);
+                StateHasChanged();
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    // Press-and-hold from swipe.js switches to that singer — the haptic tick is what confirms the hold took,
+    // since the row's own re-render is the only other feedback.
+    [JSInvokable]
+    public Task SetActiveById(string id)
+    {
+        if (Guid.TryParse(id, out var guid))
+        {
+            var s = _singers.FirstOrDefault(x => x.Id == guid);
+            if (s is not null && !IsActive(s))
+            {
+                SetActive(s);
+                Haptics.LongPress();
+                StateHasChanged();
+            }
+        }
+        return Task.CompletedTask;
+    }
+
     // ---- Add / edit ----
     private void OpenAdd()
     {
@@ -104,6 +154,13 @@
     }
 
     private void CloseEdit() => _editing = null;
+
+    // Switching from the sheet closes it: the point of the switch is to get back to that singer's lists.
+    private void SetActiveFromSheet(Singer s)
+    {
+        SetActive(s);
+        _editing = null;
+    }
 
     private async Task SaveAsync(Singer s)
     {
@@ -139,6 +196,7 @@
         Id = s.Id,
         Name = s.Name,
         Color = s.Color,
+        Glyph = s.Glyph,
         Order = s.Order,
         AddedAt = s.AddedAt,
     };
@@ -146,6 +204,7 @@
     public void Dispose()
     {
         _backGuard?.Dispose();
+        _selfRef?.Dispose();
         Store.Changed -= OnChanged;
         Session.ActiveSingerChanged -= OnChanged;
     }

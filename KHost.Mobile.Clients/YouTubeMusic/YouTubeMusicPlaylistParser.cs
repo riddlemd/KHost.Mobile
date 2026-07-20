@@ -155,7 +155,6 @@ public static partial class YouTubeMusicPlaylistParser
         return new YouTubeMusicTrack(title.Trim(), artist.Trim(), videoId);
     }
 
-    // Concatenates the text runs of flexColumns[index].
     private static string? FlexColumnText(JsonElement columns, int index)
     {
         if (index >= columns.GetArrayLength())

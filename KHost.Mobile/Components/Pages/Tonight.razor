@@ -260,7 +260,6 @@ else
             }
             else
             {
-                // Log an unrated performance and complete immediately, no prompt.
                 var perf = new Performance { Date = DateTimeOffset.Now, HowItWent = 0, VenueId = Session.ActiveVenueId };
                 song.Performances.Add(perf);
                 song.Status = SongListItemStatus.Sang;
@@ -335,7 +334,6 @@ else
     private async Task RefreshAsync()
     {
         _items = await Store.GetAllAsync();
-        // Drop any tonight entries whose song was deleted (orphan pruning), then reload the joined set.
         await TonightStore.PruneAsync(_items.Select(i => i.Id).ToList());
         _tonight = await TonightStore.GetAllAsync();
         await InvokeAsync(StateHasChanged);

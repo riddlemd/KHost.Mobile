@@ -62,7 +62,6 @@
         _ => "Tap a star to rate — or skip below",
     };
 
-    // Reset the star/note buffers whenever a different song opens the sheet (or it reopens after closing).
     protected override void OnParametersSet()
     {
         if (Item?.Id != _openFor)

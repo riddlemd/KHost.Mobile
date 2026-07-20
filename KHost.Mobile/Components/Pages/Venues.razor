@@ -7,11 +7,14 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject IBackButtonService BackButton
+@inject IHaptics Haptics
 @implements IDisposable
 
 @* The Venues page — manage saved karaoke venues and see your history at each. Reached from the header ⋮ menu and
    the active-venue chip. The active venue (a session pointer, not persisted here) is pinned + badged; performances
-   logged while a venue is active are tagged with it, which is what powers the per-venue history below. *@
+   logged while a venue is active are tagged with it, which is what powers the per-venue history below.
+   Row gestures come from swipe.js: tap opens the detail sheet, press-and-hold sets the venue active (the detail
+   sheet's Active toggle is the equivalent that a screen reader can reach), swipe-left removes. *@
 <section class="venues">
     <div class="page-head">
         <NavLink class="page-back" href="" aria-label="Back to my songs">←</NavLink>
@@ -38,6 +41,7 @@
         }
         else
         {
+        <div class="list-hint">Press and hold a venue to make it active.</div>
         <div class="venue-list" @ref="_swipeRoot">
             @foreach (var v in Ordered())
             {
@@ -60,12 +64,10 @@
                             <div class="venue-row__sub">@sub</div>
                         }
                     </div>
-                    @* Radio = single-select: the filled dot marks the active venue. Tapping it sets active without
-                       opening the detail sheet (which the rest of the row does). *@
-                    <button type="button" class="venue-row__radio @(IsActive(v) ? "is-on" : "")"
-                            @onclick="() => SetActive(v)" @onclick:stopPropagation="true"
-                            role="radio" aria-checked="@IsActive(v)"
-                            aria-label="@(IsActive(v) ? $"{v.Name} — active venue" : $"Set {v.Name} active")"></button>
+                    @if (IsActive(v))
+                    {
+                        <span class="venue-row__active" aria-label="Active venue">Active</span>
+                    }
                 </div>
             }
         </div>
@@ -305,6 +307,25 @@
         return Task.CompletedTask;
     }
 
+    // Press-and-hold from swipe.js sets the row's venue active — the gesture replaces the old radio dot, so the
+    // haptic tick is the only signal the hold registered before the row re-renders. Called from JS, so render
+    // explicitly.
+    [JSInvokable]
+    public Task SetActiveById(string id)
+    {
+        if (Guid.TryParse(id, out var guid))
+        {
+            var v = _venues.FirstOrDefault(x => x.Id == guid);
+            if (v is not null && !IsActive(v))
+            {
+                SetActive(v);
+                Haptics.LongPress();
+                StateHasChanged();
+            }
+        }
+        return Task.CompletedTask;
+    }
+
     // A commit-swipe from swipe.js removes the venue immediately and offers a few-second undo (mirrors My Songs).
     [JSInvokable]
     public async Task RemoveById(string id)
@@ -368,7 +389,7 @@
         {
             _selfRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("khSwipe.register", _swipeRoot, _selfRef,
-                new { idAttr = "data-venue-id", swipingClass = "venue-row--swiping", tapMethod = "OpenDetailById", removeMethod = "RemoveById" });
+                new { idAttr = "data-venue-id", swipingClass = "venue-row--swiping", tapMethod = "OpenDetailById", removeMethod = "RemoveById", holdMethod = "SetActiveById" });
             _swipeBound = true;
         }
         else if (!listShown)
@@ -399,7 +420,6 @@
     // A manual pick pins the venue so the periodic geo re-check won't override it.
     private void SetActive(Venue v) => Session.SetActiveVenue(v.Id, pinned: true);
 
-    // Detail-card toggle: clear the active venue if this card's venue is already active, else make it active.
     // Pinned either way (a manual pick), same as the list radio.
     private void ToggleActive(Venue v) => Session.SetActiveVenue(IsActive(v) ? null : v.Id, pinned: true);
 

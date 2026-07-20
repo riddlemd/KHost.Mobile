@@ -97,9 +97,8 @@ else
             notifyStateChanged: StateHasChanged);
     }
 
-    // Singer bootstrap: make sure a singer exists (seeding the default + migrating any legacy single-user files on
-    // first run), then pick the active singer — the one remembered from last launch when it's still around, else the
-    // first — and set it before the shell (and its personal pages) render.
+    // Singer bootstrap: EnsureSeededAsync also seeds the default singer and migrates any legacy single-user files
+    // on first run. The active singer must be set before the shell (and its personal pages) render.
     protected override async Task OnInitializedAsync()
     {
         await Singers.EnsureSeededAsync();
@@ -142,7 +141,7 @@ else
 
     private void CloseMenu() => _menuOpen = false;
 
-    // Toggles the theme in place; the menu stays open so the label flips and the change is visible.
+    // The menu stays open so the label flips and the change is visible.
     private async Task ToggleThemeAsync()
     {
         _theme = await JS.InvokeAsync<string>("khTheme.toggle");

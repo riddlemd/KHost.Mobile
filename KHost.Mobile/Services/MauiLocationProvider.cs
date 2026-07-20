@@ -30,7 +30,6 @@ public sealed class MauiLocationProvider(ILogger<MauiLocationProvider> logger) :
                     return null;
                 }
 
-                // Fall back to the last known fix if a fresh one doesn't resolve in time.
                 var location = await Geolocation.Default.GetLocationAsync(Request, cancellationToken)
                                ?? await Geolocation.Default.GetLastKnownLocationAsync();
                 if (location is null)

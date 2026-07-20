@@ -78,8 +78,7 @@
         StateHasChanged();
     }
 
-    // Re-tint the app chrome to the active singer's color whenever it changes (initial load + every switch). JS
-    // interop, so it lives here rather than in the render path; guarded so we only call on a real color change.
+    // JS interop, so it lives here rather than in the render path; guarded so we only call on a real color change.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         var color = _active?.Color;

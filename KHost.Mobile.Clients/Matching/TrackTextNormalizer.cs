@@ -34,7 +34,6 @@ internal static class TrackTextNormalizer
         text = StripBetween(text, '(', ')');
         text = StripBetween(text, '[', ']');
 
-        // Cut trailing qualifiers: "song - live", "artist feat. x", "x featuring y".
         foreach (var marker in Qualifiers)
         {
             var idx = text.IndexOf(marker, StringComparison.Ordinal);
@@ -42,7 +41,6 @@ internal static class TrackTextNormalizer
                 text = text[..idx];
         }
 
-        // Strip accents, and fold every non-alphanumeric char to a space.
         var decomposed = text.Normalize(NormalizationForm.FormD);
         var sb = new StringBuilder(decomposed.Length);
         foreach (var ch in decomposed)
@@ -52,7 +50,6 @@ internal static class TrackTextNormalizer
             sb.Append(char.IsLetterOrDigit(ch) ? ch : ' ');
         }
 
-        // Collapse whitespace to single spaces.
         return string.Join(' ', sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 

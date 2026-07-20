@@ -47,7 +47,6 @@ window.khTonight = {
             const dy = e.clientY - drag.startY;
             drag.row.style.transform = `translateY(${dy}px)`;
 
-            // How many slots have we crossed? Round to the nearest row height.
             const list = rows();
             let target = drag.index + Math.round(dy / drag.rowH);
             target = Math.max(0, Math.min(list.length - 1, target));

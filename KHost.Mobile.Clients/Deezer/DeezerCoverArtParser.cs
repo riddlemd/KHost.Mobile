@@ -58,7 +58,7 @@ public static class DeezerCoverArtParser
     }
 
     // Prefer a 500×500 cover (good on a card without bloating the cached/base64-encoded image), then fall
-    // back through the other Deezer sizes. Returns null when the album carries no usable cover field.
+    // back through the other Deezer sizes.
     private static string? CoverUrl(JsonElement album)
     {
         foreach (var field in (ReadOnlySpan<string>)["cover_big", "cover_xl", "cover_medium", "cover_small", "cover"])

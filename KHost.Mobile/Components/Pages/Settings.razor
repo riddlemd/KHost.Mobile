@@ -378,8 +378,7 @@
     private int _albumArtCount;
     private bool _confirmClear;
 
-    // Collapsible sections. Track the collapsed ones by a short id (default: all expanded, so nothing is hidden
-    // on first visit); the header chevron toggles membership.
+    // Collapsible sections: default to all expanded, so nothing is hidden on first visit.
     private readonly HashSet<string> _collapsed = [];
     private bool IsOpen(string id) => !_collapsed.Contains(id);
     private void Toggle(string id) { if (!_collapsed.Add(id)) _collapsed.Remove(id); }
@@ -442,8 +441,7 @@
 
     private void CancelClear() => _confirmClear = false;
 
-    // Re-arm the first-run tour: clear the durable "done" flag and the per-launch guard, then land on My Songs
-    // where the tour starts (TutorialOverlay picks the navigation up via LocationChanged and kicks off).
+    // TutorialOverlay picks up the navigation to "/" via LocationChanged and kicks off the tour.
     private void ReplayTutorial()
     {
         Prefs.TutorialCompleted = false;

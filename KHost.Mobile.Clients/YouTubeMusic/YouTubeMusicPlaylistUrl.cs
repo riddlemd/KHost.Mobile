@@ -36,7 +36,6 @@ public static partial class YouTubeMusicPlaylistUrl
             return true;
         }
 
-        // browse/VL<id> links, or a bare id pasted on its own.
         var browseIndex = trimmed.IndexOf("browse/", StringComparison.Ordinal);
         if (browseIndex >= 0)
         {

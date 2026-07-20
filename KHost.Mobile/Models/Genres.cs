@@ -62,8 +62,7 @@ public static class Genres
     ];
 
     // Map an external (iTunes) genre onto the app's fixed genre list (the edit field is a <select> of All,
-    // so an unmapped value couldn't stick). Exact match, then a few aliases, then a contains fallback.
-    // Shared by the detail-sheet auto-fill and the post-import review.
+    // so an unmapped value couldn't stick). Shared by the detail-sheet auto-fill and the post-import review.
     private static readonly Dictionary<string, string> Aliases = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Hip-Hop/Rap"] = "Hip Hop",

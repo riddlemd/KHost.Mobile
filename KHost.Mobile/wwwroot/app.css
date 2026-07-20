@@ -1994,22 +1994,16 @@ body.kh-sheet-open { overflow: hidden; }
 /* "Hidden from switcher" marker — muted so it reads as a status, not an alert like the pink Active badge. */
 .venue-row__badge--muted { color: var(--kh-text-muted); background: var(--kh-surface-2); }
 .venue-row__sub { font-size: 0.8rem; color: var(--kh-text-muted); margin-top: 0.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Active-venue selector: a radio dot (filled = active) that replaces the wide "Set active" button. The button is a
-   44px hit target; the visible dot is drawn smaller via ::before so it doesn't grow the row. */
-.venue-row__radio {
-    flex: 0 0 auto; width: 2.5rem; height: 2.5rem; margin: -0.4rem -0.2rem -0.4rem 0;
-    display: flex; align-items: center; justify-content: center;
-    background: none; border: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+/* Teaches the press-and-hold on the venue + singer lists, since the gesture has no on-screen affordance of its own. */
+.list-hint {
+    font-size: 0.75rem; color: var(--kh-text-muted); margin: 0 0.15rem 0.5rem; text-align: center;
 }
-.venue-row__radio::before {
-    content: ""; box-sizing: border-box; width: 1.5rem; height: 1.5rem; border-radius: 50%;
-    border: 2px solid var(--kh-border); transition: transform 0.06s ease;
+
+/* The active venue is marked by a badge, not a control — it's set by pressing and holding the row (swipe.js). */
+.venue-row__active {
+    flex: 0 0 auto; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;
+    color: #fff; background: var(--kh-primary); border-radius: 999px; padding: 0.1rem 0.45rem;
 }
-.venue-row__radio.is-on::before {
-    border-color: var(--kh-primary); background: var(--kh-primary);
-    box-shadow: inset 0 0 0 0.28rem var(--kh-surface);
-}
-.venue-row__radio:active::before { transform: scale(0.9); }
 
 /* Venues page — detail sheet */
 .venue-detail__hero { display: flex; align-items: center; gap: 0.85rem; margin-top: 0.4rem; }
@@ -2167,21 +2161,15 @@ body.kh-sheet-open { overflow: hidden; }
     font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;
     color: #fff; background: var(--kh-primary); border-radius: 999px; padding: 0.1rem 0.45rem;
 }
-/* Active-singer selector: a radio dot (filled = active), matching the Venues page radio. */
-.singer-row__radio {
-    flex: 0 0 auto; width: 2.5rem; height: 2.5rem; margin: -0.4rem -0.2rem -0.4rem 0;
-    display: flex; align-items: center; justify-content: center;
-    background: none; border: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+/* Press-and-hold feedback, shared by the venue + singer rows. Deliberately NOT a transform: swipe.js writes an
+   inline transform on these same rows to drag them, and that would win over any class rule here. Tinting the
+   surface instead keeps the two gestures independent. swipe.js drops the class the moment the hold fires or is
+   cancelled, so the tint clears as the haptic lands; the ~hold-length fade makes it read as a progress cue. */
+.venue-row.is-holding,
+.singer-row.is-holding {
+    background: color-mix(in srgb, var(--kh-primary) 14%, var(--kh-surface));
+    transition: background 0.45s ease-out;
 }
-.singer-row__radio::before {
-    content: ""; box-sizing: border-box; width: 1.5rem; height: 1.5rem; border-radius: 50%;
-    border: 2px solid var(--kh-border); transition: transform 0.06s ease;
-}
-.singer-row__radio.is-on::before {
-    border-color: var(--kh-primary); background: var(--kh-primary);
-    box-shadow: inset 0 0 0 0.28rem var(--kh-surface);
-}
-.singer-row__radio:active::before { transform: scale(0.9); }
 
 /* Add/edit sheet — name input + delete/hint (the color + emoji picker is the shared IconPicker below). */
 .singer-edit__name { flex: 1 1 auto; min-width: 0; }

@@ -182,7 +182,7 @@
         try { await Locator.ResolveActiveAsync(); } catch { /* best-effort */ }
     }
 
-    // 📌 Pinned: hold the current venue so the periodic geo re-check leaves it alone.
+    // 📌 Pinned so the periodic geo re-check leaves it alone.
     private void SetPinned() => Session.SetActiveVenue(Session.ActiveVenueId, pinned: true);
 
     private void ManageVenues()

@@ -118,7 +118,7 @@
     </div>
 }
 
-@* Advanced filters open in a bottom sheet from the funnel; each active one also shows as a removable pill above. *@
+@* Each active filter also shows as a removable pill above. *@
 @if (_filterSheetOpen)
 {
     <div class="sheet-backdrop" @onclick="CloseFilterSheet"></div>
@@ -568,7 +568,6 @@ else
                     Find on Spotify
                 </button>
             }
-            @* KaraFun search is per-venue: shown only when the active venue has a KaraFun ID to search under. *@
             @if (Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))
             {
                 <button class="btn sheet__karafun" @onclick="OpenKaraFunAsync">🎙 Find on KaraFun</button>
@@ -718,7 +717,7 @@ else
     private string _artist = string.Empty;
     private string _notes = string.Empty;
     private string _genre = string.Empty;
-    private int? _year;        // release year; null = unset
+    private int? _year;
     private List<string> _tags = [];   // add-form tags buffer; normalized onto the song when it's added
 
     // How many tag chips a card shows inline before collapsing the rest into a "+N" count.
@@ -838,7 +837,6 @@ else
 
     private bool CanAdd => !string.IsNullOrWhiteSpace(_title) && YearValid;
 
-    // Duplicate guard: an existing song with the same title + artist (trimmed, case-insensitive).
     // Non-blocking — the first Add on a match arms an "Add anyway" confirm; editing a field disarms it.
     private bool _confirmedDuplicate;
 
@@ -855,7 +853,6 @@ else
 
     private void OnAddFieldChanged() => _confirmedDuplicate = false;
 
-    // Same year rule for the edit sheet; Save needs a title and a valid year.
     private bool EditYearValid => !_editYear.HasValue || (_editYear.Value >= 1 && _editYear.Value <= CurrentYear);
     private bool CanSaveEdit => !string.IsNullOrWhiteSpace(_editTitle) && EditYearValid;
 
@@ -1019,7 +1016,6 @@ else
         s.Initialized = true;
     }
 
-    // Full reset — search text and every funnel filter (the "No matches" empty state).
     private void ClearFilters()
     {
         _filterSearch = string.Empty;
@@ -1116,7 +1112,6 @@ else
 
         if (!string.IsNullOrWhiteSpace(_filterSearch))
         {
-            // One box matches either field — title OR artist.
             var term = _filterSearch.Trim();
             q = q.Where(i => i.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
                           || i.Artist.Contains(term, StringComparison.OrdinalIgnoreCase));
@@ -1363,7 +1358,6 @@ else
             ShowUndo(removed);
     }
 
-    // Undo: keep the just-removed item around for a few seconds so a swipe can be taken back.
     private void ShowUndo(SongListItem item)
     {
         _undoCts?.Cancel();
@@ -1418,7 +1412,6 @@ else
         return OpenDetail(pick.Id.ToString());
     }
 
-    // A song counts as "sung today" if any of its performance timestamps falls on the local calendar day.
     private static bool SungToday(SongListItem item) =>
         item.Performances.Any(p => p.Date.LocalDateTime.Date == DateTime.Today);
 
@@ -1669,7 +1662,7 @@ else
         _editing = true;
     }
 
-    private void CancelEdit() => _editing = false;   // discard the edit buffers, back to view mode
+    private void CancelEdit() => _editing = false;
 
     // Human list: "Genre", "Genre & Year", or (3+) "A, B, & C" — Oxford comma, ampersand before the last.
     private static string JoinFields(IReadOnlyList<string> parts) => parts.Count switch
@@ -2059,7 +2052,6 @@ else
 
         _items = await Store.GetAllAsync();
         RecomputeYearBounds();
-        // Drop any tonight entries whose song was deleted (orphan pruning), then reload the joined set.
         await Tonight.PruneAsync(_items.Select(i => i.Id).ToList());
         _tonight = await Tonight.GetAllAsync();
         await InvokeAsync(StateHasChanged);

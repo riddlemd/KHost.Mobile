@@ -18,6 +18,19 @@
                    @bind="_name" @bind:event="oninput" />
         </IconPicker>
 
+        @* The keyboard/screen-reader equivalent of the list's press-and-hold, which no assistive gesture maps to.
+           Only offered on an existing singer, and only to switch TO one — there is always exactly one active. *@
+        @if (!IsNew && !IsActive)
+        {
+            <button type="button" class="btn btn-secondary singer-edit__activate" @onclick="ActivateAsync">
+                Switch to this singer
+            </button>
+        }
+        else if (!IsNew)
+        {
+            <div class="singer-edit__hint singer-edit__hint--active">Currently singing — this is the active singer.</div>
+        }
+
         <div class="sheet__actions" style="margin-top:1rem">
             <button class="btn btn-secondary" @onclick="OnClose">Cancel</button>
             <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(string.IsNullOrWhiteSpace(_name))">Save</button>
@@ -53,6 +66,14 @@
 
     /// <summary>Raised when the sheet is dismissed without saving (✕ / Cancel / backdrop / swipe).</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Whether the singer being edited is the active one — drives "Switch to this singer" vs the
+    /// "currently singing" note.</summary>
+    [Parameter] public bool IsActive { get; set; }
+
+    /// <summary>Raised with the singer when the user switches to them from the sheet. This is the accessible
+    /// counterpart to the list row's press-and-hold.</summary>
+    [Parameter] public EventCallback<Singer> OnSetActive { get; set; }
 
     private string _name = string.Empty;
     private string _color = SingerColors.Default;
@@ -112,6 +133,13 @@
         s.Color = string.IsNullOrWhiteSpace(_color) ? SingerColors.Default : _color;
         s.Glyph = HasGlyph ? _glyph : null;
         await OnSave.InvokeAsync(s);
+    }
+
+    // Switching is a live action on the stored singer, not part of the edit buffer, so it doesn't wait for Save.
+    private async Task ActivateAsync()
+    {
+        if (Editing is { } s)
+            await OnSetActive.InvokeAsync(s);
     }
 
     private async Task DeleteAsync()

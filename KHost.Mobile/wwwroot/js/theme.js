@@ -5,7 +5,6 @@
 window.khTheme = {
     KEY: 'kh-theme',
 
-    // The theme in effect right now: an explicit choice, else the OS preference.
     current() {
         const stored = localStorage.getItem(this.KEY);
         if (stored === 'light' || stored === 'dark') return stored;

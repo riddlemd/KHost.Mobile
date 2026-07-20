@@ -28,9 +28,9 @@ window.khSheet = {
 
         const onControl = (t) => t && t.closest && t.closest('button, input, select, textarea, a');
 
-        // The nearest scrollable element between the touch target and the sheet. A sheet can have its own
-        // inner scroller (e.g. the history list); drag-to-dismiss only engages when THIS one is at its top,
-        // so a scrolled-down list keeps scrolling instead of the pull dragging the sheet closed.
+        // A sheet can have its own inner scroller (e.g. the history list); drag-to-dismiss only engages when
+        // THIS one is at its top, so a scrolled-down list keeps scrolling instead of the pull dragging the
+        // sheet closed.
         const scrollerFor = (target) => {
             let el = target;
             while (el && el !== sheet.parentElement) {
@@ -75,7 +75,7 @@ window.khSheet = {
                 setTimeout(() => dotNetRef.invokeMethodAsync(closeMethod), SLIDE_MS - 20);
             } else {
                 sheet.style.transition = `transform ${SLIDE_MS}ms ease`;
-                sheet.style.transform = REST;   // snap back to rest
+                sheet.style.transform = REST;
             }
         };
 

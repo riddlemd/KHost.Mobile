@@ -311,7 +311,7 @@
         Settings.TutorialCompleted = true;
         StateHasChanged();
 
-        await RemoveSampleDataAsync();   // drop any sample rows we seeded for the tour
+        await RemoveSampleDataAsync();
 
         // Elements are gone now; just drop the stored resize context (safe — takes no element refs).
         try { await JS.InvokeVoidAsync("khTutorial.clear"); } catch { /* JS not ready — nothing to clean up */ }

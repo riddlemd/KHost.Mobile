@@ -78,7 +78,6 @@
     private bool HasColor => !string.IsNullOrWhiteSpace(Color);
     private bool HasColorPalette => AvailableColors is { Count: > 0 };
 
-    // The preview shows the chosen glyph, or the letter fallback when the glyph is empty (singer), or "?" if neither.
     private string Preview => !string.IsNullOrWhiteSpace(Glyph) ? Glyph : (LetterFallback ?? "?");
 
     private void Toggle() => _open = !_open;

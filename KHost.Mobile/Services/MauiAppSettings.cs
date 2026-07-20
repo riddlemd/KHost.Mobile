@@ -73,7 +73,7 @@ public sealed class MauiAppSettings : IAppSettings
         set => Preferences.Default.Set(KaraFunKey, value);
     }
 
-    // The first string-valued setting; empty string default means "no venue set yet".
+    // Empty string default means "no venue set yet".
     public string KaraFunVenueId
     {
         get => Preferences.Default.Get(KaraFunVenueIdKey, string.Empty);

@@ -31,7 +31,6 @@ public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory ht
         if (string.IsNullOrWhiteSpace(url))
             return null;
 
-        // Fast path: already encoded this launch.
         lock (_memo)
         {
             if (_memo.TryGetValue(url, out var cached))

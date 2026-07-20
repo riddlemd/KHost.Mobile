@@ -28,7 +28,7 @@ public static class SongTags
         if (trimmed.Length == 0)
             return null;
 
-        // Collapse any internal whitespace runs (incl. a pasted newline/tab) to single spaces.
+        // Handles a pasted newline/tab too, not just spaces.
         var collapsed = string.Join(' ', trimmed.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
         if (collapsed.Length == 0)
             return null;

@@ -11,7 +11,7 @@ namespace KHost.Mobile.Services;
 /// </summary>
 public sealed class MauiAppUpdateService(IUpdateClient updateClient, IAppSettings settings) : IAppUpdateService
 {
-    private Task<AppUpdateStatus>? _check;   // memoized on first request; the network call runs once per launch
+    private Task<AppUpdateStatus>? _check;
 
     public bool Dismissed { get; private set; }
 

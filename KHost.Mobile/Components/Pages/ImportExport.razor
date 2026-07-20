@@ -258,7 +258,6 @@
         public bool AlreadyInList { get; init; }
     }
 
-    // A review row is applyable when its lookup produced a year or a mappable genre to fill.
     private bool HasApplyable(ReviewRow row) =>
         row.Suggestion is not null &&
         (row.Suggestion.Year.HasValue || Genres.Map(row.Suggestion.Genre) is not null);
@@ -350,9 +349,8 @@
         }
     }
 
-    // Testable core: deserialize our export, give every song a fresh identity (Store.ImportAsync dedups by
-    // title+artist, not Id, so keeping file Ids could collide with existing rows), and import with dedup on.
-    // Returns the number added, or -1 if the file isn't valid JSON for our format.
+    // Testable core: fresh identity per song, since Store.ImportAsync dedups by title+artist, not Id, so keeping
+    // file Ids could collide with existing rows. Returns the number added, or -1 if the file isn't valid JSON.
     private async Task<int> ImportFromJsonAsync(Stream stream)
     {
         List<SongListItem>? incoming;
@@ -469,7 +467,6 @@
                     string.Equals(i.Artist.Trim(), t.Artist, StringComparison.OrdinalIgnoreCase)),
             }).ToList();
 
-            // Pre-select everything not already in the list; leave duplicates unticked.
             foreach (var row in _importRows)
                 row.Selected = !row.AlreadyInList;
 
@@ -521,8 +518,7 @@
             _importRows = null;
             if (Settings.AutoFillMetadata)
             {
-                // Hand off to the review phase: enrich the freshly-added songs in the background, throttled,
-                // and let the user apply the found year/genre in bulk. The sheet stays open showing progress.
+                // The sheet stays open, showing enrichment progress.
                 _reviewRows = toImport.Select(i => new ReviewRow { Item = i }).ToList();
                 _ = StartReviewEnrichmentAsync();
             }

@@ -72,7 +72,6 @@ public static partial class KaraFunVenueUrlParser
         if (!AllowedHosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase))
             return false;
 
-        // The venue ID is the first path segment: /012345/… — digits only.
         var firstSegment = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         if (firstSegment is null || !BareIdRegex().IsMatch(firstSegment))
             return false;

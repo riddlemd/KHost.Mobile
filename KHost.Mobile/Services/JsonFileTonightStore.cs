@@ -222,7 +222,7 @@ public sealed class JsonFileTonightStore : ITonightStore
             Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    // Make Order 0..n-1 contiguous in the list's current sequence. Callers must hold _gate.
+    // Callers must hold _gate.
     private static void Renumber(List<TonightEntry> entries)
     {
         for (var i = 0; i < entries.Count; i++)

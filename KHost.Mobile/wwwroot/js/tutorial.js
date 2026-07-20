@@ -36,8 +36,7 @@ window.khTutorial = {
         caret.style.left = caretX + 'px';
 
         // Keep the tip within the usable band — below the app header (clear of the status bar) and above the app's
-        // bottom nav / OS gesture area — so it never renders under chrome or off-screen. Below the hole if it fits,
-        // else above; if neither fits, pin it in the band and drop the caret.
+        // bottom nav / OS gesture area — so it never renders under chrome or off-screen.
         const header = document.querySelector('.app-header');
         const nav = document.querySelector('.app-nav');
         const safeTop = Math.max(12, header ? header.getBoundingClientRect().bottom + 8 : 12);

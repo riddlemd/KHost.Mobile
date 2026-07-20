@@ -74,8 +74,9 @@ public static class MauiProgram
         // app-wide; it pulls a pooled HttpClient from the factory per download (see the named client below).
         builder.Services.AddSingleton<IAlbumArtCache, AlbumArtCache>();
 
-        // Opens external links (e.g. a YouTube search) in the OS browser / matching app.
         builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
+
+        builder.Services.AddSingleton<IHaptics, MauiHaptics>();
 
         // App-wide registry for the Android back button: components register an overlay-close callback while
         // mounted, and the Android MainActivity consults it so hardware back dismisses the top-most sheet/menu

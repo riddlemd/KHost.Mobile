@@ -87,7 +87,6 @@ public static partial class SpotifyEmbedParser
         return false;
     }
 
-    // First object shaped like the playlist entity (type == "playlist" with a "name").
     // Best-effort — returns null if the page doesn't expose it.
     private static string? TryFindPlaylistName(JsonElement element)
     {
