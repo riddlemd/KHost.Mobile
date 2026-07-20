@@ -11,46 +11,40 @@ namespace KHost.Mobile.Services;
 /// A blob store rather than the JSON pattern the other caches use, because the payload is binary image bytes.
 /// </summary>
 /// <remarks>
-/// Images are served to the Blazor WebView as base64 <c>data:</c> URIs — the pragmatic cross-platform way to show a
-/// device-local file in the WebView without a custom URL scheme. The bytes are downloaded from the artwork CDN (not
-/// the rate-limited iTunes Search API), so caching the whole visible list is fine. An in-memory memo avoids
-/// re-reading + re-encoding a cover that's already been served this launch.
+/// The cover bytes reach the WebView as a stream that the UI wraps in a <c>DotNetStreamReference</c> and turns into
+/// a <c>blob:</c> object URL — so the render tree holds a short URL, not a base64 copy of every image. The bytes are
+/// downloaded from the artwork CDN (not the rate-limited iTunes Search API), so caching the visible page is fine.
+/// No in-memory copy is kept here: repeat requests re-open the on-disk file (cheap) and the browser caches the
+/// decoded image behind its object URL.
 /// </remarks>
 public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory httpFactory, ILogger<AlbumArtCache>? logger = null) : IAlbumArtCache
 {
     private readonly string _dir = Path.Combine(paths.AppDataDirectory, "album-art");
     private readonly SemaphoreSlim _gate = new(1, 1);                       // guards count/clear against the folder
-    private readonly Dictionary<string, string> _memo = new(StringComparer.Ordinal);   // url -> data URI
     // Optional so the integration tests can `new` the cache without a logging stack; DI supplies the real logger.
     private readonly ILogger _log = logger ?? NullLogger<AlbumArtCache>.Instance;
 
     public event EventHandler? Changed;
 
-    public async Task<string?> GetDataUriAsync(string? url, CancellationToken cancellationToken = default)
+    public async Task<Stream?> OpenArtStreamAsync(string? url, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(url))
             return null;
 
-        lock (_memo)
-        {
-            if (_memo.TryGetValue(url, out var cached))
-                return cached;
-        }
-
         var path = PathFor(url);
-        byte[] bytes;
         var wroteNew = false;
         try
         {
-            if (File.Exists(path))
-            {
-                bytes = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
-                _log.LogDebug("Album art served from disk cache ({Bytes} bytes) for {Url}", bytes.Length, url);
-            }
-            else
+            if (!File.Exists(path))
             {
                 var http = httpFactory.CreateClient("album-art");
-                bytes = await http.GetByteArrayAsync(url, cancellationToken).ConfigureAwait(false);
+                var bytes = await http.GetByteArrayAsync(url, cancellationToken).ConfigureAwait(false);
+                if (bytes.Length == 0)
+                {
+                    _log.LogWarning("Album art for {Url} was empty (0 bytes); the card stays blank", url);
+                    return null;
+                }
+
                 Directory.CreateDirectory(_dir);
                 await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
                 wroteNew = true;
@@ -59,28 +53,29 @@ public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory ht
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Best-effort: a failed download/read just means no art for this card. Cancellation propagates.
-            _log.LogWarning(ex, "Album art download/read failed for {Url}; the card stays blank", url);
+            // Best-effort: a failed download just means no art for this card. Cancellation propagates.
+            _log.LogWarning(ex, "Album art download failed for {Url}; the card stays blank", url);
             return null;
-        }
-
-        if (bytes.Length == 0)
-        {
-            _log.LogWarning("Album art for {Url} was empty (0 bytes); the card stays blank", url);
-            return null;
-        }
-
-        // iTunes covers are JPEG; the mime only needs to be image/* for the WebView to render it.
-        var dataUri = $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}";
-        lock (_memo)
-        {
-            _memo[url] = dataUri;
         }
 
         if (wroteNew)
             Changed?.Invoke(this, EventArgs.Empty);
 
-        return dataUri;
+        try
+        {
+            var stream = File.OpenRead(path);
+            if (stream.Length == 0)   // a leftover 0-byte file from an older/interrupted write
+            {
+                stream.Dispose();
+                return null;
+            }
+            return stream;   // the caller (a DotNetStreamReference) disposes it once the WebView has read it
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _log.LogWarning(ex, "Album art read failed for {Url}; the card stays blank", url);
+            return null;
+        }
     }
 
     public async Task ClearAsync()
@@ -89,9 +84,6 @@ public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory ht
         await _gate.WaitAsync();
         try
         {
-            lock (_memo)
-                _memo.Clear();
-
             if (Directory.Exists(_dir))
             {
                 foreach (var file in Directory.EnumerateFiles(_dir))
