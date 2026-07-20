@@ -257,6 +257,44 @@ public sealed class JsonFileSongListStore : ISongListStore
         return added;
     }
 
+    public async Task<int> MergeByIdAsync(IEnumerable<SongListItem> incoming)
+    {
+        ArgumentNullException.ThrowIfNull(incoming);
+
+        var written = 0;
+        await _gate.WaitAsync();
+        try
+        {
+            var items = await LoadAsync();
+            foreach (var item in incoming)
+            {
+                if (item is null || string.IsNullOrWhiteSpace(item.Title))
+                    continue;
+
+                MigrateToPerformances(item);   // fold a legacy-format profile into Performances if needed
+                var index = items.FindIndex(i => i.Id == item.Id);
+                if (index < 0)
+                    items.Add(item);            // new id → append
+                else
+                    items[index] = item;        // existing id → replace verbatim (restore)
+                written++;
+            }
+
+            if (written > 0)
+                await SaveAsync(items);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        _log.LogInformation("Song list profile-restore: wrote {Written} songs by id", written);
+        if (written > 0)
+            Changed?.Invoke(this, EventArgs.Empty);
+
+        return written;
+    }
+
     // Title+artist identity used for de-duplication (trimmed, case-insensitive). The  unit
     // separator keeps "AB"+"C" distinct from "A"+"BC". Mirrors the add-form duplicate guard in MySongs.
     private static string DedupeKey(SongListItem item)

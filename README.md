@@ -22,7 +22,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
   <br />
   <img src="docs/screenshots/venue-switcher.png" width="200" alt="Venue switcher — tap the header chip to jump between your venues, set the active one, and choose auto-detect or a pinned pick" />
   <img src="docs/screenshots/settings.png" width="200" alt="Settings — feature toggles grouped by what they affect, in collapsible sections" />
-  <img src="docs/screenshots/import-export.png" width="200" alt="Import & Export — pull songs from a Spotify or YouTube Music playlist or a KHost Cue file, and export your list back out" />
+  <img src="docs/screenshots/import-export.png" width="200" alt="Import & Export — move a singer's profile between devices, export/import venues, or pull songs from a Spotify or YouTube Music playlist" />
 </p>
 
 ## ✨ Features
@@ -37,7 +37,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 - **Quick links** — jump straight to any song on **YouTube** or **Spotify**, or search your venue on **KaraFun**. KaraFun search is per-venue, so set your venue once (Settings → *KaraFun*, or the first time you tap the button) and it remembers the venue ID — paste a link from your venue's KaraFun page, type the ID, or (on iOS/Android) **scan the venue's QR code**.
 - **Favorites** — star the songs you love; they float to the top of the list.
 - **Tags** — add your own free-form labels to a song — *duet*, *closer*, *needs practice* — shown as chips on the card and detail sheet. Reuse suggestions keep them tidy, and you can filter your list by tag (match *any* or *all* of the tags you pick). Switch tags off entirely in Settings → *Show song tags*.
-- **Import & export** — pull songs from a public **Spotify** or **YouTube Music** playlist link, or a KHost Cue `.json` file, and export your whole list back out.
+- **Import & export** — three ways to move data, each in its own section. **Singer profiles**: export a singer's whole profile — their songs *and* sung history — to a `.json` file to move them to another device or keep a backup, and import one to add a singer here (ids are preserved, so re-importing updates the same singer rather than duplicating; tonight's set stays device-local). **Venues**: since venues are shared across singers, they export and import on their own, so a second device can pick up the same venue list. **Third-party import**: pull songs straight into your list from a public **Spotify** or **YouTube Music** playlist link. (A legacy songs-only `.json` export still imports, straight into the current singer.)
 - **Auto-fill** — looks up a song's release year and genre automatically (via the iTunes Search API) so you don't have to type them.
 - **Album art** — each song's cover is used as its card background — and behind the title on the song's detail sheet — with a dark fade behind the text for legibility. Covers are looked up from iTunes, with Deezer as a fallback for songs iTunes can't find (e.g. album deep cuts), and cached on-device; clear them from the Danger zone, or switch the whole thing off in Settings → *Show album art on cards*.
 - **Update alerts** — tells you when a newer version is available (from the app's GitHub Releases) with a one-tap link to grab it.

@@ -1130,6 +1130,44 @@ body.kh-sheet-open { overflow: hidden; }
 .ie-action__title { font-weight: 600; }
 .ie-action__desc { font-size: 0.78rem; color: var(--kh-text-muted); }
 
+/* Profile-import decision sheet — two tall "add as new singer / merge" choices. */
+.ie-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    width: 100%;
+    text-align: left;
+    padding: 0.9rem;
+    margin-bottom: 0.7rem;
+    border: 1px solid var(--kh-border);
+    border-radius: var(--kh-radius);
+    background: var(--kh-surface);
+    cursor: pointer;
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+}
+.ie-choice:active { transform: scale(0.99); }
+.ie-choice:disabled { opacity: 0.55; cursor: default; }
+.ie-choice--primary {
+    border-color: var(--kh-primary);
+    background: color-mix(in srgb, var(--kh-primary) 8%, var(--kh-surface));
+}
+.ie-choice__ico {
+    width: 2.2rem;
+    height: 2.2rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    border-radius: 50%;
+    background: var(--kh-surface-2);
+}
+.ie-choice--primary .ie-choice__ico { background: var(--kh-primary); color: var(--kh-primary-contrast); }
+.ie-choice__text { display: flex; flex-direction: column; min-width: 0; }
+.ie-choice__title { font-weight: 700; }
+.ie-choice__desc { font-size: 0.8rem; color: var(--kh-text-muted); margin-top: 0.15rem; }
+
 /* ---- Sortable song table ------------------------------------------------ */
 
 /* Song list = a vertical stack of cards. */

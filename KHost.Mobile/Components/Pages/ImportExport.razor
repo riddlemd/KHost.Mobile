@@ -1,17 +1,20 @@
 @page "/import-export"
 @layout MainLayout
-@using System.Text.Json
 @using Microsoft.Maui.Storage
 @using Microsoft.Maui.ApplicationModel.DataTransfer
 @using KHost.Mobile.Clients.Enrichment
 @using KHost.Mobile.Clients.Spotify
 @using KHost.Mobile.Clients.YouTubeMusic
 @inject ISongListStore Store
+@inject ISingerStore Singers
+@inject IVenueStore Venues
+@inject IAppSession Session
 @inject ISpotifyImportService Spotify
 @inject IYouTubeMusicImportService YtMusic
 @inject ITrackMetadataLookup Metadata
 @inject IAppSettings Settings
 @inject IBackButtonService BackButton
+@inject NavigationManager Nav
 @implements IDisposable
 
 <section class="ie">
@@ -20,17 +23,57 @@
         <h1 class="page-title">Import &amp; Export</h1>
     </div>
 
+    @* ---- Singer profile: identity + songs + sung history (not the Tonight set) ---- *@
     <div class="card">
-        <div class="section-title">Import songs</div>
-        <p class="ie__lead">Add songs to your list from a file or a music service.</p>
-        <div class="ie-actions" data-tut="import">
-            <button type="button" class="ie-action" @onclick="ImportFromFileAsync" disabled="@_fileBusy">
-                <span class="ie-action__icon" aria-hidden="true">📄</span>
+        <div class="section-title">Singer profile</div>
+        <p class="ie__lead">Move a singer — their songs and sung history — to another device, or keep a backup. Tonight's set stays on this device.</p>
+        <div class="ie-actions" data-tut="profile">
+            <button type="button" class="ie-action" @onclick="ExportProfileAsync" disabled="@_profileBusy">
+                <span class="ie-action__icon" aria-hidden="true">📤</span>
                 <span class="ie-action__text">
-                    <span class="ie-action__title">@(_fileBusy ? "Importing…" : "Import from file")</span>
-                    <span class="ie-action__desc">A KHost Cue export (.json)</span>
+                    <span class="ie-action__title">@(_profileBusy ? "Exporting…" : $"Export {ActiveSingerName}'s profile")</span>
+                    <span class="ie-action__desc">@_songCount song@(_songCount == 1 ? "" : "s") + history, as .json</span>
                 </span>
             </button>
+            <button type="button" class="ie-action" @onclick="ImportProfileAsync" disabled="@_fileBusy">
+                <span class="ie-action__icon" aria-hidden="true">📥</span>
+                <span class="ie-action__text">
+                    <span class="ie-action__title">@(_fileBusy ? "Reading…" : "Import a profile")</span>
+                    <span class="ie-action__desc">Add a singer from a .json file</span>
+                </span>
+            </button>
+        </div>
+    </div>
+
+    @* ---- Venues: shared across singers, so their own export/import ---- *@
+    <div class="card">
+        <div class="section-title">Venues</div>
+        <p class="ie__lead">Venues are shared by everyone on this device. Export the list, or merge one in.</p>
+        <div class="ie-actions" data-tut="venues-ie">
+            <button type="button" class="ie-action" @onclick="ExportVenuesAsync" disabled="@(_venueBusy || _venueCount == 0)">
+                <span class="ie-action__icon" aria-hidden="true">📤</span>
+                <span class="ie-action__text">
+                    <span class="ie-action__title">@(_venueBusy ? "Exporting…" : "Export venues")</span>
+                    <span class="ie-action__desc">
+                        @(_venueCount == 0 ? "No venues to export yet" : $"{_venueCount} venue{(_venueCount == 1 ? "" : "s")} as .json")
+                    </span>
+                </span>
+            </button>
+            <button type="button" class="ie-action" @onclick="ImportVenuesAsync" disabled="@_venueFileBusy">
+                <span class="ie-action__icon" aria-hidden="true">📥</span>
+                <span class="ie-action__text">
+                    <span class="ie-action__title">@(_venueFileBusy ? "Reading…" : "Import venues")</span>
+                    <span class="ie-action__desc">Merge venues from a .json file</span>
+                </span>
+            </button>
+        </div>
+    </div>
+
+    @* ---- Third-party import: songs from a public playlist ---- *@
+    <div class="card">
+        <div class="section-title">Third-party import</div>
+        <p class="ie__lead">Pull songs into your list from a public playlist.</p>
+        <div class="ie-actions" data-tut="third-party">
             <button type="button" class="ie-action" @onclick="() => OpenImport(ImportSource.Spotify)">
                 <span class="ie-action__icon" aria-hidden="true">
                     <SpotifyIcon Size="26" />
@@ -51,25 +94,36 @@
             </button>
         </div>
     </div>
-
-    <div class="card">
-        <div class="section-title">Export songs</div>
-        <p class="ie__lead">Save your whole list to a file you can back up or move to another device.</p>
-        <div class="ie-actions" data-tut="export">
-            <button type="button" class="ie-action" @onclick="ExportToFileAsync" disabled="@(_exportBusy || _songCount == 0)">
-                <span class="ie-action__icon" aria-hidden="true">📤</span>
-                <span class="ie-action__text">
-                    <span class="ie-action__title">@(_exportBusy ? "Exporting…" : "Export to file")</span>
-                    <span class="ie-action__desc">
-                        @(_songCount == 0
-                            ? "No songs to export yet"
-                            : $"{_songCount} song{(_songCount == 1 ? "" : "s")} as .json")
-                    </span>
-                </span>
-            </button>
-        </div>
-    </div>
 </section>
+
+@* ---- Profile-import decision sheet: add as a new singer, or merge songs into the current one ---- *@
+@if (_pendingProfile is { } profile)
+{
+    <div class="sheet-backdrop" @onclick="CancelProfileImport"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+        <button type="button" class="sheet__close" @onclick="CancelProfileImport" aria-label="Close">✕</button>
+        <div class="sheet__title">Import @profile.Singer.Name's profile</div>
+        <div class="sheet__subtitle">
+            @profile.Songs.Count song@(profile.Songs.Count == 1 ? "" : "s")@(ProfilePerformanceCount(profile) is var p && p > 0 ? $" · {p} sung performance{(p == 1 ? "" : "s")}" : "") · exported @profile.ExportedAt.LocalDateTime.ToString("MMM d")
+        </div>
+
+        <button type="button" class="ie-choice ie-choice--primary" @onclick="() => AddProfileAsNewSingerAsync(profile)" disabled="@_profileImportBusy">
+            <span class="ie-choice__ico">＋</span>
+            <span class="ie-choice__text">
+                <span class="ie-choice__title">Add as a new singer</span>
+                <span class="ie-choice__desc">@profile.Singer.Name joins this device with their own My Songs and history, and becomes the active singer.</span>
+            </span>
+        </button>
+        <button type="button" class="ie-choice" @onclick="() => MergeProfileIntoCurrentAsync(profile)" disabled="@_profileImportBusy">
+            <span class="ie-choice__ico">⤵</span>
+            <span class="ie-choice__text">
+                <span class="ie-choice__title">Merge songs into @ActiveSingerName</span>
+                <span class="ie-choice__desc">Just the songs, added to your current list. Identity and history are left behind.</span>
+            </span>
+        </button>
+        <button type="button" class="btn btn-secondary" @onclick="CancelProfileImport" disabled="@_profileImportBusy">Cancel</button>
+    </div>
+}
 
 @if (_flash is not null)
 {
@@ -204,9 +258,20 @@
     private IReadOnlyList<SongListItem> _items = [];
     private int _songCount => _items.Count;
 
-    // File import / export are native round-trips (FilePicker / Share); busy flags gate their buttons.
-    private bool _fileBusy;
-    private bool _exportBusy;
+    // The active singer (for the profile export label) + the shared venue count.
+    private Singer? _activeSinger;
+    private string ActiveSingerName => _activeSinger?.Name is { Length: > 0 } n ? n : "this singer";
+    private int _venueCount;
+
+    // Native round-trips (FilePicker / Share); busy flags gate their buttons.
+    private bool _fileBusy;          // reading a picked profile file
+    private bool _profileBusy;       // exporting a profile
+    private bool _venueBusy;         // exporting venues
+    private bool _venueFileBusy;     // reading a picked venues file
+
+    // The profile a picked file parsed to, awaiting the add-as-new-singer / merge choice (null = sheet closed).
+    private SingerProfile? _pendingProfile;
+    private bool _profileImportBusy;
 
     private static readonly FilePickerFileType JsonFileType = new(new Dictionary<DevicePlatform, IEnumerable<string>>
     {
@@ -281,7 +346,16 @@
             closeTopMost: TryCloseTopOverlay,
             notifyStateChanged: StateHasChanged);
         Store.Changed += OnStoreChanged;
+        Venues.Changed += OnStoreChanged;
+        Session.ActiveSingerChanged += OnStoreChanged;   // profile label follows a singer switch
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
         _items = await Store.GetAllAsync();
+        _venueCount = (await Venues.GetAllAsync()).Count;
+        _activeSinger = Session.ActiveSingerId is { } id ? await Singers.GetAsync(id) : null;
     }
 
     // Routes the Android back button to close the import sheet instead of navigating; active only while it's open.
@@ -289,6 +363,7 @@
 
     private bool TryCloseTopOverlay()
     {
+        if (_pendingProfile is not null) { CancelProfileImport(); return true; }
         if (_importOpen) { CloseImport(); return true; }
         return false;
     }
@@ -305,7 +380,7 @@
         {
             await InvokeAsync(async () =>
             {
-                _items = await Store.GetAllAsync();
+                await ReloadAsync();
                 StateHasChanged();
             });
         }
@@ -315,9 +390,32 @@
         }
     }
 
-    // ---- File import / export -----------------------------------------------------------------
+    // ---- Singer profile: export + import ------------------------------------------------------
 
-    private async Task ImportFromFileAsync()
+    private async Task ExportProfileAsync()
+    {
+        if (_profileBusy)
+            return;
+
+        _profileBusy = true;
+        try
+        {
+            var singer = _activeSinger ?? new Singer { Name = "Me" };   // session-less fallback
+            var songs = await Store.GetAllAsync();
+            var json = SingerProfileCodec.Serialize(SingerProfile.Create(singer, songs));
+            await ShareJsonAsync($"khost-{Slug(singer.Name)}-profile-{DateTime.Now:yyyy-MM-dd}.json", json, "Export singer profile");
+        }
+        catch (Exception ex)
+        {
+            await FlashAsync($"Export failed: {ex.Message}");
+        }
+        finally
+        {
+            _profileBusy = false;
+        }
+    }
+
+    private async Task ImportProfileAsync()
     {
         if (_fileBusy)
             return;
@@ -325,19 +423,32 @@
         _fileBusy = true;
         try
         {
-            var pick = await FilePicker.Default.PickAsync(new PickOptions
-            {
-                PickerTitle = "Choose a KHost Cue export",
-                FileTypes = JsonFileType,
-            });
-            if (pick is null)
+            var text = await ReadPickedTextAsync("Choose a KHost Cue profile");
+            if (text is null)
                 return;   // cancelled
 
-            await using var stream = await pick.OpenReadAsync();   // content:// URI on Android — never .FullPath
-            var added = await ImportFromJsonAsync(stream);
-            await FlashAsync(added < 0
-                ? "That file isn't a valid KHost Cue export."
-                : $"Imported {added} song{(added == 1 ? "" : "s")} from file");
+            switch (SingerProfileCodec.Detect(text))
+            {
+                case SingerProfileCodec.FileKind.Profile:
+                    if (SingerProfileCodec.ParseProfile(text) is { } profile)
+                        _pendingProfile = profile;   // open the add-as-new / merge decision sheet
+                    else
+                        await FlashAsync("That profile file couldn't be read.");
+                    break;
+
+                case SingerProfileCodec.FileKind.LegacySongList:
+                    // An old songs-only export → merge straight into the current singer (fresh ids, as before).
+                    var songs = SingerProfileCodec.ParseLegacySongs(text) ?? [];
+                    foreach (var s in songs)
+                        s.Id = Guid.NewGuid();
+                    var added = await Store.ImportAsync(songs, skipDuplicates: true);
+                    await FlashAsync($"Imported {added} song{(added == 1 ? "" : "s")} from file");
+                    break;
+
+                default:
+                    await FlashAsync("That file isn't a KHost Cue profile.");
+                    break;
+            }
         }
         catch (Exception ex)
         {
@@ -349,48 +460,98 @@
         }
     }
 
-    // Testable core: fresh identity per song, since Store.ImportAsync dedups by title+artist, not Id, so keeping
-    // file Ids could collide with existing rows. Returns the number added, or -1 if the file isn't valid JSON.
-    private async Task<int> ImportFromJsonAsync(Stream stream)
-    {
-        List<SongListItem>? incoming;
-        try
-        {
-            incoming = await JsonSerializer.DeserializeAsync(stream, SongListJsonContext.Default.ListSongListItem);
-        }
-        catch (JsonException)
-        {
-            return -1;
-        }
-        if (incoming is null)
-            return -1;
+    private static int ProfilePerformanceCount(SingerProfile profile) => profile.Songs.Sum(s => s.Performances.Count);
 
-        foreach (var item in incoming)
-        {
-            item.Id = Guid.NewGuid();   // fresh identity so a re-import can't collide with an existing row
-        }
-        return await Store.ImportAsync(incoming, skipDuplicates: true);
-    }
-
-    private async Task ExportToFileAsync()
+    // Add-as-new-singer: keep the singer + song ids (a true restore). If the singer already exists, update their
+    // identity and upsert their songs by id (nothing is lost); otherwise create them. Either way switch to them.
+    private async Task AddProfileAsNewSingerAsync(SingerProfile profile)
     {
-        if (_exportBusy || _songCount == 0)
+        if (_profileImportBusy)
             return;
 
-        _exportBusy = true;
+        _profileImportBusy = true;
         try
         {
-            var json = JsonSerializer.Serialize(_items.ToList(), SongListJsonContext.Default.ListSongListItem);
-            var fileName = $"khost-songs-{DateTime.Now:yyyy-MM-dd}.json";
-            var path = Path.Combine(FileSystem.CacheDirectory, fileName);
-            await File.WriteAllTextAsync(path, json);
+            var singer = profile.Singer;
+            if (await Singers.GetAsync(singer.Id) is null)
+                await Singers.AddAsync(singer);      // AddAsync keeps a provided (non-blank) id
+            else
+                await Singers.UpdateAsync(singer);
 
-            // Hand off to the OS share sheet — the user picks where it lands (Files, Drive, email, …).
-            await Share.Default.RequestAsync(new ShareFileRequest
-            {
-                Title = "Export my songs",
-                File = new ShareFile(path),
-            });
+            Session.SetActiveSinger(singer.Id);      // the song store now targets this singer's file
+            Settings.LastActiveSingerId = singer.Id.ToString();
+            var written = await Store.MergeByIdAsync(profile.Songs);
+
+            _pendingProfile = null;
+            await FlashAsync($"Imported {singer.Name} — {written} song{(written == 1 ? "" : "s")}");
+            Nav.NavigateTo("/");   // land on My Songs as the imported singer
+        }
+        catch (Exception ex)
+        {
+            await FlashAsync($"Import failed: {ex.Message}");
+        }
+        finally
+        {
+            _profileImportBusy = false;
+        }
+    }
+
+    // Merge-songs-only: copy the profile's songs into the CURRENT singer's list as fresh wishlist entries (new
+    // ids, no history), deduped by title+artist. Identity and sung history are left behind.
+    private async Task MergeProfileIntoCurrentAsync(SingerProfile profile)
+    {
+        if (_profileImportBusy)
+            return;
+
+        _profileImportBusy = true;
+        try
+        {
+            var copies = profile.Songs
+                .Where(s => !string.IsNullOrWhiteSpace(s.Title))
+                .Select(s => new SongListItem
+                {
+                    Title = s.Title,
+                    Artist = s.Artist,
+                    Notes = s.Notes,
+                    Genre = s.Genre,
+                    Year = s.Year,
+                    Enjoyment = s.Enjoyment,
+                    IsFavorite = s.IsFavorite,
+                    Tags = [.. s.Tags],
+                    MetadataLookedUp = s.MetadataLookedUp,
+                    ArtworkLookedUp = s.ArtworkLookedUp,
+                })
+                .ToList();
+
+            var added = await Store.ImportAsync(copies, skipDuplicates: true);
+            _pendingProfile = null;
+            await FlashAsync($"Merged {added} song{(added == 1 ? "" : "s")} into {ActiveSingerName}");
+        }
+        finally
+        {
+            _profileImportBusy = false;
+        }
+    }
+
+    private void CancelProfileImport()
+    {
+        _pendingProfile = null;
+        _profileImportBusy = false;
+    }
+
+    // ---- Venues: export + import (shared, so their own file) ----------------------------------
+
+    private async Task ExportVenuesAsync()
+    {
+        if (_venueBusy || _venueCount == 0)
+            return;
+
+        _venueBusy = true;
+        try
+        {
+            var venues = await Venues.GetAllAsync();
+            var json = SingerProfileCodec.SerializeVenues(venues);
+            await ShareJsonAsync($"khost-venues-{DateTime.Now:yyyy-MM-dd}.json", json, "Export venues");
         }
         catch (Exception ex)
         {
@@ -398,8 +559,90 @@
         }
         finally
         {
-            _exportBusy = false;
+            _venueBusy = false;
         }
+    }
+
+    private async Task ImportVenuesAsync()
+    {
+        if (_venueFileBusy)
+            return;
+
+        _venueFileBusy = true;
+        try
+        {
+            var text = await ReadPickedTextAsync("Choose a KHost Cue venues file");
+            if (text is null)
+                return;   // cancelled
+
+            var incoming = SingerProfileCodec.ParseVenues(text);
+            if (incoming is null)
+            {
+                await FlashAsync("That file isn't a valid venues export.");
+                return;
+            }
+
+            // Merge by id, keeping ids so venue-tagged history keeps resolving: update existing, add the rest.
+            var existing = (await Venues.GetAllAsync()).Select(v => v.Id).ToHashSet();
+            int added = 0, updated = 0;
+            foreach (var v in incoming)
+            {
+                if (string.IsNullOrWhiteSpace(v.Name))
+                    continue;   // not a venues file (or a blank row)
+                if (existing.Contains(v.Id))
+                {
+                    await Venues.UpdateAsync(v);
+                    updated++;
+                }
+                else
+                {
+                    await Venues.AddAsync(v);   // keeps the provided id
+                    added++;
+                }
+            }
+
+            await FlashAsync(added + updated == 0
+                ? "No venues found in that file."
+                : $"Venues merged — {added} added, {updated} updated");
+        }
+        catch (Exception ex)
+        {
+            await FlashAsync($"Import failed: {ex.Message}");
+        }
+        finally
+        {
+            _venueFileBusy = false;
+        }
+    }
+
+    // ---- Shared file helpers ------------------------------------------------------------------
+
+    // Pick a .json file and read it to text. Returns null if the user cancelled. Uses OpenReadAsync so the
+    // content:// URI works on Android (never .FullPath).
+    private static async Task<string?> ReadPickedTextAsync(string pickerTitle)
+    {
+        var pick = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = pickerTitle, FileTypes = JsonFileType });
+        if (pick is null)
+            return null;
+
+        await using var stream = await pick.OpenReadAsync();
+        using var reader = new StreamReader(stream);
+        return await reader.ReadToEndAsync();
+    }
+
+    // Write json to a cache file and hand it to the OS share sheet (Files, Drive, email, …).
+    private static async Task ShareJsonAsync(string fileName, string json, string title)
+    {
+        var path = Path.Combine(FileSystem.CacheDirectory, fileName);
+        await File.WriteAllTextAsync(path, json);
+        await Share.Default.RequestAsync(new ShareFileRequest { Title = title, File = new ShareFile(path) });
+    }
+
+    // Filename-safe lower-kebab of a singer name (non-alphanumerics → '-'); falls back to "singer" when empty.
+    private static string Slug(string name)
+    {
+        var slug = new string([.. name.Trim().ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-')]).Trim('-');
+        return slug.Length == 0 ? "singer" : slug;
     }
 
     // ---- Playlist import (Spotify / YouTube Music) --------------------------------------------
@@ -659,6 +902,8 @@
     {
         _backGuard?.Dispose();
         Store.Changed -= OnStoreChanged;
+        Venues.Changed -= OnStoreChanged;
+        Session.ActiveSingerChanged -= OnStoreChanged;
         _reviewCts?.Cancel();     // stop a background review if the user navigates away mid-enrichment
         _reviewCts?.Dispose();
         _flashCts?.Cancel();

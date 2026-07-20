@@ -29,6 +29,11 @@
     <Compile Include="..\KHost.Mobile\Models\Singer.cs" Link="Linked\Models\Singer.cs" />
     <Compile Include="..\KHost.Mobile\Models\SingerColors.cs" Link="Linked\Models\SingerColors.cs" />
     <Compile Include="..\KHost.Mobile\Models\SingerGlyphs.cs" Link="Linked\Models\SingerGlyphs.cs" />
+    <Compile Include="..\KHost.Mobile\Models\SingerProfile.cs" Link="Linked\Models\SingerProfile.cs" />
+    <Compile Include="..\KHost.Mobile\Services\SingerProfileCodec.cs" Link="Linked\Services\SingerProfileCodec.cs" />
+    <Compile Include="..\KHost.Mobile\Services\ProfileJsonContext.cs" Link="Linked\Services\ProfileJsonContext.cs" />
+    <Compile Include="..\KHost.Mobile\Services\SongListJsonContext.cs" Link="Linked\Services\SongListJsonContext.cs" />
+    <Compile Include="..\KHost.Mobile\Services\VenueJsonContext.cs" Link="Linked\Services\VenueJsonContext.cs" />
     <Compile Include="..\KHost.Mobile\Models\SongTags.cs" Link="Linked\Models\SongTags.cs" />
     <Compile Include="..\KHost.Mobile\Models\VenueGlyphs.cs" Link="Linked\Models\VenueGlyphs.cs" />
     <Compile Include="..\KHost.Mobile\Models\Venue.cs" Link="Linked\Models\Venue.cs" />

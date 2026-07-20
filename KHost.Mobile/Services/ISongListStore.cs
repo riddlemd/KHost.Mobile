@@ -45,4 +45,13 @@ public interface ISongListStore
     /// Entries with a blank title are ignored. Returns the number actually added.
     /// </summary>
     Task<int> ImportAsync(IEnumerable<SongListItem> items, bool skipDuplicates = true);
+
+    /// <summary>
+    /// Upsert many songs <em>by <see cref="SongListItem.Id"/></em>, preserving their ids — the singer-profile
+    /// restore path. Existing ids are replaced in place (verbatim, history and all); new ids are appended.
+    /// One load, one save, one <see cref="Changed"/>. Unlike <see cref="ImportAsync"/> it does <b>not</b> dedupe
+    /// by title+artist — the profile is the source of truth for these ids. Blank-title entries are ignored.
+    /// Returns the number of rows written (added + replaced).
+    /// </summary>
+    Task<int> MergeByIdAsync(IEnumerable<SongListItem> items);
 }
