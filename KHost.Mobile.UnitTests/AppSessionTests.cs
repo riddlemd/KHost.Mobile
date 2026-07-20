@@ -80,4 +80,78 @@ public class AppSessionTests
         Assert.Equal(venue, session.ActiveVenueId);
         Assert.Equal(0, fired);   // venue didn't change, so no refresh event
     }
+
+    // ---- Active singer ----
+
+    [Fact]
+    public void ActiveSingerId_is_null_until_set()
+    {
+        Assert.Null(new AppSession().ActiveSingerId);
+    }
+
+    [Fact]
+    public void SetActiveSinger_updates_the_id_and_raises_the_event()
+    {
+        var session = new AppSession();
+        var fired = 0;
+        session.ActiveSingerChanged += (_, _) => fired++;
+        var singer = Guid.NewGuid();
+
+        session.SetActiveSinger(singer);
+
+        Assert.Equal(singer, session.ActiveSingerId);
+        Assert.Equal(1, fired);
+    }
+
+    [Fact]
+    public void SetActiveSinger_is_a_no_op_when_the_value_is_unchanged()
+    {
+        var session = new AppSession();
+        var singer = Guid.NewGuid();
+        session.SetActiveSinger(singer);
+
+        var fired = 0;
+        session.ActiveSingerChanged += (_, _) => fired++;
+        session.SetActiveSinger(singer);   // same value
+
+        Assert.Equal(0, fired);
+    }
+
+    // ---- Tutorial signals ----
+
+    [Fact]
+    public void TutorialResolved_and_LandingResolved_default_false_and_are_settable()
+    {
+        var session = new AppSession();
+        Assert.False(session.TutorialResolved);
+        Assert.False(session.LandingResolved);
+
+        session.TutorialResolved = true;
+        session.LandingResolved = true;
+
+        Assert.True(session.TutorialResolved);
+        Assert.True(session.LandingResolved);
+    }
+
+    [Fact]
+    public void SetTutorialVenueDetail_drives_the_id_and_raises_only_on_a_real_change()
+    {
+        var session = new AppSession();
+        Assert.Null(session.TutorialVenueDetailId);
+
+        var fired = 0;
+        session.TutorialVenueDetailChanged += (_, _) => fired++;
+        var venue = Guid.NewGuid();
+
+        session.SetTutorialVenueDetail(venue);
+        Assert.Equal(venue, session.TutorialVenueDetailId);
+        Assert.Equal(1, fired);
+
+        session.SetTutorialVenueDetail(venue);   // unchanged → no event
+        Assert.Equal(1, fired);
+
+        session.SetTutorialVenueDetail(null);     // cleared → the tour closes the detail it opened
+        Assert.Null(session.TutorialVenueDetailId);
+        Assert.Equal(2, fired);
+    }
 }

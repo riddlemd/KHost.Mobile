@@ -81,20 +81,75 @@ public sealed class JsonFileSingerStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateAsync_persists_edits_and_is_a_no_op_for_an_unknown_id()
+    {
+        var store = NewStore();
+        var s = await store.AddAsync(new Singer { Name = "Mike", Color = SingerColors.Default });
+
+        s.Name = "Michael";
+        s.Color = "#0d9488";
+        s.Glyph = "🎸";
+        await store.UpdateAsync(s);
+
+        var reloaded = await NewStore().GetAsync(s.Id);
+        Assert.Equal("Michael", reloaded!.Name);
+        Assert.Equal("#0d9488", reloaded.Color);
+        Assert.Equal("🎸", reloaded.Glyph);
+
+        // An update for an id that isn't in the roster changes nothing.
+        await store.UpdateAsync(new Singer { Id = Guid.NewGuid(), Name = "Ghost" });
+        var all = await store.GetAllAsync();
+        Assert.Equal("Michael", Assert.Single(all).Name);
+    }
+
+    [Fact]
     public async Task RemoveAsync_deletes_the_singer_and_their_data_files()
     {
         var store = NewStore();
         var s = await store.AddAsync(new Singer { Name = "Guest" });
-        // Give the singer a song file to prove it's cleaned up on removal.
+        // Give the singer both a song file and a tonight file to prove both are cleaned up on removal.
         var session = new AppSession();
         session.SetActiveSinger(s.Id);
         await new JsonFileSongListStore(_dir, session).AddAsync("One Song", "An Artist");
+        await new JsonFileTonightStore(_dir, session).AddAsync(Guid.NewGuid());
         Assert.True(File.Exists(_dir.FilePath($"song-list-{s.Id:N}.json")));
+        Assert.True(File.Exists(_dir.FilePath($"tonight-{s.Id:N}.json")));
 
         await store.RemoveAsync(s.Id);
 
         Assert.Empty(await store.GetAllAsync());
         Assert.False(File.Exists(_dir.FilePath($"song-list-{s.Id:N}.json")));
+        Assert.False(File.Exists(_dir.FilePath($"tonight-{s.Id:N}.json")));
+    }
+
+    [Fact]
+    public async Task RemoveAsync_is_a_no_op_for_an_unknown_id()
+    {
+        var store = NewStore();
+        await store.AddAsync(new Singer { Name = "Keep" });
+
+        await store.RemoveAsync(Guid.NewGuid());   // not in the roster
+
+        Assert.Equal("Keep", Assert.Single(await store.GetAllAsync()).Name);
+    }
+
+    [Fact]
+    public async Task EnsureSeededAsync_migrates_the_legacy_tonight_set_into_the_seeded_singer()
+    {
+        // A pre-multi-singer install with a tonight.json at the root (written via the legacy no-session path).
+        await new JsonFileTonightStore(_dir).AddAsync(Guid.NewGuid());
+        Assert.True(File.Exists(_dir.FilePath("tonight.json")));
+
+        var store = NewStore();
+        var me = await store.EnsureSeededAsync();
+
+        // The legacy file is moved into the seeded singer's namespaced file, and its entry survives.
+        Assert.False(File.Exists(_dir.FilePath("tonight.json")));
+        Assert.True(File.Exists(_dir.FilePath($"tonight-{me.Id:N}.json")));
+
+        var session = new AppSession();
+        session.SetActiveSinger(me.Id);
+        Assert.Single(await new JsonFileTonightStore(_dir, session).GetAllAsync());
     }
 
     [Fact]

@@ -26,6 +26,9 @@
   <ItemGroup>
     <Compile Include="..\KHost.Mobile\Models\Genres.cs" Link="Linked\Models\Genres.cs" />
     <Compile Include="..\KHost.Mobile\Models\SongListItem.cs" Link="Linked\Models\SongListItem.cs" />
+    <Compile Include="..\KHost.Mobile\Models\Singer.cs" Link="Linked\Models\Singer.cs" />
+    <Compile Include="..\KHost.Mobile\Models\SingerColors.cs" Link="Linked\Models\SingerColors.cs" />
+    <Compile Include="..\KHost.Mobile\Models\SingerGlyphs.cs" Link="Linked\Models\SingerGlyphs.cs" />
     <Compile Include="..\KHost.Mobile\Models\SongTags.cs" Link="Linked\Models\SongTags.cs" />
     <Compile Include="..\KHost.Mobile\Models\VenueGlyphs.cs" Link="Linked\Models\VenueGlyphs.cs" />
     <Compile Include="..\KHost.Mobile\Models\Venue.cs" Link="Linked\Models\Venue.cs" />
@@ -37,6 +40,8 @@
     <Compile Include="..\KHost.Mobile\Services\MySongsViewState.cs" Link="Linked\Services\MySongsViewState.cs" />
     <Compile Include="..\KHost.Mobile\Services\KaraFunSearch.cs" Link="Linked\Services\KaraFunSearch.cs" />
     <Compile Include="..\KHost.Mobile\Services\KaraFunVenueUrlParser.cs" Link="Linked\Services\KaraFunVenueUrlParser.cs" />
+    <Compile Include="..\KHost.Mobile\Services\YouTubeSearch.cs" Link="Linked\Services\YouTubeSearch.cs" />
+    <Compile Include="..\KHost.Mobile\Services\SpotifySearch.cs" Link="Linked\Services\SpotifySearch.cs" />
   </ItemGroup>
 
 </Project>
