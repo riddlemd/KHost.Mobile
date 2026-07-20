@@ -21,6 +21,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
   <img src="docs/screenshots/venues.png" width="200" alt="Venue detail — each place you sing builds its own history (sings, average, go-to songs), with a one-tap KaraFun catalog and Active / Favorite toggles" />
   <br />
   <img src="docs/screenshots/venue-switcher.png" width="200" alt="Venue switcher — tap the header chip to jump between your venues, set the active one, and choose auto-detect or a pinned pick" />
+  <img src="docs/screenshots/singer-switcher.png" width="200" alt="Who's singing? — tap the header avatar to switch between everyone sharing the device; each singer keeps their own songs and the app re-tints to their color" />
   <img src="docs/screenshots/settings.png" width="200" alt="Settings — feature toggles grouped by what they affect, in collapsible sections" />
   <img src="docs/screenshots/import-export.png" width="200" alt="Import & Export — move a singer's profile between devices, export/import venues, or pull songs from a Spotify or YouTube Music playlist" />
 </p>
