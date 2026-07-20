@@ -48,6 +48,17 @@ dotnet build KHost.Mobile.Clients/KHost.Mobile.Clients.csproj
 
 `-p:BaseOutputPath=./obj/_build` mirrors the KHost repo convention (redirects output so it doesn't lock VS's `bin/`).
 
+### UI automation (`playwright/`)
+
+For driving the running app's WebView — walking the first-run tour, exercising a flow, capturing screenshots — use the Playwright scripts in `playwright/` rather than hand-rolling a CDP client. `playwright-core` is a pinned dev dependency; attach with `chromium.connectOverCDP` over a devtools port you forward yourself (Playwright's native Android webview discovery needs a companion APK on the device and is avoided). See `playwright/README.md` for the `adb forward` attach flow, the `walk-tutorial` script, and the on-device gotchas (force-click, `adb screencap` for screenshots, navigate via the app's own links).
+
+```bash
+cd playwright && npm install                     # pulls playwright-core (pinned in package-lock.json)
+# app running + foregrounded, then forward its WebView devtools socket:
+PID=$(adb shell pidof khost.mobile) && adb forward tcp:9333 localabstract:webview_devtools_remote_$PID
+npm run walk-tutorial                             # steps the whole tour, screenshots to shots/
+```
+
 ## Local features (current focus — no server yet)
 
 The app ships **offline/local UI only**. All local data sits behind an interface with a device-backed JSON implementation, so a server-sync implementation can drop in later without UI changes. Every store is registered as a singleton in `MauiProgram`, is `SemaphoreSlim`-guarded with an in-memory cache, raises a `Changed` event to drive UI refresh, and swallows a corrupt file rather than crashing.
@@ -95,7 +106,7 @@ The app ships **offline/local UI only**. All local data sits behind an interface
 - This repo **builds standalone** — it no longer references the sibling `KHost.Online`/`KHost.Contracts` projects. (They return with the online slice; see Roadmap.)
 - **`FileSystem.AppDataDirectory` is the `Data` SUBFOLDER**, i.e. `%LOCALAPPDATA%\KHost\khost.mobile\Data\` on unpackaged Windows (parent folders are the appxmanifest `PublisherDisplayName` = `KHost` and the `ApplicationId` = `khost.mobile`) — NOT the parent `khost.mobile\`. Seeding/inspecting persisted state must target `Data\`. Builds from *before* the publisher/id rename wrote to the legacy `%LOCALAPPDATA%\User Name\com.companyname.khost.mobile\Data\`; that stale copy is ignored by current builds.
 - The template's `Components/Routes.razor` has `FocusOnNavigate Selector="h1"`; pages here have no `<h1>`, so nothing auto-focuses. Harmless, but don't rely on autofocus.
-- **UI test automation on the Windows head is flaky** — WebView2 swallows the *first* SendKeys burst after launch, and page scroll position varies between launches (fixed click coords drift). For persistence checks, prefer seeding/reading the JSON files under `Data\` directly over driving the form.
+- **UI test automation on the Windows head is flaky** — WebView2 swallows the *first* SendKeys burst after launch, and page scroll position varies between launches (fixed click coords drift). For persistence checks, prefer seeding/reading the JSON files under `Data\` directly over driving the form. To drive the UI itself, use the Playwright tools in `playwright/` (see Commands → UI automation) — attaching over CDP with real locators sidesteps the SendKeys/coordinate flakiness.
 - **Sample import data** — this public YouTube Music playlist imports cleanly via Import & Export → YouTube Music, handy for populating the list: `https://music.youtube.com/playlist?list=PLrB1lrYJ3YfvS2ZaTJZ_D8vvIv_fowkNM`
 
 ## Conventions
