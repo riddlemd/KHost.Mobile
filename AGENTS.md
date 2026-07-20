@@ -48,6 +48,19 @@ dotnet build KHost.Mobile.Clients/KHost.Mobile.Clients.csproj
 
 `-p:BaseOutputPath=./obj/_build` mirrors the KHost repo convention (redirects output so it doesn't lock VS's `bin/`).
 
+### Deploying to a device / emulator
+
+```bash
+# Build, deploy, AND launch on the connected Android device (physical Pixel or emulator).
+dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-android -t:Run "-p:BaseOutputPath=./obj/_build"
+# Target a specific device when more than one is attached:
+#   "-p:AdbTarget=-s <serial>"      (e.g. -s emulator-5554, or the wireless-adb serial)
+```
+
+- **Always deploy the Debug build with `-t:Run`, never `adb install` the APK.** The Debug config keeps the .NET assemblies *outside* the APK (Fast Deployment) and relies on the MSBuild deploy target to push them to the device's `files/.__override__/`; a bare `adb install` launches then **crashes** with *"No assemblies found in '.../.__override__/...'. Assuming this is part of Fast Deployment. Exiting."* `-t:Run` does the push and starts the activity. (For a self-contained APK instead, build with `-p:EmbedAssembliesIntoApk=true`.)
+- Deploying **updates the app in place** — the on-device data files (`files/*.json`, `shared_prefs/`) persist across a redeploy; they're only lost on an uninstall.
+- **`<MauiVersion>` is pinned to `10.0.80` in the csproj on purpose — don't "clean it up" back to the workload default.** The workload default (10.0.20) crashes immediately on launch on Android 16 / API 36 (a .NET 10 MAUI root-fragment regression: *"No view found for id … for fragment NavigationRootManager_ElementBasedFragment"*). If an Android launch crash reappears after a workload update, bump `MauiVersion` to the latest serviced `10.0.x` on NuGet and verify with `adb logcat` for the "No view found" FATAL.
+
 ### UI automation (`playwright/`)
 
 For driving the running app's WebView — walking the first-run tour, exercising a flow, capturing screenshots — use the Playwright scripts in `playwright/` rather than hand-rolling a CDP client. `playwright-core` is a pinned dev dependency; attach with `chromium.connectOverCDP` over a devtools port you forward yourself (Playwright's native Android webview discovery needs a companion APK on the device and is avoided). See `playwright/README.md` for the `adb forward` attach flow, the `walk-tutorial` script, and the on-device gotchas (force-click, `adb screencap` for screenshots, navigate via the app's own links).
