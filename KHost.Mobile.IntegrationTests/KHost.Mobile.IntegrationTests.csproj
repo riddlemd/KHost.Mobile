@@ -36,6 +36,7 @@
     <Compile Include="..\KHost.Mobile\Models\SingerColors.cs" Link="Linked\Models\SingerColors.cs" />
 
     <Compile Include="..\KHost.Mobile\Services\IAppDataDirectory.cs" Link="Linked\Services\IAppDataDirectory.cs" />
+    <Compile Include="..\KHost.Mobile\Services\AtomicFile.cs" Link="Linked\Services\AtomicFile.cs" />
     <Compile Include="..\KHost.Mobile\Services\IAppSession.cs" Link="Linked\Services\IAppSession.cs" />
     <Compile Include="..\KHost.Mobile\Services\AppSession.cs" Link="Linked\Services\AppSession.cs" />
     <Compile Include="..\KHost.Mobile\Services\MySongsViewState.cs" Link="Linked\Services\MySongsViewState.cs" />

@@ -327,8 +327,10 @@ public sealed class JsonFileSongListStore : ISongListStore
         }
         catch (JsonException ex)
         {
-            // Corrupt file (e.g. interrupted write on a prior version) — start clean rather than crash the app.
-            _log.LogWarning(ex, "Song list file at {Path} is corrupt; starting with an empty list", path);
+            // Corrupt file (e.g. interrupted write on a pre-atomic-write version) — quarantine it aside so the bad
+            // bytes aren't erased by the next save, then start clean rather than crash the app.
+            _log.LogWarning(ex, "Song list file at {Path} is corrupt; quarantining it and starting with an empty list", path);
+            AtomicFile.Quarantine(path);
             _items = [];
         }
 
@@ -378,8 +380,7 @@ public sealed class JsonFileSongListStore : ISongListStore
     {
         _items = items;
         var path = PathFor(_loadedFor);
-        await using var stream = File.Create(path);
-        await JsonSerializer.SerializeAsync(stream, items, SongListJsonContext.Default.ListSongListItem);
+        await AtomicFile.WriteAsync(path, stream => JsonSerializer.SerializeAsync(stream, items, SongListJsonContext.Default.ListSongListItem));
         _log.LogDebug("Song list saved: {Count} songs to {Path}", items.Count, path);
     }
 }

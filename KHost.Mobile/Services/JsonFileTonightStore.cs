@@ -256,8 +256,9 @@ public sealed class JsonFileTonightStore : ITonightStore
         }
         catch (JsonException ex)
         {
-            // Corrupt file (e.g. an interrupted write) — start clean rather than crash the app.
-            _log.LogWarning(ex, "Tonight file at {Path} is corrupt; starting with an empty set", path);
+            // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app.
+            _log.LogWarning(ex, "Tonight file at {Path} is corrupt; quarantining it and starting with an empty set", path);
+            AtomicFile.Quarantine(path);
             _entries = [];
         }
 
@@ -270,8 +271,7 @@ public sealed class JsonFileTonightStore : ITonightStore
     {
         _entries = entries;
         var path = PathFor(_loadedFor);
-        await using var stream = File.Create(path);
-        await JsonSerializer.SerializeAsync(stream, entries, TonightJsonContext.Default.ListTonightEntry);
+        await AtomicFile.WriteAsync(path, stream => JsonSerializer.SerializeAsync(stream, entries, TonightJsonContext.Default.ListTonightEntry));
         _log.LogDebug("Tonight set saved: {Count} entries to {Path}", entries.Count, path);
     }
 }
