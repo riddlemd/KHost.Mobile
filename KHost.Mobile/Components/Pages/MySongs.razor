@@ -274,6 +274,7 @@
     if (listSig != _lastListSig) { _renderCount = PageSize; _lastListSig = listSig; _pagingReset = true; }
     var page = visible.Take(_renderCount).ToList();
     _listRendered = !_loading && visible.Count > 0;
+    _artPageSig = $"{listSig}:{_renderCount}";   // OnAfterRender loads art for this page only when the signature changes
 }
 
 @if (!_loading)
@@ -825,11 +826,18 @@ else
     private CancellationTokenSource? _suggestCts;                // detail-sheet lookup; cancelled when the sheet closes
     private readonly CancellationTokenSource _bgFillCts = new(); // add-time background lookups; cancelled on dispose
 
-    // Album-art card backgrounds (gated by Settings.AlbumArtEnabled, on by default). Maps a song id to a data
-    // URI once its cover image has been fetched + cached; the card reads it via ArtStyle. Populated lazily in the
-    // background (LoadArtAsync) so the list paints immediately and covers fade in as they arrive.
+    // Album-art card backgrounds (gated by Settings.AlbumArtEnabled, on by default). Maps a song id to a blob:
+    // object URL once its cover has been cached + handed to the WebView (js/album-art.js); the card reads it via
+    // ArtStyle. Populated lazily in the background (LoadArtAsync) so the list paints immediately and covers fade in
+    // as they arrive. The blob URLs are owned by khAlbumArt and freed on stale-drop / singer switch / dispose.
     private readonly Dictionary<Guid, string> _artUris = [];
     private CancellationTokenSource? _artCts;   // cancels the in-flight art load when the list reloads / page disposes
+
+    // Art is loaded only for the CURRENTLY-PAGED cards, so memory is bounded by what's on screen rather than by the
+    // whole library. _artPageSig (filter/sort signature + paged count) captures the rendered page; OnAfterRender
+    // kicks a load whenever it changes (a filter, sort, search, or the sentinel growing the page).
+    private string _artPageSig = "";
+    private string _artLoadedSig = " ";   // distinct from any real signature so the first page always loads
 
     // A release year is optional, but when supplied it must be a real year: 1..this year.
     private static int CurrentYear => DateTime.Now.Year;
@@ -985,6 +993,12 @@ else
     // whose view state hasn't been seeded yet, so their list starts clean instead of inheriting the last singer's.
     private void ResetViewBuffers()
     {
+        // The incoming singer's list replaces this one, so drop every cover and free its blob URL (the ids won't
+        // recur, so keeping them would leak). Their images reload for the new singer's paged cards.
+        _artUris.Clear();
+        _artLoadedSig = " ";   // force the next page to (re)load art for the new singer
+        _ = JS.InvokeVoidAsync("khAlbumArt.revokeAll");
+
         _filterSearch = string.Empty;
         _filterGenres.Clear();
         _filterRatings.Clear();
@@ -1259,6 +1273,15 @@ else
         else if (_detailItem is null)
         {
             _sheetBound = false;
+        }
+
+        // Load album art for the newly-rendered page, once per page change (filter / sort / search / grew a page).
+        // Reloads (RefreshAsync) and single-item autofills trigger LoadArtAsync directly, since those change content
+        // without changing the page signature.
+        if (_artPageSig != _artLoadedSig)
+        {
+            _artLoadedSig = _artPageSig;
+            _ = LoadArtAsync();
         }
 
         // History sheet: same pull-down-to-dismiss, but it has an inner scrolling list — khSheet's scroller
@@ -1697,6 +1720,7 @@ else
             _detailItem.ArtworkUrl = null;
             _detailItem.ArtworkLookedUp = false;   // re-open the one-shot art lookup for the new title/artist
             _artUris.Remove(_detailItem.Id);       // drop the stale cover so the card doesn't keep showing it
+            _ = JS.InvokeVoidAsync("khAlbumArt.revoke", _detailItem.Id.ToString());   // free its blob URL
         }
 
         await Store.UpdateAsync(_detailItem);
@@ -2003,8 +2027,8 @@ else
     // then the card renders normally, so nothing pops or shifts — the cover just fades in when ready.
     private bool HasArt(SongListItem item) => Settings.AlbumArtEnabled && _artUris.ContainsKey(item.Id);
 
-    // Feed the cached data URI to the card via a CSS custom property the stylesheet's ::before reads. Single-quoted
-    // url() is safe: a data URI has no single quotes. Null (no inline style) whenever there's no cover to show.
+    // Feed the cover's blob: URL to the card via a CSS custom property the stylesheet's ::before reads. Single-quoted
+    // url() is safe: a blob: URL has no single quotes. Null (no inline style) whenever there's no cover to show.
     private string? ArtStyle(SongListItem item) =>
         HasArt(item) ? $"--kh-card-art: url('{_artUris[item.Id]}');" : null;
 
@@ -2060,37 +2084,67 @@ else
         _ = LoadArtAsync();
     }
 
-    // Best-effort background pass: for every song that has a cover URL but whose image isn't cached yet, fetch +
-    // cache it (from the artwork CDN, not the rate-limited Search API) and fade it in. Runs after each list load;
-    // a no-op when album art is off or every visible cover is already cached. Cancelled when the list reloads
-    // again or the page is disposed. Only songs that already carry an ArtworkUrl are touched — discovering new
-    // URLs stays on the throttled add / detail-open paths, so this never bulk-hammers iTunes.
-    private async Task LoadArtAsync()
+    // Serializes the background art passes: each call cancels the previous run's token, then the new run waits for
+    // that run to fully unwind before starting — so only ONE loop ever mutates _artUris / the blob map at a time.
+    // (Two runs overlapping could have a cancelled one revoke a blob the live one just installed, leaving a card
+    // pointing at a dead blob: URL.) Fire-and-forget callers reassign this from the UI thread, so no locking is needed.
+    private Task _artRun = Task.CompletedTask;
+
+    private Task LoadArtAsync()
     {
         if (!Settings.AlbumArtEnabled)
-            return;
+            return Task.CompletedTask;
 
         _artCts?.Cancel();
+        var previous = _artRun;
         _artCts = new CancellationTokenSource();
-        var token = _artCts.Token;
+        return _artRun = LoadArtCoreAsync(previous, _artCts.Token);
+    }
 
-        var pending = _items.Where(i => i.ArtworkUrl is not null && !_artUris.ContainsKey(i.Id)).ToList();
+    // Best-effort background pass: for every PAGED song that has a cover URL but whose image isn't shown yet, fetch +
+    // cache it (from the artwork CDN, not the rate-limited Search API), hand it to the WebView as a blob URL, and fade
+    // it in. A no-op when album art is off or every visible cover is already loaded. Only songs that already carry an
+    // ArtworkUrl are touched — discovering new URLs stays on the throttled add / detail-open paths.
+    private async Task LoadArtCoreAsync(Task previous, CancellationToken token)
+    {
+        try { await previous; } catch { /* the prior run's own failure is its concern; we just needed it to finish */ }
+        if (token.IsCancellationRequested)
+            return;
+
+        // Only the cards currently paged in — art memory is bounded by the visible page, not the whole library.
+        var pending = Sorted().Take(_renderCount).Where(i => i.ArtworkUrl is not null && !_artUris.ContainsKey(i.Id)).ToList();
         foreach (var item in pending)
         {
             if (token.IsCancellationRequested)
                 return;
 
+            Stream? stream;
+            try { stream = await AlbumArt.OpenArtStreamAsync(item.ArtworkUrl, token); }
+            catch (OperationCanceledException) { return; }
+            if (stream is null)
+                continue;
+            if (token.IsCancellationRequested)
+            {
+                stream.Dispose();
+                return;
+            }
+
             try
             {
-                var uri = await AlbumArt.GetDataUriAsync(item.ArtworkUrl, token);
-                if (uri is null || token.IsCancellationRequested)
-                    continue;
+                // Hand the bytes to JS as a stream (a byte[] arg would base64 in transit — the hop we're removing);
+                // JS makes a blob: object URL. DotNetStreamReference disposes the stream once the WebView has read it.
+                var objectUrl = await JS.InvokeAsync<string>("khAlbumArt.set", item.Id.ToString(), new DotNetStreamReference(stream));
 
-                _artUris[item.Id] = uri;
+                // If the list moved on while this transferred, DON'T revoke here: a superseding run may already own
+                // this id, and its set() has revoked our now-stale blob. Just stop — the next run reconciles the id.
+                if (token.IsCancellationRequested)
+                    return;
+
+                _artUris[item.Id] = objectUrl;
                 await InvokeAsync(StateHasChanged);   // fade this one cover in without waiting for the rest
             }
-            catch (OperationCanceledException) { return; }
-            catch { /* best-effort: skip a cover that won't load, keep going */ }
+            catch (OperationCanceledException) { stream.Dispose(); return; }
+            catch { stream.Dispose(); /* skip a cover that won't transfer; the FileStream handle isn't leaked */ }
         }
     }
 
@@ -2155,5 +2209,6 @@ else
         _bgFillCts.Dispose();
         _artCts?.Cancel();
         _artCts?.Dispose();
+        _ = JS.InvokeVoidAsync("khAlbumArt.revokeAll");   // free every cover's blob URL as the page tears down
     }
 }

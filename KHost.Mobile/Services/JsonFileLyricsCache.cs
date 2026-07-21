@@ -146,8 +146,10 @@ public sealed class JsonFileLyricsCache(IAppDataDirectory paths, ILogger<JsonFil
         }
         catch (JsonException ex)
         {
-            // Corrupt file (e.g. an interrupted write) — start clean rather than crash the app.
-            _log.LogWarning(ex, "Lyrics cache file at {Path} is corrupt; starting empty", _filePath);
+            // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app. (Lyrics
+            // re-download on next view, so this is the most disposable cache — but stay consistent with the stores.)
+            _log.LogWarning(ex, "Lyrics cache file at {Path} is corrupt; quarantining it and starting empty", _filePath);
+            AtomicFile.Quarantine(_filePath);
             _entries = new Dictionary<string, LyricsCacheEntry>(StringComparer.Ordinal);
         }
 
@@ -158,8 +160,7 @@ public sealed class JsonFileLyricsCache(IAppDataDirectory paths, ILogger<JsonFil
     private async Task SaveAsync(Dictionary<string, LyricsCacheEntry> entries)
     {
         _entries = entries;
-        await using var stream = File.Create(_filePath);
-        await JsonSerializer.SerializeAsync(stream, entries.Values.ToList(), LyricsCacheJsonContext.Default.ListLyricsCacheEntry);
+        await AtomicFile.WriteAsync(_filePath, stream => JsonSerializer.SerializeAsync(stream, entries.Values.ToList(), LyricsCacheJsonContext.Default.ListLyricsCacheEntry));
         _log.LogDebug("Lyrics cache saved: {Count} entries to {Path}", entries.Count, _filePath);
     }
 }

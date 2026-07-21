@@ -2,7 +2,7 @@
 
 > **You're on cue.** — the singer & patron companion app for [KHost](https://github.com/riddlemd/KHost), open-source karaoke host software.
 
-[![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-blueviolet)](#)
+[![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-blueviolet)](https://github.com/riddlemd/KHost.Mobile/releases)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![UI](https://img.shields.io/badge/UI-MAUI%20Blazor%20Hybrid-5C2D91)](https://learn.microsoft.com/dotnet/maui/)
 [![License](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-orange)](LICENSE)
@@ -52,6 +52,10 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 
 ## 🚀 Getting started
 
+### Install (Android)
+
+Grab the latest `KHostCue-vX.Y.Z.apk` from [Releases](https://github.com/riddlemd/KHost.Mobile/releases) and sideload it (you may need to allow installs from your browser or file manager). The app checks Releases itself and shows a banner when a newer version is out. On iOS, build from source for now (see below).
+
 ### Prerequisites
 
 - **.NET 10 SDK** with the MAUI workload:
@@ -80,7 +84,7 @@ dotnet run --project KHost.Mobile -f net10.0-windows10.0.19041.0 "-p:BaseOutputP
 
 Need songs to populate the list while testing? This public **YouTube Music** playlist imports cleanly via **Import & Export → YouTube Music**:
 
-```
+```text
 https://music.youtube.com/playlist?list=PLrB1lrYJ3YfvS2ZaTJZ_D8vvIv_fowkNM
 ```
 
@@ -104,6 +108,16 @@ dotnet test KHost.Mobile.IntegrationTests/KHost.Mobile.IntegrationTests.csproj "
 
 Neither test project needs the MAUI workload: they target plain `net10.0`. The MAUI-free source they cover (models, stores) is pulled in via linked `<Compile>` since a `net10.0` project can't reference the MAUI head. The stores' only device dependency — the app-data folder — is abstracted behind `IAppDataDirectory`, which the integration tests point at a throwaway temp directory.
 
+### Design notes
+
+**Album art — why `blob:` URLs and not `<img src>` / `file://`.** Covers are cached as plain image files in the app's private data directory (`Data/album-art/`, named by a hash of the source URL). But the Blazor WebView serves only the bundled, read-only `wwwroot`, and its page origin is `https://0.0.0.1` — so it has **no route to a file in the data directory**: `file://` access to the app-private dir is sandbox-blocked, an `https` page loading a `file://` resource is a cross-origin/mixed-content violation, and `wwwroot` can't be written to at runtime.
+
+Referencing the cached file directly would therefore need a **per-platform serving handler** — WebView2 `SetVirtualHostNameToFolderMapping`, Android `WebViewAssetLoader` / `shouldInterceptRequest`, iOS `WKURLSchemeHandler` — three separate native implementations, the riskiest of which (Android) can't be verified without an on-device run.
+
+Instead, the cover bytes are streamed to the WebView via a `DotNetStreamReference` and turned into a `blob:` object URL in `wwwroot/js/album-art.js` — **one implementation that behaves identically on every platform**, so it's verifiable once. The card's CSS background then holds a short `blob:` URL rather than a base64 `data:` copy of every image, and art is loaded only for the currently-paged cards, so image memory stays bounded by what's on screen. `js/album-art.js` owns the object-URL lifecycle (revoked when a cover is replaced, on a singer switch, and on page teardown). The platform-serving approach remains a valid alternative if the C#↔JS transfer ever becomes a bottleneck.
+
+**Crash-safe store writes.** Every JSON store writes to a same-directory `.tmp` file and atomically renames it over the target (`AtomicFile.WriteAsync`) — a same-volume rename, so a write interrupted by an app kill or power loss leaves the *last good* file intact instead of a truncated one. (The load path treats a corrupt file as "start empty", which for a direct overwrite would silently lose the whole list.) A file that fails to parse on load is moved aside to a `.corrupt` sibling rather than being overwritten by the next save, so the bad bytes are preserved for recovery.
+
 ## 📁 Project structure
 
 | Project | Role |
@@ -119,7 +133,7 @@ Issues and pull requests are welcome. Please keep changes focused and describe t
 
 ## 📄 License
 
-KHost Cue is licensed under the [PolyForm Shield License 1.0.0](LICENSE) — the same license as [KHost](../KHost).
+KHost Cue is licensed under the [PolyForm Shield License 1.0.0](LICENSE) — the same license as [KHost](https://github.com/riddlemd/KHost).
 
 You may use, modify, and self-host it for any purpose, **including commercial use** (for example, running it for your own karaoke events). You may **not** use it to provide a competing product or service — such as a hosted/managed offering (SaaS) or a rebranded redistribution — without a separate license. Commercial, SaaS, and OEM licenses are available; contact Michael Riddle <riddlemd@gmail.com>.
 

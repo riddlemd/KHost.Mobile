@@ -223,8 +223,9 @@ public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFil
         }
         catch (JsonException ex)
         {
-            // Corrupt file (e.g. an interrupted write) — start clean rather than crash the app.
-            _log.LogWarning(ex, "Singers file at {Path} is corrupt; starting with an empty roster", _filePath);
+            // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app.
+            _log.LogWarning(ex, "Singers file at {Path} is corrupt; quarantining it and starting with an empty roster", _filePath);
+            AtomicFile.Quarantine(_filePath);
             _singers = [];
         }
 
@@ -235,8 +236,7 @@ public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFil
     private async Task SaveAsync(List<Singer> singers)
     {
         _singers = singers;
-        await using var stream = File.Create(_filePath);
-        await JsonSerializer.SerializeAsync(stream, singers, SingerJsonContext.Default.ListSinger);
+        await AtomicFile.WriteAsync(_filePath, stream => JsonSerializer.SerializeAsync(stream, singers, SingerJsonContext.Default.ListSinger));
         _log.LogDebug("Singers saved: {Count} to {Path}", singers.Count, _filePath);
     }
 }
