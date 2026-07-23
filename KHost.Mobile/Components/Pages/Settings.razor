@@ -281,6 +281,22 @@
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Weight recent sings more</span>
+                <span class="setting__desc">
+                    A song's how-it-went star normally blends its whole record and leans toward your list average
+                    until you've sung it a few times (so one lucky 5 doesn't outrank a solid ten-sing streak). Turn
+                    this on to also fade older sings, so what you're crushing lately leads. Only changes the star and
+                    the list order — your logged performances are never altered.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.RecencyWeightedRatings" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
         }
     </div>
 

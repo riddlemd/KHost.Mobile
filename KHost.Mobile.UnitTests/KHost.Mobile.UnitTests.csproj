@@ -47,6 +47,9 @@
     <Compile Include="..\KHost.Mobile\Services\KaraFunVenueUrlParser.cs" Link="Linked\Services\KaraFunVenueUrlParser.cs" />
     <Compile Include="..\KHost.Mobile\Services\YouTubeSearch.cs" Link="Linked\Services\YouTubeSearch.cs" />
     <Compile Include="..\KHost.Mobile\Services\SpotifySearch.cs" Link="Linked\Services\SpotifySearch.cs" />
+
+    <!-- Bayesian how-it-went scoring (MAUI-free, pure): the confidence-weighted star + list prior. -->
+    <Compile Include="..\KHost.Mobile\Services\RatingScore.cs" Link="Linked\Services\RatingScore.cs" />
   </ItemGroup>
 
 </Project>

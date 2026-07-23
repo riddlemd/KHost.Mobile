@@ -107,6 +107,13 @@ public interface IAppSettings
     bool RatePerformances { get; set; }
 
     /// <summary>
+    /// When true, a song's how-it-went star weights recent sings more than old ones (an exponential time-decay), so
+    /// what you're crushing lately ranks above what you nailed years ago. When false (the default), every rated sing
+    /// counts equally. Affects only the derived star + list ranking on My Songs — the stored performances are untouched.
+    /// </summary>
+    bool RecencyWeightedRatings { get; set; }
+
+    /// <summary>
     /// When true, the app checks GitHub for a newer release once at startup and shows a banner when one is
     /// available. When false, no update check runs (no network request) and the banner never appears.
     /// </summary>
