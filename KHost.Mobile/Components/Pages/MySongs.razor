@@ -673,9 +673,9 @@ else
         <div class="sheet__title">Sung history</div>
         <div class="sheet__subtitle">
             @_historyItem.Title
-            @if (_historyItem.AverageHowItWent is { } avg)
+            @if (BayesStar(_historyItem) is { } score)
             {
-                <text> · avg @avg.ToString("0.0") over @_historyItem.Performances.Count</text>
+                <text> · @score.ToString("0.0")★ over @_historyItem.Performances.Count sing@(_historyItem.Performances.Count == 1 ? "" : "s")</text>
             }
         </div>
 
