@@ -1,0 +1,108 @@
+@implements IDisposable
+@inject IBackButtonService BackButton
+
+@* Concept-1 split button: a primary action segment + a chevron that drops a menu of related actions. Reusable —
+   pass the default action via OnPrimary and the extra actions as <SplitButtonItem> children. Dismissed by tapping
+   outside (the scrim) or the Android back button (via IBackButtonService), exactly like the header ⋮ menu. *@
+<div class="kh-split @(_open ? "is-open" : "")">
+    <button type="button" class="btn @VariantBtnClass kh-split__main" disabled="@Disabled" @onclick="PrimaryClickAsync">
+        @if (PrimaryContent is not null)
+        {
+            @PrimaryContent
+        }
+        else
+        {
+            @PrimaryLabel
+        }
+    </button>
+    <button type="button" class="btn @VariantBtnClass kh-split__toggle" disabled="@Disabled"
+            aria-haspopup="menu" aria-expanded="@_open" aria-label="@ToggleAriaLabel" @onclick="Toggle">
+        <span class="kh-split__chev" aria-hidden="true">▾</span>
+    </button>
+    @if (_open)
+    {
+        @* Transparent full-screen catcher: a tap anywhere outside the menu closes it (same trick as the header menu). *@
+        <div class="kh-split__scrim" @onclick="Close"></div>
+        <div class="kh-split__menu kh-split__menu--@DirectionAttr kh-split__menu--@AlignAttr" role="menu">
+            <CascadingValue Value="this" IsFixed="true">
+                @ChildContent
+            </CascadingValue>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The primary (default) action's label. Ignored when <see cref="PrimaryContent"/> is set.</summary>
+    [Parameter] public string? PrimaryLabel { get; set; }
+
+    /// <summary>Optional rich content for the primary segment (icon + label markup); overrides <see cref="PrimaryLabel"/>.</summary>
+    [Parameter] public RenderFragment? PrimaryContent { get; set; }
+
+    /// <summary>Invoked when the primary segment is tapped — the button's default action.</summary>
+    [Parameter] public EventCallback OnPrimary { get; set; }
+
+    /// <summary>The dropdown's rows — a sequence of <see cref="SplitButtonItem"/> elements.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Which way the menu opens: <see cref="SplitDirection.Down"/> (default) or <see cref="SplitDirection.Up"/>
+    /// for a button low in a sheet.</summary>
+    [Parameter] public SplitDirection Direction { get; set; } = SplitDirection.Down;
+
+    /// <summary>Which edge the menu aligns to: <see cref="SplitMenuAlign.End"/> (default, right) or Start (left).</summary>
+    [Parameter] public SplitMenuAlign Align { get; set; } = SplitMenuAlign.End;
+
+    /// <summary>The fill for both segments — Primary (default), Tonal, or Secondary.</summary>
+    [Parameter] public SplitVariant Variant { get; set; } = SplitVariant.Primary;
+
+    /// <summary>Disables both segments.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Accessible label for the chevron toggle (the visible glyph is decorative).</summary>
+    [Parameter] public string ToggleAriaLabel { get; set; } = "More options";
+
+    private bool _open;
+    private BackButtonOverlayGuard? _backGuard;
+
+    // Registered for the component's lifetime so the Android back button closes an open menu instead of navigating
+    // (mirrors the header ⋮ menu). The guard no-ops when the menu is closed, so it only consumes a back press
+    // when there's something to dismiss.
+    protected override void OnInitialized() =>
+        _backGuard = new BackButtonOverlayGuard(BackButton, TryClose, StateHasChanged);
+
+    private bool TryClose()
+    {
+        if (!_open)
+            return false;
+        _open = false;
+        return true;
+    }
+
+    private void Toggle() => _open = !_open;
+
+    private void Close() => _open = false;
+
+    private async Task PrimaryClickAsync()
+    {
+        _open = false;
+        await OnPrimary.InvokeAsync();
+    }
+
+    // Called by a child SplitButtonItem after its own click runs — this component owns the open/close state.
+    internal void CloseFromItem()
+    {
+        _open = false;
+        StateHasChanged();
+    }
+
+    private string VariantBtnClass => Variant switch
+    {
+        SplitVariant.Tonal => "btn-tonal",
+        SplitVariant.Secondary => "btn-secondary",
+        _ => "btn-primary",
+    };
+
+    private string DirectionAttr => Direction == SplitDirection.Up ? "up" : "down";
+    private string AlignAttr => Align == SplitMenuAlign.Start ? "start" : "end";
+
+    public void Dispose() => _backGuard?.Dispose();
+}

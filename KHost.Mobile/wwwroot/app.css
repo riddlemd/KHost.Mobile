@@ -194,6 +194,66 @@ html, body {
 .header-menu__item:hover { background: var(--kh-surface-2); }
 .header-menu__icon { font-size: 1.05rem; line-height: 1; width: 1.3rem; text-align: center; }
 
+/* ---- Split button (SplitButton / SplitButtonItem components) ----------- */
+/* A primary action segment + a chevron that drops a menu of related actions. The two segments share a .btn
+   variant for their fill; this block only flattens the shared edge, adds the divider, spins the chevron, and
+   positions the menu (styled like the header ⋮ menu above). */
+.kh-split { position: relative; display: inline-flex; }
+
+.kh-split__main { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.kh-split__toggle {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    min-width: 2.6rem;
+    padding-left: 0.7rem;
+    padding-right: 0.7rem;
+    /* Divider adapts to the segment's own text color, so it reads on the solid, tonal, and secondary fills alike. */
+    border-left: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+}
+.kh-split__chev { font-size: 0.85em; line-height: 1; transition: transform 0.18s ease; }
+.kh-split.is-open .kh-split__chev { transform: rotate(180deg); }
+
+/* Transparent full-screen catcher: a tap anywhere outside the menu closes it (same trick as .header-menu__scrim). */
+.kh-split__scrim { position: fixed; inset: 0; z-index: 1; }
+
+.kh-split__menu {
+    position: absolute;
+    z-index: 2;
+    min-width: 14rem;
+    padding: 0.35rem;
+    background: var(--kh-surface);
+    border: 1px solid var(--kh-border);
+    border-radius: 0.6rem;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    animation: sheet-fade 0.12s ease;
+}
+.kh-split__menu--down { top: calc(100% + 0.4rem); }
+.kh-split__menu--up { bottom: calc(100% + 0.4rem); }
+.kh-split__menu--end { right: 0; }
+.kh-split__menu--start { left: 0; }
+
+.kh-split__item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    border: none;
+    border-radius: 0.45rem;
+    background: none;
+    color: var(--kh-text);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+.kh-split__item:hover:not(:disabled) { background: var(--kh-surface-2); }
+.kh-split__item:disabled { opacity: 0.5; cursor: not-allowed; }
+.kh-split__item--sep { margin-top: 0.3rem; padding-top: 0.65rem; border-top: 1px solid var(--kh-border); }
+.kh-split__item-icon { font-size: 1.05rem; line-height: 1; width: 1.3rem; text-align: center; flex: none; }
+.kh-split__item-body { display: flex; flex-direction: column; min-width: 0; }
+.kh-split__item-desc { font-size: 0.76rem; font-weight: 400; color: var(--kh-text-muted); }
+
 /* ---- About page -------------------------------------------------------- */
 /* Box model matches the Settings/Import pages (both rely on .app-content's padding + max-width);
    only the centered text is About-specific. */
