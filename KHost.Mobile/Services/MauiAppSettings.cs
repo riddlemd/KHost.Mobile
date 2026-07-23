@@ -26,6 +26,7 @@ public sealed class MauiAppSettings : IAppSettings
     private const string AlbumArtKey = "settings.album_art";
     private const string SurpriseSkipSungTodayKey = "settings.surprise_skip_sung_today";
     private const string RatePerformancesKey = "settings.rate_performances";
+    private const string RecencyWeightedRatingsKey = "settings.recency_weighted_ratings";
     private const string UpdateCheckKey = "settings.update_check";
     private const string TutorialCompletedKey = "settings.tutorial_completed";
     private const string TutorialSeededTonightIdsKey = "settings.tutorial_seeded_tonight_ids";
@@ -140,6 +141,14 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(RatePerformancesKey, true);
         set => Preferences.Default.Set(RatePerformancesKey, value);
+    }
+
+    // Defaults to false (not true like most flags): the plain equal-weight average is the baseline behavior, and
+    // recency weighting is an opt-in for singers who want their recent form to lead.
+    public bool RecencyWeightedRatings
+    {
+        get => Preferences.Default.Get(RecencyWeightedRatingsKey, false);
+        set => Preferences.Default.Set(RecencyWeightedRatingsKey, value);
     }
 
     public bool UpdateCheckEnabled

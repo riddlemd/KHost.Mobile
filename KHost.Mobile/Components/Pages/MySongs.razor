@@ -389,10 +389,10 @@ else
                 <div class="song-card__ratings-row">
                     <span class="song-card__ratings">
                         <span class="rating-grp">
-                            @if (item.AverageHowItWent is { } avg)
+                            @if (BayesStar(item) is { } score)
                             {
                                 <StarRating Value="RoundedAvg(item)" Tone="hot" Sung="true" ReadOnly="true" />
-                                <span class="rating-num">@avg.ToString("0.0")</span>
+                                <span class="rating-num">@score.ToString("0.0")</span>
                             }
                             else
                             {
@@ -503,10 +503,10 @@ else
                         {
                             <span class="sheet__muted">unsung</span>
                         }
-                        else if (_detailItem.AverageHowItWent is { } avg)
+                        else if (BayesStar(_detailItem) is { } score)
                         {
                             <StarRating Value="RoundedAvg(_detailItem)" Tone="hot" Sung="true" ReadOnly="true" />
-                            <span class="rating-num">@avg.ToString("0.0")</span>
+                            <span class="rating-num">@score.ToString("0.0")</span>
                         }
                         else
                         {
@@ -1427,12 +1427,33 @@ else
                 candidates = fresh;
         }
 
-        var pick = candidates[Random.Shared.Next(candidates.Count)];
+        var pick = WeightedPick(candidates);
         if (pick.Id == _lastSurpriseId && candidates.Count >= 2)
-            pick = candidates[Random.Shared.Next(candidates.Count)];
+            pick = WeightedPick(candidates);
 
         _lastSurpriseId = pick.Id;
         return OpenDetail(pick.Id.ToString());
+    }
+
+    // Pick a song at random, weighted by its Bayesian how-it-went star so the shuffle leans toward songs you sing
+    // well — while still able to surface anything. An unrated song gets the list's average as a neutral weight (so
+    // it isn't excluded), and everything keeps a small floor so nothing is ever impossible to draw.
+    private SongListItem WeightedPick(IReadOnlyList<SongListItem> candidates)
+    {
+        var neutral = _ratingContext.PriorMean ?? 3.0;
+        var weights = candidates.Select(c => Math.Max(0.25, BayesStar(c) ?? neutral)).ToList();
+        var total = weights.Sum();
+        if (total <= 0)
+            return candidates[Random.Shared.Next(candidates.Count)];
+
+        var roll = Random.Shared.NextDouble() * total;
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            roll -= weights[i];
+            if (roll <= 0)
+                return candidates[i];
+        }
+        return candidates[^1];   // floating-point guard: the roll landed exactly on the total
     }
 
     private static bool SungToday(SongListItem item) =>
@@ -2016,12 +2037,18 @@ else
         await Store.UpdateAsync(item);
     }
 
-    // Whole-star value for the red "how it went" display: the rounded average of rated performances (0 when none).
-    private static int RoundedAvg(SongListItem item) =>
-        item.AverageHowItWent is { } avg ? (int)Math.Round(avg, MidpointRounding.AwayFromZero) : 0;
+    // The confidence-weighted "how it went" star (Bayesian shrinkage toward the whole list's average), rebuilt
+    // whenever the list reloads. This is what the card star, the sort, and the rating filter buckets all read — so a
+    // song with one lucky 5 doesn't outrank one with a solid ten-sing record. Null until the song's first rated sing.
+    private RatingContext _ratingContext = new(null, RatingConfig.Default, default);
+    private double? BayesStar(SongListItem item) => RatingScore.StarFor(item, _ratingContext);
 
-    // Sort key for "how it went": the true average; unrated/unsung songs sort below every rated one.
-    private static double AvgSortKey(SongListItem item) => item.AverageHowItWent ?? -1;
+    // Whole-star value for the red "how it went" display: the rounded Bayesian star (0 when the song has no rating).
+    private int RoundedAvg(SongListItem item) =>
+        BayesStar(item) is { } score ? (int)Math.Round(score, MidpointRounding.AwayFromZero) : 0;
+
+    // Sort key for "how it went": the Bayesian star; unrated/unsung songs sort below every rated one.
+    private double AvgSortKey(SongListItem item) => BayesStar(item) ?? -1;
 
     // A card shows its cover only when the feature is on AND the image has finished caching (in _artUris). Until
     // then the card renders normally, so nothing pops or shifts — the cover just fades in when ready.
@@ -2075,6 +2102,10 @@ else
         }
 
         _items = await Store.GetAllAsync();
+        // Rebuild the shared rating context (the list-wide prior) once per load; the recency toggle picks the config.
+        _ratingContext = RatingScore.BuildContext(_items,
+            RatingConfig.Default with { RecencyEnabled = Settings.RecencyWeightedRatings },
+            DateTimeOffset.Now);
         RecomputeYearBounds();
         await Tonight.PruneAsync(_items.Select(i => i.Id).ToList());
         _tonight = await Tonight.GetAllAsync();
