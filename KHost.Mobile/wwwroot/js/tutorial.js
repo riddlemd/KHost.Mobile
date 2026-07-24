@@ -7,9 +7,21 @@ window.khTutorial = {
     _ctx: null,          // last positioned step, so a resize can re-lay-it-out
     _resizeBound: false,
 
+    // Is the target actually on screen? NOT `offsetParent === null`: that is also null for every position:fixed
+    // element, so it reads a perfectly visible FAB (My Songs' add button) as hidden and the step silently degrades
+    // to a centered card. Measure what we care about instead — does it paint, and is it visible? A rect covers
+    // display:none (0 x 0); opacity/visibility cover the controls that hide by fading out rather than unmounting,
+    // like that same FAB while a sheet is open.
+    _visible(el) {
+        const r = el.getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0) return false;
+        const style = getComputedStyle(el);
+        return style.visibility !== 'hidden' && Number(style.opacity) !== 0;
+    },
+
     position(hole, caret, tip, selector) {
         const target = document.querySelector(selector);
-        if (!target || target.offsetParent === null) return false;   // not rendered / hidden
+        if (!target || !this._visible(target)) return false;   // not rendered / hidden
 
         // Bring the target into view first. behavior:'instant' forces a synchronous scroll (overriding any CSS
         // smooth-scroll), so the rect we read next is the target's FINAL position — otherwise a mid-animation
