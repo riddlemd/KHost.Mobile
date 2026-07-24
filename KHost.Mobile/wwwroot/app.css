@@ -314,6 +314,10 @@ button { text-transform: none; }
 .page-back:hover { background: var(--kh-surface-2); }
 /* h1 is the FocusOnNavigate target (a11y); suppress the ring on this non-interactive heading. */
 .page-title { margin: 0; font-size: 1.25rem; font-weight: 700; outline: none; }
+/* The header's trailing action (Venues' and Singers' "＋ Add"), pushed to the far end. A page with its OWN header
+   puts the add control here; My Songs has no page header and a list long enough to scroll one away, which is why
+   it uses a floating FAB (.mysongs-fab) instead — same add sheet either way. */
+.page-head__add { flex: 0 0 auto; margin-left: auto; padding: 0.45rem 0.85rem; }
 
 /* A settings row: label text on the left, toggle switch on the right. The whole row is a <label>, so a tap
    anywhere on it flips the switch. */
@@ -2141,7 +2145,6 @@ body.kh-sheet-open { overflow: hidden; }
 .venue-switcher__seg-btn.is-on.is-pin { color: #e1477e; }
 
 /* Venues page — list */
-.venues__add { flex: 0 0 auto; margin-left: auto; padding: 0.45rem 0.85rem; }
 .venues__cta { margin-top: 1rem; }
 .venues__search { margin-bottom: 0.75rem; }
 .venues__nomatch { color: var(--kh-text-muted); font-size: 0.9rem; padding: 0.5rem 0.15rem; }
@@ -2323,7 +2326,6 @@ body.kh-sheet-open { overflow: hidden; }
 .brand-lockup--boot .brand-lockup__cue { font-size: 1.2rem; }
 
 /* Singers page — roster */
-.singers__add { flex: 0 0 auto; margin-left: auto; padding: 0.45rem 0.85rem; }
 .singer-list { display: flex; flex-direction: column; gap: 0.6rem; }
 .singer-row {
     display: flex; align-items: center; gap: 0.75rem;
