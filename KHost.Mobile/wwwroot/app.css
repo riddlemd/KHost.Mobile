@@ -5,11 +5,8 @@
    the bottom exactly as the app relies on them.
    ============================================================================ */
 
-/* --kh-primary is NOT a constant: js/singer.js overrides it on <html> to the active singer's color, and the dark
-   theme re-points it below. So any translucent tint of the accent — a glow, a wash, a chip background — has to be
-   derived from the token with color-mix(), never written as a hardcoded rgba(124, 58, 237, …). Those literals look
-   right only for the default violet singer in light mode, and leave everyone else with, say, an amber button
-   wearing a violet shadow. */
+/* js/singer.js overrides --kh-primary on <html> per active singer, so tint the accent with color-mix() on the
+   token — never a hardcoded rgba(), which only matches for the default violet. */
 :root {
     --kh-primary: #7c3aed;          /* violet — karaoke accent */
     --kh-primary-strong: #6d28d9;
@@ -314,9 +311,7 @@ button { text-transform: none; }
 .page-back:hover { background: var(--kh-surface-2); }
 /* h1 is the FocusOnNavigate target (a11y); suppress the ring on this non-interactive heading. */
 .page-title { margin: 0; font-size: 1.25rem; font-weight: 700; outline: none; }
-/* The header's trailing action (Venues' and Singers' "＋ Add"), pushed to the far end. A page with its OWN header
-   puts the add control here; My Songs has no page header and a list long enough to scroll one away, which is why
-   it uses a floating FAB (.mysongs-fab) instead — same add sheet either way. */
+/* Venues + Singers. My Songs has no page header, so it adds via the floating .mysongs-fab instead. */
 .page-head__add { flex: 0 0 auto; margin-left: auto; padding: 0.45rem 0.85rem; }
 
 /* A settings row: label text on the left, toggle switch on the right. The whole row is a <label>, so a tap

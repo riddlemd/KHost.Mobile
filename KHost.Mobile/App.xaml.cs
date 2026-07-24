@@ -7,9 +7,8 @@ namespace KHost.Mobile;
 public partial class App : Application
 {
 #if MACCATALYST
-    // The documented mobile-preview viewport — 393 x 852 (iPhone 15/16), see DEVELOPMENT.md. This is the size of
-    // the WEB VIEW, which is what the screenshot grid and the CSS breakpoints are measured against, not of the
-    // macOS window — which ends up a title bar taller.
+    // The mobile-preview viewport from DEVELOPMENT.md. It sizes the WEB VIEW, not the window (which is a title
+    // bar taller).
     private const double PreviewViewportWidth = 393;
     private const double PreviewViewportHeight = 852;
 #endif
@@ -36,25 +35,10 @@ public partial class App : Application
     /// Opens the Catalyst window at the documented mobile-preview viewport, then releases it to the user to resize.
     /// </summary>
     /// <remarks>
-    /// The Catalyst head exists to preview layout changes without an emulator — it is NOT a shipping desktop app —
-    /// so it opens at the phone viewport rather than some desktop-ish default. Two Catalyst-isms make that harder
-    /// than setting <see cref="Window.Width"/>:
-    /// <list type="bullet">
-    /// <item><description>
-    /// Width/Height alone do nothing. MAUI's <c>WindowExtensions.UpdateCoordinates</c> issues the macOS geometry
-    /// request only when X, Y, Width AND Height are all non-NaN, so setting just the size is a silent no-op and the
-    /// window opens at Catalyst's 1024 x 768 default — a desktop-wide layout, exactly what this head is not for.
-    /// Supplying a position too still isn't enough: that request is clamped to the screen's visible frame, so the
-    /// Dock alone is enough to quietly hand back a viewport shorter than asked for. The scene's size restrictions
-    /// (<see cref="Window.MinimumHeight"/> and friends) are not clamped, so pinning min = max is the only way to
-    /// land the exact size — and the pin is then released so the window stays resizable.
-    /// </description></item>
-    /// <item><description>
-    /// The size applies to the window FRAME, of which macOS claims a slice back as a safe-area inset for the title
-    /// bar — leaving the web view a title bar short of the viewport. The inset reads 0 until the first layout pass
-    /// settles, and a hard-coded title-bar height would rot across macOS versions, so it is measured instead.
-    /// </description></item>
-    /// </list>
+    /// Don't simplify this to <see cref="Window.Width"/>/<see cref="Window.Height"/>: MAUI only issues the macOS
+    /// geometry request when X, Y, Width and Height are ALL set, and that request is then clamped to the screen's
+    /// visible frame (the Dock is enough to shrink it). Size restrictions aren't clamped, so min = max is the only
+    /// way to land an exact size.
     /// </remarks>
     private static void PinToMobilePreviewViewport(Window window)
     {
@@ -71,13 +55,10 @@ public partial class App : Application
         EventHandler? growByTitleBar = null;
         growByTitleBar = (_, _) =>
         {
-            // The page IS the web view area, so its height is the viewport the CSS sees, and whatever it comes up
-            // short is exactly the chrome to grow the window by.
+            // macOS takes a title bar's worth of the window back as a safe-area inset, so the page (= the web view)
+            // comes up short by it. Measured rather than hard-coded: the inset reads 0 until the first layout pass
+            // settles, and 0 / anything too big to be a title bar means there's nothing useful to correct.
             var shortfall = PreviewViewportHeight - page.Height;
-
-            // Ignore the layout pass before the inset is applied (the page is still full-frame height, so nothing
-            // is missing yet) and any shortfall too large to be a title bar — on a display too small to hold the
-            // preview, growing the window wouldn't fix it.
             if (shortfall is <= 0 or >= 200)
             {
                 return;
@@ -87,8 +68,7 @@ public partial class App : Application
             window.MinimumHeight = PreviewViewportHeight + shortfall;
             window.MaximumHeight = PreviewViewportHeight + shortfall;
 
-            // Then hand the window back: this head is for dragging a layout wider to find where it breaks, which a
-            // pinned window can't do. Deferred rather than immediate because the pin is what drives the resize —
+            // Release the pin so the window stays resizable. Deferred: the pin is what drives the resize, so
             // dropping it in the same pass leaves the window at its old size.
             window.Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(500), () =>
             {
