@@ -5,6 +5,7 @@
 @inject IBackButtonService BackButton
 @inject ISingerStore Singers
 @inject IAppSession Session
+@inject ISafeAreaInsets Insets
 @implements IDisposable
 
 @* Gate the shell on the singer bootstrap: at least one singer must exist and the active one chosen before any
@@ -122,11 +123,26 @@ else
     {
         if (firstRender)
         {
+            // Forward the native safe-area insets into CSS, now that the DOM exists to receive them — the native
+            // side measures long before Blazor renders, so this is the earliest reliable moment. Re-pushed on
+            // Changed (rotation). No-op where nothing was measured: the values stay 0 and CSS max() picks env().
+            Insets.Changed += OnInsetsChanged;
+            await PushInsetsAsync();
+
             // Read whatever the head script / OS preference resolved to, so the icon matches.
             _theme = await JS.InvokeAsync<string>("khTheme.current");
             StateHasChanged();
         }
     }
+
+    private Task PushInsetsAsync() => JS.InvokeVoidAsync("khInsets.set", Insets.Top, Insets.Bottom).AsTask();
+
+    private void OnInsetsChanged(object? sender, EventArgs e) =>
+        _ = InvokeAsync(async () =>
+        {
+            try { await PushInsetsAsync(); }
+            catch { /* a push racing teardown is harmless — the next render pushes again */ }
+        });
 
     // Routes the Android back button to close the ⋮ menu instead of navigating; active only while it's open.
     private BackButtonOverlayGuard? _backGuard;
@@ -150,6 +166,7 @@ else
     public void Dispose()
     {
         Nav.LocationChanged -= OnLocationChanged;
+        Insets.Changed -= OnInsetsChanged;
         _backGuard?.Dispose();
     }
 }

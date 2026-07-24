@@ -78,6 +78,11 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<IHaptics, MauiHaptics>();
 
+        // Safe-area insets for platforms whose WebView can't see the system bars via CSS env() (Android). The
+        // Android MainActivity writes measured values in; MainLayout forwards them to CSS variables. Singleton so
+        // the activity's listener and the layout share one instance.
+        builder.Services.AddSingleton<ISafeAreaInsets, SafeAreaInsets>();
+
         // App-wide registry for the Android back button: components register an overlay-close callback while
         // mounted, and the Android MainActivity consults it so hardware back dismisses the top-most sheet/menu
         // instead of minimizing the app. Singleton so the components and the platform callback share one instance.

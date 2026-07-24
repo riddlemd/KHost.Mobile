@@ -80,6 +80,10 @@ html, body {
     color: var(--kh-text);
     -webkit-font-smoothing: antialiased;
     -webkit-text-size-adjust: 100%;
+    /* No bounce/chaining on the page scroll — an app shell shouldn't move. NOTE: Android's WebView applies its
+       overscroll stretch natively and ignores this property; the operative Android fix is OverScrollMode.Never in
+       MainPage.xaml.cs. This covers engines that do honor it. Root scroller only; inner scrollers keep theirs. */
+    overscroll-behavior-y: none;
 }
 
 /* Buttons, inputs and selects otherwise render in the browser's default UI font, not our Helvetica Neue stack.
@@ -96,8 +100,8 @@ button { text-transform: none; }
     position: sticky;
     top: 0;
     z-index: 20;   /* above the bottom nav (10) so the header dropdown menu overlays it */
-    height: calc(var(--kh-header-h) + env(safe-area-inset-top));
-    padding-top: env(safe-area-inset-top);
+    height: calc(var(--kh-header-h) + max(env(safe-area-inset-top), var(--kh-inset-top, 0px)));
+    padding-top: max(env(safe-area-inset-top), var(--kh-inset-top, 0px));
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -150,7 +154,7 @@ button { text-transform: none; }
 .header-menu {
     position: absolute;
     right: 0.75rem;
-    top: calc(env(safe-area-inset-top) + (var(--kh-header-h) - 2.1rem) / 2);
+    top: calc(max(env(safe-area-inset-top), var(--kh-inset-top, 0px)) + (var(--kh-header-h) - 2.1rem) / 2);
 }
 .header-menu__btn {
     width: 2.1rem;
@@ -370,13 +374,13 @@ button { text-transform: none; }
 .app-splash__name { font-size: 1.4rem; font-weight: 800; }
 
 .app-content {
-    padding: 1rem 0.6rem calc(var(--kh-nav-h) + env(safe-area-inset-bottom) + 1rem);
+    padding: 1rem 0.6rem calc(var(--kh-nav-h) + max(env(safe-area-inset-bottom), var(--kh-inset-bottom, 0px)) + 1rem);
     max-width: 640px;
     margin: 0 auto;
     min-height: 100vh;
 }
 /* No bottom nav rendered: reclaim the reserved tab-bar space. */
-.app-content--no-nav { padding-bottom: calc(env(safe-area-inset-bottom) + 1rem); }
+.app-content--no-nav { padding-bottom: calc(max(env(safe-area-inset-bottom), var(--kh-inset-bottom, 0px)) + 1rem); }
 
 /* ---- "Update available" banner ------------------------------------------ */
 .update-banner {
@@ -424,8 +428,8 @@ button { text-transform: none; }
     left: 0;
     right: 0;
     z-index: 10;
-    height: calc(var(--kh-nav-h) + env(safe-area-inset-bottom));
-    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(var(--kh-nav-h) + max(env(safe-area-inset-bottom), var(--kh-inset-bottom, 0px)));
+    padding-bottom: max(env(safe-area-inset-bottom), var(--kh-inset-bottom, 0px));
     display: flex;
     background-color: var(--kh-surface);
     border-top: 1px solid var(--kh-border);
@@ -634,7 +638,7 @@ button { text-transform: none; }
 .snackbar {
     position: fixed;
     left: 50%;
-    bottom: calc(var(--kh-nav-h) + env(safe-area-inset-bottom) + 0.85rem);
+    bottom: calc(var(--kh-nav-h) + max(env(safe-area-inset-bottom), var(--kh-inset-bottom, 0px)) + 0.85rem);
     z-index: 50;
     display: flex;
     align-items: center;
@@ -689,7 +693,7 @@ button { text-transform: none; }
     background: var(--kh-surface);
     border-radius: var(--kh-radius) var(--kh-radius) 0 0;
     box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.3);
-    padding: 1.25rem 1.15rem calc(1.15rem + env(safe-area-inset-bottom));
+    padding: 1.25rem 1.15rem calc(1.15rem + max(env(safe-area-inset-bottom), var(--kh-inset-bottom, 0px)));
     animation: sheet-up 0.22s ease;
 }
 
@@ -2005,7 +2009,7 @@ body.kh-sheet-open { overflow: hidden; }
 .venue-chip-host {
     position: absolute;
     right: 3.3rem;
-    top: calc(env(safe-area-inset-top) + (var(--kh-header-h) - 2rem) / 2);
+    top: calc(max(env(safe-area-inset-top), var(--kh-inset-top, 0px)) + (var(--kh-header-h) - 2rem) / 2);
 }
 .venue-chip {
     display: inline-flex; align-items: center; gap: 0.35rem;
@@ -2037,7 +2041,7 @@ body.kh-sheet-open { overflow: hidden; }
     /* Cap to the space below the header so a long list scrolls instead of running off-screen; the bottom inset
        keeps the pinned foot clear of the system nav / gesture bar. */
     display: flex; flex-direction: column;
-    max-height: calc(100dvh - var(--kh-header-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1rem);
+    max-height: calc(100dvh - var(--kh-header-h) - max(env(safe-area-inset-top), var(--kh-inset-top, 0px)) - max(env(safe-area-inset-bottom), var(--kh-inset-bottom, 0px)) - 1rem);
 }
 /* Only the venue rows scroll; the foot (mode toggle + actions) stays pinned and reachable. */
 .venue-switcher__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -2192,7 +2196,7 @@ body.kh-sheet-open { overflow: hidden; }
 .singer-chip-host {
     position: absolute;
     right: 3.3rem;   /* just left of the ⋮ menu (right: 0.75rem) */
-    top: calc(env(safe-area-inset-top) + (var(--kh-header-h) - 2rem) / 2);
+    top: calc(max(env(safe-area-inset-top), var(--kh-inset-top, 0px)) + (var(--kh-header-h) - 2rem) / 2);
 }
 
 /* Round avatar button in the header — the active singer's color + initial, ringed white on the gradient. */
@@ -2224,7 +2228,7 @@ body.kh-sheet-open { overflow: hidden; }
     border-radius: 0.6rem; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
     animation: sheet-fade 0.12s ease;
     display: flex; flex-direction: column;
-    max-height: calc(100dvh - var(--kh-header-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1rem);
+    max-height: calc(100dvh - var(--kh-header-h) - max(env(safe-area-inset-top), var(--kh-inset-top, 0px)) - max(env(safe-area-inset-bottom), var(--kh-inset-bottom, 0px)) - 1rem);
 }
 .singer-switcher__head {
     font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
