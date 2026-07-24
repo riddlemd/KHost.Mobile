@@ -218,21 +218,21 @@ button { text-transform: none; }
    positions the menu (styled like the header ⋮ menu above). */
 .kh-split { position: relative; display: inline-flex; }
 
-.kh-split__main { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .kh-split__toggle {
     flex: none;   /* the chevron segment is content-width; the main segment takes the rest */
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
     min-width: 2.6rem;
     padding-left: 0.7rem;
     padding-right: 0.7rem;
     /* Divider adapts to the segment's own text color, so it reads on the solid, tonal, and secondary fills alike. */
     border-left: 1px solid color-mix(in srgb, currentColor 28%, transparent);
 }
-/* A .btn variant (e.g. .btn-primary) can set width:100%; neutralize it on the segments so they size to the split,
-   not the whole row — otherwise both segments claim 100% and the layout collapses. */
+/* Child selectors so these beat plain .btn, which is declared far later in this file and would otherwise win on
+   source order — re-rounding the shared edge into two separate-looking pills, and letting a .btn variant's
+   width:100% make both segments claim the full row. */
 .kh-split > .kh-split__main,
 .kh-split > .kh-split__toggle { width: auto; }
+.kh-split > .kh-split__main { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.kh-split > .kh-split__toggle { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .kh-split__chev { font-size: 0.85em; line-height: 1; transition: transform 0.18s ease; }
 .kh-split.is-open .kh-split__chev { transform: rotate(180deg); }
 
