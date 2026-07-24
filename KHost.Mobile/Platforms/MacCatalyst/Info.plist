@@ -11,9 +11,15 @@
     <!-- Please consult https://developer.apple.com/documentation/bundleresources/information_property_list/lsapplicationcategorytype -->
     <!-- <key>LSApplicationCategoryType</key> -->
     <!-- <string>public.app-category.YOUR-CATEGORY-HERE</string> -->
+    <!-- 2 = iPad idiom, 6 = Mac idiom ("Optimize Interface for Mac"). Without 6, Catalyst runs the scaled-iPad
+         mode that draws everything at 77%, so the 393 x 852 preview viewport occupies 303 x 657 macOS points and a
+         2x screen capture comes out 606 x 1314 — off the 786 x 1704 screenshot grid, and every layout measurement
+         is off by the same 1.3x. The Mac idiom maps 1 point to 1 point, which is the whole reason this head
+         exists. Nothing in the app branches on DeviceInfo.Idiom, so this only affects scaling. -->
     <key>UIDeviceFamily</key>
     <array>
         <integer>2</integer>
+        <integer>6</integer>
     </array>
     <key>UIRequiredDeviceCapabilities</key>
     <array>
