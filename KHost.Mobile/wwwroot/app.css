@@ -5,6 +5,11 @@
    the bottom exactly as the app relies on them.
    ============================================================================ */
 
+/* --kh-primary is NOT a constant: js/singer.js overrides it on <html> to the active singer's color, and the dark
+   theme re-points it below. So any translucent tint of the accent — a glow, a wash, a chip background — has to be
+   derived from the token with color-mix(), never written as a hardcoded rgba(124, 58, 237, …). Those literals look
+   right only for the default violet singer in light mode, and leave everyone else with, say, an amber button
+   wearing a violet shadow. */
 :root {
     --kh-primary: #7c3aed;          /* violet — karaoke accent */
     --kh-primary-strong: #6d28d9;
@@ -814,7 +819,7 @@ body.kh-sheet-open { overflow: hidden; }
 }
 .btn.sheet__lyrics:hover {
     background: var(--kh-primary-strong);
-    box-shadow: 0 2px 10px rgba(124, 58, 237, 0.35);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--kh-primary) 35%, transparent);
 }
 .btn.sheet__lyrics:active {
     background: var(--kh-primary-strong);
@@ -872,11 +877,11 @@ body.kh-sheet-open { overflow: hidden; }
 .lyrics__attribution { margin-top: 0.85rem; font-size: 0.75rem; color: var(--kh-text-muted); }
 
 /* ---- "Tonight" on-deck set list ---------------------------------------- */
-/* The Tonight tab's set-list card. Violet-accented so it reads as the active in-venue mode. */
-.card.tonight { border: 1px solid var(--kh-primary); box-shadow: 0 2px 14px rgba(124, 58, 237, 0.18); padding: 0; overflow: hidden; }
+/* The Tonight tab's set-list card. Accent-tinted so it reads as the active in-venue mode. */
+.card.tonight { border: 1px solid var(--kh-primary); box-shadow: 0 2px 14px color-mix(in srgb, var(--kh-primary) 18%, transparent); padding: 0; overflow: hidden; }
 .tonight__head {
     display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 0.9rem; cursor: pointer;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.10), rgba(124, 58, 237, 0.02));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--kh-primary) 10%, transparent), color-mix(in srgb, var(--kh-primary) 2%, transparent));
 }
 /* The tab's header isn't a collapse toggle (there's no card to fold on a dedicated page). */
 .tonight__head--static { cursor: default; }
@@ -886,7 +891,7 @@ body.kh-sheet-open { overflow: hidden; }
 .tonight__title { font-weight: 700; font-size: 1.02rem; color: var(--kh-text); }
 .tonight__progress {
     margin-left: auto; font-size: 0.78rem; color: var(--kh-primary); font-weight: 600;
-    background: rgba(124, 58, 237, 0.12); padding: 0.15rem 0.55rem; border-radius: 1rem; white-space: nowrap;
+    background: color-mix(in srgb, var(--kh-primary) 12%, transparent); padding: 0.15rem 0.55rem; border-radius: 1rem; white-space: nowrap;
 }
 .tonight__chevron { transition: transform 0.15s ease; color: var(--kh-text-muted); font-size: 0.9rem; }
 .card.tonight.collapsed .tonight__chevron { transform: rotate(-90deg); }
@@ -935,9 +940,9 @@ body.kh-sheet-open { overflow: hidden; }
 .btn.tonight__end { flex: 1; background: transparent; border-color: transparent; color: var(--kh-danger); font-weight: 600; }
 .btn.tonight__end:hover { background: rgba(220, 38, 38, 0.08); }
 
-/* "Add to tonight" toggle in the detail sheet — violet like Lyrics; outlined once the song is on deck. */
+/* "Add to tonight" toggle in the detail sheet — accent-filled like Lyrics; outlined once the song is on deck. */
 .btn.sheet__tonight { width: 100%; margin-bottom: 0.6rem; background: var(--kh-primary); color: #fff; border: none; transition: background 0.12s ease, box-shadow 0.12s ease; }
-.btn.sheet__tonight:hover { background: var(--kh-primary-strong); box-shadow: 0 2px 10px rgba(124, 58, 237, 0.35); }
+.btn.sheet__tonight:hover { background: var(--kh-primary-strong); box-shadow: 0 2px 10px color-mix(in srgb, var(--kh-primary) 35%, transparent); }
 .btn.sheet__tonight.is-on { background: transparent; color: var(--kh-primary); border: 1px solid var(--kh-primary); }
 
 /* "Sang today" — full-width secondary action directly above the YouTube button. Padding/radius
@@ -1302,7 +1307,7 @@ body.kh-sheet-open { overflow: hidden; }
 .song-card--art .song-card__artist { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75); }
 .song-card--art .song-card__genre { background: rgba(255, 255, 255, 0.18); color: #fff; }
 .song-card--art .song-card__year { color: rgba(255, 255, 255, 0.9); }
-.song-card--art .tag-chip { background: rgba(124, 58, 237, 0.55); color: #fff; }
+.song-card--art .tag-chip { background: color-mix(in srgb, var(--kh-primary) 55%, transparent); color: #fff; }
 .song-card--art .tags-more { color: rgba(255, 255, 255, 0.9); }
 .song-card--art .rating-num { color: #fff; }
 .song-card--art .rating-num--muted { color: rgba(255, 255, 255, 0.7); }
@@ -1487,7 +1492,7 @@ body.kh-sheet-open { overflow: hidden; }
     border-radius: 0.6rem;
     outline: none;
 }
-.input:focus { border-color: var(--kh-primary); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18); }
+.input:focus { border-color: var(--kh-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--kh-primary) 18%, transparent); }
 .input--sm { padding: 0.5rem 0.6rem; font-size: 0.9rem; }
 
 /* ---- Filter bar --------------------------------------------------------- */
@@ -1564,7 +1569,7 @@ body.kh-sheet-open { overflow: hidden; }
     border-radius: 50%;
     background: var(--kh-primary);
     color: var(--kh-primary-contrast);
-    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.45);
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--kh-primary) 45%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1602,7 +1607,7 @@ body.kh-sheet-open { overflow: hidden; }
     border-radius: 0.7rem;
     padding: 0.45rem 0.55rem;
 }
-.filter-search:focus-within { border-color: var(--kh-primary); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18); }
+.filter-search:focus-within { border-color: var(--kh-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--kh-primary) 18%, transparent); }
 .filter-search__icon { flex: 0 0 auto; color: var(--kh-text-muted); font-size: 0.95rem; line-height: 1; }
 .filter-search__input {
     flex: 1 1 auto;
