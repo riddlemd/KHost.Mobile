@@ -68,15 +68,27 @@
 /* `data-theme="light"` needs no block: the base :root is already light, and the OS-dark
    rule above is scoped to :not([data-theme]), so an explicit light choice simply wins. */
 
-* { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; }
 
 html, body {
     margin: 0;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    /* line-height + the control-font rule below used to come from Bootstrap's Reboot. They're declared here now
+       that Bootstrap is gone, so body text keeps its 1.5 rhythm and controls don't fall back to the UA font. */
+    line-height: 1.5;
     background-color: var(--kh-bg);
     color: var(--kh-text);
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
 }
+
+/* Buttons, inputs and selects otherwise render in the browser's default UI font, not our Helvetica Neue stack.
+   Reboot normalized this globally; this is the equivalent. Margin reset mirrors Reboot's control margin:0. */
+button, input, optgroup, select, textarea {
+    font-family: inherit;
+    margin: 0;
+}
+button { text-transform: none; }
 
 /* ---- App shell ---------------------------------------------------------- */
 
@@ -1815,6 +1827,12 @@ body.kh-sheet-open { overflow: hidden; }
 .btn-link:hover { background: color-mix(in srgb, var(--kh-primary) 10%, var(--kh-surface)); }
 .btn-link:active { background: color-mix(in srgb, var(--kh-primary) 16%, var(--kh-surface)); }
 
+/* The 404 route is the only page with bare tags, so it carries its own type rules rather than leaning on a
+   framework reset to size a stray <h3>/<p>. */
+.notfound { padding: 2rem 1.25rem; text-align: center; }
+.notfound__title { font-size: 1.4rem; font-weight: 700; margin: 0 0 0.5rem; color: var(--kh-text); }
+.notfound__text { margin: 0; color: var(--kh-text-muted); }
+
 .btn {
     display: inline-flex;
     align-items: center;
@@ -1839,10 +1857,6 @@ body.kh-sheet-open { overflow: hidden; }
 /* Soft-fill accent — lighter than primary, for a standalone emphasis action (e.g. "Add venue"). */
 .btn.btn-tonal { background: color-mix(in srgb, var(--kh-primary) 14%, var(--kh-surface)); color: var(--kh-primary-strong); border-color: transparent; }
 .btn.btn-tonal:active { background: color-mix(in srgb, var(--kh-primary) 22%, var(--kh-surface)); }
-/* Bootstrap's .btn:disabled forces its own blue (--bs-btn-disabled-bg) on a disabled .btn-primary, out-
-   specifying our .btn-primary. Re-assert the brand purple for the disabled state (still dimmed by opacity). */
-.btn-primary:disabled,
-.btn-primary.disabled { background-color: var(--kh-primary); color: var(--kh-primary-contrast); }
 
 .btn-icon {
     padding: 0.5rem;
