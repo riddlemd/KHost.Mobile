@@ -31,6 +31,6 @@
     <key>NSCameraUsageDescription</key>
     <string>Scan a KaraFun venue QR code to set your venue.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Set your active venue automatically based on where you are.</string>
+    <string>KHost Cue uses your location, only while the app is open, to set your active venue to the nearest one you've saved. Nothing is stored or shared.</string>
 </dict>
 </plist>

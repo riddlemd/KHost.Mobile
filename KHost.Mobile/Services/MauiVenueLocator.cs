@@ -26,11 +26,17 @@ public sealed class MauiVenueLocator(
         if (!settings.LocationAutoDetect || session.ActiveVenuePinned)
             return;
 
+        // Nothing to match against until at least one venue has a saved point, so short-circuit before touching the
+        // device — this is what keeps us from asking for (or reading) location on a list with no geolocated venues.
+        var saved = await venues.GetAllAsync();
+        if (!saved.Any(v => v.HasLocation))
+            return;
+
         var here = await location.GetCurrentAsync(cancellationToken);
         if (here is null)
             return;
 
-        var nearest = VenueProximity.Nearest(here, await venues.GetAllAsync(), AtVenueMeters);
+        var nearest = VenueProximity.Nearest(here, saved, AtVenueMeters);
         if (nearest is not null && session.ActiveVenueId != nearest.Id)
         {
             logger.LogDebug("Auto-selected venue {Venue} from current location", nearest.Name);

@@ -46,8 +46,10 @@ public interface IAppSettings
     /// <summary>
     /// When true, the active venue is auto-selected from the device's location — switching to the nearest saved
     /// venue as the singer moves, and re-checking every <see cref="VenueRecheckMinutes"/> minutes while the app is
-    /// open (foreground only). Defaults to <c>true</c>; the location permission is requested the first time it runs.
-    /// Manually picking a venue pins it until "resume auto-detect"; turn this off to switch venues only by hand.
+    /// open (foreground only). Defaults to <c>true</c>, but stays dormant — and does not request the location
+    /// permission — until at least one venue has a saved point to match against; the permission is requested the first
+    /// time it actually runs. Manually picking a venue pins it until "resume auto-detect"; turn this off to switch
+    /// venues only by hand.
     /// </summary>
     bool LocationAutoDetect { get; set; }
 
