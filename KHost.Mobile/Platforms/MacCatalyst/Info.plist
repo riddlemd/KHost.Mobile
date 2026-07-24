@@ -34,5 +34,11 @@
     </array>
     <key>XSAppIconAssets</key>
     <string>Assets.xcassets/appicon.appiconset</string>
+    <!-- Required by MauiLocationProvider (venue auto-select). Apple ABORTS the process — not a catchable
+         exception — the moment location authorization is requested without this string, so its absence would
+         crash rather than degrade. No NSCameraUsageDescription: the QR scanner is Android/iOS only and resolves
+         to UnsupportedQrScanner here, so this head never touches the camera. -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Set your active venue automatically based on where you are.</string>
 </dict>
 </plist>

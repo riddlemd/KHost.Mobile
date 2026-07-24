@@ -15,8 +15,17 @@ Developer-facing docs for **KHost Cue** — how to build and test it, and the re
   ```bash
   dotnet workload install maui
   ```
-- **Android**: the Android SDK and an emulator or a connected device.
+- **Android**: the Android SDK, a JDK 17+, and an emulator or a connected device. If you have neither SDK nor JDK, .NET Android can fetch both at the versions this project targets:
+  ```bash
+  dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-android -t:InstallAndroidDependencies \
+    -p:AndroidSdkDirectory=$HOME/Library/Android/sdk -p:JavaSdkDirectory=$HOME/Library/Android/jdk \
+    -p:AcceptAndroidSDKLicenses=true
+  ```
+  Then export `ANDROID_HOME` and `JAVA_HOME` at those paths so plain `dotnet build` finds them — otherwise every build needs the `-p:AndroidSdkDirectory=… -p:JavaSdkDirectory=…` flags. (The warnings that target logs on its *first* run are from the evaluation pass before the SDK exists; they clear once it's installed.)
 - **iOS**: a paired Mac (iOS cannot be built on Windows).
+- **macOS (Mac Catalyst)**: full **Xcode** — Command Line Tools alone is not enough. Point the toolchain at it with `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
+
+> Restore walks **every** target framework the project declares, even when you build a single head with `-f`, so a build fails until all of them have workloads. `dotnet workload restore KHost.Mobile/KHost.Mobile.csproj` installs exactly the set this project needs.
 
 ### Build & run
 
@@ -29,6 +38,9 @@ dotnet build KHost.Mobile/KHost.Mobile.csproj -t:Run -f net10.0-android "-p:Base
 
 # Run on Windows — the quickest way to iterate on the Blazor UI (no emulator needed)
 dotnet run --project KHost.Mobile -f net10.0-windows10.0.19041.0 "-p:BaseOutputPath=./obj/_build"
+
+# Run on macOS — the Mac equivalent, same story (no simulator needed)
+dotnet run --project KHost.Mobile -f net10.0-maccatalyst "-p:BaseOutputPath=./obj/_build"
 ```
 
 > `-p:BaseOutputPath=./obj/_build` keeps build output out of the IDE's `bin/` folder so it doesn't get locked while the IDE is open.
@@ -70,6 +82,14 @@ Instead, the cover bytes are streamed to the WebView via a `DotNetStreamReferenc
 **Crash-safe store writes.** Every JSON store writes to a same-directory `.tmp` file and atomically renames it over the target (`AtomicFile.WriteAsync`) — a same-volume rename, so a write interrupted by an app kill or power loss leaves the *last good* file intact instead of a truncated one. (The load path treats a corrupt file as "start empty", which for a direct overwrite would silently lose the whole list.) A file that fails to parse on load is moved aside to a `.corrupt` sibling rather than being overwritten by the next save, so the bad bytes are preserved for recovery.
 
 **Split button — one control, a default action plus a menu.** `SplitButton` / `SplitButtonItem` (`Components/`) render a primary action segment beside a chevron that drops a menu of related actions — e.g. *Mark sung* with alternate ways to log it, or *Find on YouTube* with Spotify / KaraFun / Lyrics behind the chevron to reclaim sheet height. Reusable: pass the default via `OnPrimary` and the extras as `SplitButtonItem` children (each takes `Icon` / `Description` / `Separated`), with `Direction` (Down/Up, for buttons low in a sheet), `Align`, and `Variant` (Primary/Tonal/Secondary) knobs. Dismissal reuses the header ⋮ menu's approach — a transparent full-screen scrim for an outside tap, plus `IBackButtonService` so the Android back button closes the menu instead of navigating — so there's **no bespoke JS**; it's styled with the shared `.btn` variants and `--kh-` tokens.
+
+**Mac Catalyst head — a layout preview, not a product.** There is no desktop KHost Cue and none is planned. The Catalyst head exists for the same reason as the Windows head: iterating on the Blazor UI without waiting on an emulator. Everything about it is tuned for that and nothing for shipping — it builds `maccatalyst-arm64` only (native on Apple silicon, one slice instead of two), and `App.CreateWindow` opens it at exactly the **393 × 852** mobile-preview viewport documented under Screenshots, so what you see matches the screenshot grid. It stays resizable so you can drag it wider to find where a layout breaks.
+
+Treat a wide Catalyst window as a diagnostic, not a bug: the shell is deliberately mobile-first (fixed bottom tab bar, full-bleed cards, swipe and press-and-hold gestures), so stretching it *should* look wrong. Don't add desktop breakpoints to `wwwroot/app.css` to "fix" it.
+
+It cost almost nothing to add because the platform-specific code was already conditioned on `ANDROID || IOS`, and Catalyst defines `MACCATALYST` rather than `IOS`: the ML Kit / Apple Vision QR scanner is scoped out of the package reference and falls through to `UnsupportedQrScanner`, and `MauiHaptics` already swallows `FeatureNotSupportedException`. Two things did need adding — `NSLocationWhenInUseUsageDescription` in the Catalyst `Info.plist` (Apple *aborts the process* rather than throwing when location is requested without it, so its absence would crash rather than degrade) and `com.apple.security.personal-information.location` in `Entitlements.plist`, since App Sandbox otherwise denies Core Location outright. Both are needed to exercise the venue auto-select while testing, not for distribution.
+
+Mouse input covers the gestures: `swipe.js` runs off pointer events, so click-and-drag is a swipe and click-and-hold is a press-and-hold. Where a gesture is awkward to trigger, the reachable equivalents added for assistive tech work too — Venues' *Active* toggle and the singer sheet's *Switch to this singer*.
 
 ## 📁 Project structure
 

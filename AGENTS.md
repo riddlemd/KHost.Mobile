@@ -38,9 +38,14 @@ repos/
 # Android head — THE green signal on Windows (iOS cannot build here; see gotcha).
 dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-android "-p:BaseOutputPath=./obj/_build"
 
-# Windows head — fastest way to iterate the Blazor Hybrid UI (no emulator).
+# Windows head — fastest way to iterate the Blazor Hybrid UI on Windows (no emulator).
 dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-windows10.0.19041.0 "-p:BaseOutputPath=./obj/_build"
 dotnet run   --project KHost.Mobile -f net10.0-windows10.0.19041.0   # launch the UI on the desktop
+
+# Mac Catalyst head — the macOS equivalent: fastest UI iteration on a Mac, no simulator.
+# DEV-ONLY (layout preview). There is no desktop product; don't treat it as a shipping target.
+dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-maccatalyst "-p:BaseOutputPath=./obj/_build"
+dotnet run   --project KHost.Mobile -f net10.0-maccatalyst            # launch the UI on the desktop
 
 # Client library on its own
 dotnet build KHost.Mobile.Clients/KHost.Mobile.Clients.csproj
@@ -115,7 +120,9 @@ The app ships **offline/local UI only**. All local data sits behind an interface
 ## Gotchas
 
 - **iOS cannot build on Windows** without a paired Mac. A bare `dotnet build` on the solution surfaces iOS/Apple-toolchain errors that are **not** your code. Build the **Android head explicitly** to verify, and use the **Windows head** for fast UI iteration. iOS is validated when a Mac is in the loop.
-- **`TargetFrameworks` is trimmed to `android;ios;windows`** (maccatalyst/tizen dropped) since the stated targets are iOS/Android. Don't re-add heads without a reason.
+- **`TargetFrameworks` is `android;ios` + `windows` on Windows + `maccatalyst` on macOS** (tizen dropped). Don't re-add heads without a reason. Note that **restore evaluates every TFM even when you pass `-f`**, so a build of any single head fails until *all* the declared workloads are installed — `dotnet workload restore KHost.Mobile/KHost.Mobile.csproj` installs exactly the set the project declares.
+- **The Mac Catalyst head needs full Xcode, not Command Line Tools.** `xcode-select -p` must point at `/Applications/Xcode.app/Contents/Developer` (set with `sudo xcode-select -s …`), the license must be accepted (`sudo xcodebuild -license accept` — note `xcodebuild -version` succeeds *without* it, so it's not a valid check; read `IDEXcodeVersionForAgreedToGMLicense` from `/Library/Preferences/com.apple.dt.Xcode` instead), and `xcodebuild -runFirstLaunch` must have installed the extra components or `actool` fails with `ibtoold failed IDE initialization`. All three surface as errors that look like build breakage but aren't.
+- **The Mac Catalyst head is a layout preview, not a product** — see DEVELOPMENT.md → Design notes. Don't add desktop breakpoints, a side rail, or hover affordances "for the desktop app": there isn't one, and a wide window looking wrong is expected.
 - This repo **builds standalone** — it no longer references the sibling `KHost.Online`/`KHost.Contracts` projects. (They return with the online slice; see Roadmap.)
 - **`FileSystem.AppDataDirectory` is the `Data` SUBFOLDER**, i.e. `%LOCALAPPDATA%\KHost\khost.mobile\Data\` on unpackaged Windows (parent folders are the appxmanifest `PublisherDisplayName` = `KHost` and the `ApplicationId` = `khost.mobile`) — NOT the parent `khost.mobile\`. Seeding/inspecting persisted state must target `Data\`. Builds from *before* the publisher/id rename wrote to the legacy `%LOCALAPPDATA%\User Name\com.companyname.khost.mobile\Data\`; that stale copy is ignored by current builds.
 - The template's `Components/Routes.razor` has `FocusOnNavigate Selector="h1"`; pages here have no `<h1>`, so nothing auto-focuses. Harmless, but don't rely on autofocus.

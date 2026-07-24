@@ -4,13 +4,16 @@
         <TargetFrameworks>net10.0-android</TargetFrameworks>
         <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios</TargetFrameworks>
         <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+        <!-- Mac Catalyst is a DEV-ONLY head: the macOS equivalent of the Windows head, for previewing UI changes
+             without an emulator. It is not a shipping target — there is no desktop product. Gated on osx because
+             the Apple toolchain it needs exists nowhere else. -->
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">$(TargetFrameworks);net10.0-maccatalyst</TargetFrameworks>
 
-        <!-- Note for MacCatalyst:
-            The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
-            When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
-            The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
-            either BOTH runtimes must be indicated or ONLY macatalyst-x64. -->
-        <!-- For example: <RuntimeIdentifiers>maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers> -->
+        <!-- arm64 only. Debug otherwise defaults to maccatalyst-x64, which runs under Rosetta on Apple silicon;
+             building both slices would just double the build time for a head that is never distributed. (A Mac
+             App Store submission would need x64 too — not applicable here.) Scoped to the maccatalyst head so it
+             can't leak into the other TFMs' RID resolution. -->
+        <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">maccatalyst-arm64</RuntimeIdentifiers>
 
         <OutputType>Exe</OutputType>
         <RootNamespace>KHost.Mobile</RootNamespace>
