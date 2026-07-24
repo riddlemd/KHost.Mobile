@@ -22,65 +22,19 @@
 
 @* The wishlist. "Tonight" lives on its own tab now (Components/Pages/Tonight.razor); each card here still carries
    the 🎤 quick-add so you can line a song up for tonight from the list. *@
-<div class="card">
-    <button type="button" class="filters-toggle" data-tut="add" @onclick="() => _addOpen = !_addOpen" aria-expanded="@_addOpen">
-        <span class="filters-toggle__label">Add a song you'd like to sing</span>
-        <span class="filters-toggle__chevron @(_addOpen ? "is-open" : "")">▾</span>
-    </button>
-    @if (_addOpen)
-    {
-    <div class="field" style="margin-top:0.85rem">
-        <label class="field__label" for="title">Song title</label>
-        <input id="title" class="input" placeholder="e.g. Bohemian Rhapsody"
-               @bind="_title" @bind:event="oninput" @bind:after="OnAddFieldChanged" />
-    </div>
-    <div class="field">
-        <label class="field__label" for="artist">Artist</label>
-        <input id="artist" class="input" placeholder="e.g. Queen"
-               @bind="_artist" @bind:event="oninput" @bind:after="OnAddFieldChanged" />
-    </div>
-    <div class="field">
-        <label class="field__label" for="genre">Genre <span class="autofill-star" title="We'll look this up online if you leave it blank">✨</span> <span class="field__hint">— optional</span></label>
-        <select id="genre" class="input" @bind="_genre">
-            <option value=""></option>
-            @foreach (var g in Genres.All)
-            {
-                <option value="@g">@g</option>
-            }
-        </select>
-    </div>
-    <div class="field">
-        <label class="field__label" for="year">Release year <span class="autofill-star" title="We'll look this up online if you leave it blank">✨</span> <span class="field__hint">— optional</span></label>
-        <input id="year" class="input num-year" type="text" inputmode="numeric" maxlength="4"
-               placeholder="e.g. 1975" @bind="_year" @bind:event="oninput" />
-        @if (_year.HasValue && !YearValid)
-        {
-            <div class="field__error">Enter a year between 1 and @CurrentYear.</div>
-        }
-    </div>
-    @if (Settings.TagsEnabled)
-    {
-        <div class="field">
-            <label class="field__label">Tags <span class="field__hint">— your own labels, optional</span></label>
-            <TagInput Tags="_tags" TagsChanged="v => _tags = v" Suggestions="UsedTags" />
-        </div>
-    }
-    <p class="autofill-note">✨ Leave a starred field blank and we'll look it up online when you add the song.</p>
-
-    @if (IsDuplicate)
-    {
-        <div class="field__warn">⚠ @DuplicateMessage</div>
-    }
-
-    <button class="btn btn-primary" @onclick="AddAsync" disabled="@(!CanAdd)">
-        @(IsDuplicate && _confirmedDuplicate ? "Add anyway" : "Add to my songs")
-    </button>
-    }
-</div>
+@* Adding a song is a floating "+" (bottom-right) that opens the add sheet, so it stays reachable while scrolling
+   and doesn't take a card's worth of room at the top. It tucks away whenever any sheet/overlay is open (so it never
+   sits under a dim backdrop) and during the undo-toast window. data-tut="add" moved here from the old add card. *@
+<button type="button" class="mysongs-fab @(Settings.TonightEnabled ? "" : "mysongs-fab--no-nav") @(AnyOverlayOpen ? "is-hidden" : "")"
+        data-tut="add" aria-label="Add a song you'd like to sing" @onclick="OpenAdd">
+    <span class="mysongs-fab__plus" aria-hidden="true">＋</span>
+</button>
 
 @if (_items.Count > 0)
 {
-    <div class="card filter-card">
+    @* Search floats sticky under the header (see .mysongs-floatbar) so a new search never needs a scroll-to-top;
+       active-filter pills ride along in the same sticky bar so they stay visible while scrolling. *@
+    <div class="mysongs-floatbar">
         @* One bar searches song OR artist — the common case. The rest of the filters live behind the funnel. *@
         <div class="filter-search" data-tut="search">
             <span class="filter-search__icon" aria-hidden="true">🔍</span>
@@ -265,6 +219,62 @@
     </div>
 }
 
+@* Add-a-song sheet — opened by the floating "+". Same bottom-sheet + pull-to-dismiss treatment as the other sheets. *@
+@if (_addOpen)
+{
+    <div class="sheet-backdrop" @onclick="CloseAdd"></div>
+    <div class="sheet add-sheet" role="dialog" aria-modal="true" @ref="_addSheet">
+        <button type="button" class="sheet__close" @onclick="CloseAdd" aria-label="Close">✕</button>
+        <div class="sheet__title">Add a song you'd like to sing</div>
+        <div class="field" style="margin-top:0.85rem">
+            <label class="field__label" for="title">Song title</label>
+            <input id="title" class="input" placeholder="e.g. Bohemian Rhapsody"
+                   @bind="_title" @bind:event="oninput" @bind:after="OnAddFieldChanged" />
+        </div>
+        <div class="field">
+            <label class="field__label" for="artist">Artist</label>
+            <input id="artist" class="input" placeholder="e.g. Queen"
+                   @bind="_artist" @bind:event="oninput" @bind:after="OnAddFieldChanged" />
+        </div>
+        <div class="field">
+            <label class="field__label" for="genre">Genre <span class="autofill-star" title="We'll look this up online if you leave it blank">✨</span> <span class="field__hint">— optional</span></label>
+            <select id="genre" class="input" @bind="_genre">
+                <option value=""></option>
+                @foreach (var g in Genres.All)
+                {
+                    <option value="@g">@g</option>
+                }
+            </select>
+        </div>
+        <div class="field">
+            <label class="field__label" for="year">Release year <span class="autofill-star" title="We'll look this up online if you leave it blank">✨</span> <span class="field__hint">— optional</span></label>
+            <input id="year" class="input num-year" type="text" inputmode="numeric" maxlength="4"
+                   placeholder="e.g. 1975" @bind="_year" @bind:event="oninput" />
+            @if (_year.HasValue && !YearValid)
+            {
+                <div class="field__error">Enter a year between 1 and @CurrentYear.</div>
+            }
+        </div>
+        @if (Settings.TagsEnabled)
+        {
+            <div class="field">
+                <label class="field__label">Tags <span class="field__hint">— your own labels, optional</span></label>
+                <TagInput Tags="_tags" TagsChanged="v => _tags = v" Suggestions="UsedTags" />
+            </div>
+        }
+        <p class="autofill-note">✨ Leave a starred field blank and we'll look it up online when you add the song.</p>
+
+        @if (IsDuplicate)
+        {
+            <div class="field__warn">⚠ @DuplicateMessage</div>
+        }
+
+        <button class="btn btn-primary" @onclick="AddAsync" disabled="@(!CanAdd)">
+            @(IsDuplicate && _confirmedDuplicate ? "Add anyway" : "Add to my songs")
+        </button>
+    </div>
+}
+
 @{
     var visible = Sorted().ToList();
     _visibleCount = visible.Count;
@@ -301,7 +311,7 @@ else if (_items.Count == 0)
     <div class="empty-state">
         <div class="empty-state__icon brand-mark">kH</div>
         <div class="empty-state__title">No songs yet</div>
-        <div>Add songs you'd love to sing and they'll wait here for you.</div>
+        <div>Tap the <span class="empty-state__plus" aria-hidden="true">＋</span> button to add songs you'd love to sing — they'll wait here for you.</div>
     </div>
 }
 else if (visible.Count == 0)
@@ -738,7 +748,9 @@ else
     private bool _filterSheetOpen;   // the advanced-filters bottom sheet (opened from the funnel); transient, not persisted
     private ElementReference _filterSheet;
     private bool _filterSheetBound;
-    private bool _addOpen;   // the add-song form; collapsed by default to declutter, expand to add
+    private bool _addOpen;   // the add-song sheet (opened by the floating "+"); transient, not persisted
+    private ElementReference _addSheet;
+    private bool _addSheetBound;
 
     // Year range slider. Handles are null until the user drags them, then they follow the selection;
     // the effective bounds are the min/max release year present across dated songs (recomputed on refresh).
@@ -1083,6 +1095,26 @@ else
         StateHasChanged();
     }
 
+    // ---- Add-a-song sheet (floating "+") ----
+    private void OpenAdd() => _addOpen = true;
+
+    private void CloseAdd() => _addOpen = false;
+
+    // Pull-down-to-dismiss from khSheet (the add sheet already animated off-screen).
+    [JSInvokable]
+    public void CloseAddFromSwipe()
+    {
+        CloseAdd();
+        StateHasChanged();
+    }
+
+    // The floating "+" tucks away whenever any overlay is up (so it never sits under a dim backdrop) and during the
+    // undo-toast window (so a round button doesn't poke out behind the toast). Mirrors TryCloseTopOverlay's set.
+    private bool AnyOverlayOpen =>
+        _addOpen || _filterSheetOpen || _detailItem is not null || _historyItem is not null
+        || _lyricsItem is not null || _ratingPromptItem is not null || _historyConfirmIndex is not null
+        || _undoItem is not null;
+
     // ---- Multi-select filter helpers ----
     private void SetGenreFilter(string genre, bool on) { if (on) _filterGenres.Add(genre); else _filterGenres.Remove(genre); }
     private void SetRatingFilter(int value, bool on) { if (on) _filterRatings.Add(value); else _filterRatings.Remove(value); }
@@ -1326,10 +1358,23 @@ else
             _filterSheetBound = false;
         }
 
+        // Add sheet: pull down to dismiss; it can scroll (tags/year), so the same stronger, scroll-aware swipe.
+        if (_addOpen && !_addSheetBound)
+        {
+            _swipeRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSheet.register", _addSheet, _swipeRef,
+                new { closeMethod = "CloseAddFromSwipe", closePx = 150 });
+            _addSheetBound = true;
+        }
+        else if (!_addOpen)
+        {
+            _addSheetBound = false;
+        }
+
         // Reconcile the page-scroll lock straight from sheet state every render, so it can never get stranded
         // on a close path that skips cleanup (e.g. a touch swipe-dismiss). Only touch JS when it actually flips.
         var anySheetOpen = _detailItem is not null || _historyItem is not null || _ratingPromptItem is not null
-            || _lyricsItem is not null || _filterSheetOpen;
+            || _lyricsItem is not null || _filterSheetOpen || _addOpen;
         if (anySheetOpen != _pageLocked)
         {
             _pageLocked = anySheetOpen;
@@ -1680,6 +1725,7 @@ else
         if (_ratingPromptItem is not null) { CloseRatingPrompt(); return true; }
         if (_historyItem is not null) { CloseHistory(); return true; }
         if (_lyricsItem is not null) { CloseLyrics(); return true; }
+        if (_addOpen) { CloseAdd(); return true; }
         if (_filterSheetOpen) { CloseFilterSheet(); return true; }
         if (_detailItem is not null) { CloseDetail(); return true; }
         return false;

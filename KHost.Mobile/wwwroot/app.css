@@ -1536,6 +1536,62 @@ body.kh-sheet-open { overflow: hidden; }
 .filters__field--wide { grid-column: 1 / -1; }   /* year slider + genre multi-select span the full filter width */
 .filters__clear { margin-top: 0.85rem; }
 
+/* ---- My Songs: sticky floating search bar + add FAB --------------------- */
+/* The search bar detaches and sticks directly under the header, so a new search never needs a scroll-to-top. It
+   sits in the normal content column (same 0.6rem gutters as the cards, so nothing peeks through the sides as the
+   list scrolls under it) and carries a soft downward shadow for separation. z-index sits above the list but below
+   the header (20) and any sheet backdrop (40). */
+.mysongs-floatbar {
+    position: sticky;
+    top: calc(var(--kh-header-h) + max(env(safe-area-inset-top), var(--kh-inset-top, 0px)));
+    z-index: 15;
+    margin-bottom: 0.6rem;
+    padding: 0.5rem 0;
+    background: var(--kh-bg);
+    box-shadow: 0 6px 10px -8px rgba(0, 0, 0, 0.25);
+}
+.mysongs-floatbar .filter-pills { margin-top: 0.5rem; }
+
+/* The add "+" — a fixed FAB bottom-right, above the tab bar, below sheet backdrops. */
+.mysongs-fab {
+    position: fixed;
+    right: max(1rem, env(safe-area-inset-right));
+    bottom: calc(var(--kh-nav-h) + max(env(safe-area-inset-bottom), var(--kh-inset-bottom, 0px)) + 1rem);
+    z-index: 30;
+    width: 3.4rem;
+    height: 3.4rem;
+    border: none;
+    border-radius: 50%;
+    background: var(--kh-primary);
+    color: var(--kh-primary-contrast);
+    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.18s ease, opacity 0.18s ease, background 0.15s ease;
+}
+.mysongs-fab__plus { font-size: 1.9rem; line-height: 1; margin-top: -2px; }
+.mysongs-fab:active { transform: scale(0.92); background: var(--kh-primary-strong); }
+/* No bottom tab bar (Tonight disabled) → drop the FAB to just above the safe-area. */
+.mysongs-fab--no-nav { bottom: calc(max(env(safe-area-inset-bottom), var(--kh-inset-bottom, 0px)) + 1rem); }
+/* Tuck the FAB off-screen while a sheet/overlay is open (or the undo toast is showing). */
+.mysongs-fab.is-hidden { transform: translateY(200%); opacity: 0; pointer-events: none; }
+
+.empty-state__plus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    border-radius: 50%;
+    background: var(--kh-primary);
+    color: var(--kh-primary-contrast);
+    font-weight: 700;
+    vertical-align: -0.2rem;
+}
+
 /* ---- Single search bar + funnel (basic mode) ---------------------------- */
 .filter-search {
     display: flex;
