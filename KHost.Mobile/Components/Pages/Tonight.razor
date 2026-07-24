@@ -6,6 +6,8 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject IBackButtonService BackButton
+@inject ILinkLauncher Links
+@inject IVenueStore Venues
 @implements IDisposable
 
 @* The "Tonight" on-deck set — its own tab. Drag the ⠿ handle to reorder, tap ✓ to check a song off (which logs
@@ -44,7 +46,8 @@ else
                 <div class="setrow @(entry.Completed ? "done" : "")" @key="entry.SongId" data-song-id="@entry.SongId">
                     <span class="setrow__handle" title="Drag to reorder" data-tut="tonight-reorder">⠿</span>
                     <span class="setrow__pos">@(entry.Order + 1)</span>
-                    <div class="setrow__main">
+                    <div class="setrow__main setrow__main--tappable" role="button" tabindex="0"
+                         @onclick="() => OpenDetail(song)" @onkeydown="e => OnRowKeyDown(e, song)">
                         <div class="setrow__title">@song.Title</div>
                         @if (!string.IsNullOrWhiteSpace(song.Artist))
                         {
@@ -67,6 +70,19 @@ else
 
 <RatingPromptSheet Item="_ratingPromptItem" RatePerformances="Settings.RatePerformances"
                    OnCommit="OnRatingCommitAsync" OnCancel="OnRatingCancel" />
+
+@* The same card My Songs opens, read-only here: a set list is for singing, not curating, and the row's own ✓ / ✕
+   already own the set mechanics — so no Edit, and no "Mark sung" competing with the check-off. Lyrics and history
+   stay unwired because their sheets live in My Songs; the card just omits those buttons. *@
+<SongDetailSheet Item="_detailItem" AllowEdit="false"
+                 InTonight="true"
+                 KaraFunAvailable="@(Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
+                 BayesScore="DetailStar"
+                 RoundedAverage="@(DetailStar is { } s ? (int)Math.Round(s, MidpointRounding.AwayFromZero) : 0)"
+                 OnClose="CloseDetail" OnToggleTonight="RemoveFromTonightAsync"
+                 OnOpenYouTube="OpenYouTubeAsync" OnOpenSpotify="OpenSpotifyAsync"
+                 OnOpenKaraFun="OpenKaraFunAsync"
+                 OnEnjoymentChanged="UpdateEnjoymentAsync" />
 
 @if (_removeSong is not null)
 {
@@ -112,7 +128,13 @@ else
     private Guid? _completingSongId;
     private Guid? _toggling;             // in-flight guard so a double-tap can't double-log a check-off
 
-    private bool _locked;                // mirrors body scroll-lock while the rating prompt is open
+    private bool _locked;                // mirrors body scroll-lock while a sheet is open
+
+    // The song whose detail card is open (tapped from a row). The card is Components/SongDetailSheet — the same one
+    // My Songs opens; this page only supplies what it can answer and handles the actions it offers.
+    private SongListItem? _detailItem;
+    private string? _activeVenueKaraFunId;
+    private RatingContext _ratingContext = new(null, RatingConfig.Default, default);
 
     // Scroll is kept on scroll.js so it survives a tab change (the page component is disposed on navigation). It
     // can't be C#-owned, the way My Songs' filter/sort are, because MAUI's Android WebView has no synchronous JS
@@ -166,7 +188,7 @@ else
         }
 
         // Lock the page behind the rating prompt; reconcile straight from state so a swipe-dismiss can't strand it.
-        var open = _ratingPromptItem is not null;
+        var open = _ratingPromptItem is not null || _detailItem is not null;
         if (open != _locked)
         {
             _locked = open;
@@ -183,6 +205,7 @@ else
         if (_removeSong is not null) { CancelRemove(); return true; }
         if (_confirmEndNight) { CancelEndNight(); return true; }
         if (_ratingPromptItem is not null) { OnRatingCancel(); return true; }
+        if (_detailItem is not null) { CloseDetail(); return true; }
         return false;
     }
 
@@ -334,6 +357,12 @@ else
     private async Task RefreshAsync()
     {
         _items = await Store.GetAllAsync();
+        // The detail card's "how it went" star is list-wide (it blends a song's record with the list's average), so
+        // the context is rebuilt with the list rather than per song.
+        _ratingContext = RatingScore.BuildContext(_items,
+            RatingConfig.Default with { RecencyEnabled = Settings.RecencyWeightedRatings },
+            DateTimeOffset.Now);
+        await RefreshActiveVenueKaraFunAsync();
         await TonightStore.PruneAsync(_items.Select(i => i.Id).ToList());
         _tonight = await TonightStore.GetAllAsync();
         await InvokeAsync(StateHasChanged);
@@ -350,4 +379,59 @@ else
             _ = JS.InvokeVoidAsync("khSheet.setLock", false);
         _selfRef?.Dispose();
     }
+
+    // ---- Song detail card -------------------------------------------------------------------
+    private void OpenDetail(SongListItem song)
+    {
+        _detailItem = song;
+    }
+
+    private void CloseDetail() => _detailItem = null;
+
+    // Same confidence-weighted star My Songs shows, so a song reads identically in both places.
+    private double? DetailStar => _detailItem is null ? null : RatingScore.StarFor(_detailItem, _ratingContext);
+
+    // The row body is a tap target, so give it the keyboard equivalent a real button would have.
+    private void OnRowKeyDown(KeyboardEventArgs e, SongListItem song)
+    {
+        if (e.Key is "Enter" or " ")
+            OpenDetail(song);
+    }
+
+    // The card's Tonight button, which here can only mean "take it back off the set".
+    private async Task RemoveFromTonightAsync()
+    {
+        if (_detailItem is null)
+            return;
+        var song = _detailItem;
+        _detailItem = null;
+        await TonightStore.RemoveAsync(song.Id);
+    }
+
+    private async Task UpdateEnjoymentAsync(int rating)
+    {
+        if (_detailItem is null)
+            return;
+        _detailItem.Enjoyment = rating;
+        await Store.UpdateAsync(_detailItem);
+    }
+
+    private Task OpenYouTubeAsync() =>
+        _detailItem is null ? Task.CompletedTask : Links.OpenAsync(YouTubeSearch.UrlFor(_detailItem.Title, _detailItem.Artist));
+
+    private Task OpenSpotifyAsync() =>
+        _detailItem is null ? Task.CompletedTask : Links.OpenAsync(SpotifySearch.UrlFor(_detailItem.Title, _detailItem.Artist));
+
+    // Only rendered when the active venue has a KaraFun ID, so it's always set here.
+    private Task OpenKaraFunAsync() =>
+        _detailItem is null || _activeVenueKaraFunId is null
+            ? Task.CompletedTask
+            : Links.OpenAsync(KaraFunSearch.UrlFor(_activeVenueKaraFunId, _detailItem.Title, _detailItem.Artist));
+
+    private async Task RefreshActiveVenueKaraFunAsync()
+    {
+        var venue = Session.ActiveVenueId is { } id ? await Venues.GetAsync(id) : null;
+        _activeVenueKaraFunId = string.IsNullOrWhiteSpace(venue?.KaraFunVenueId) ? null : venue!.KaraFunVenueId;
+    }
+
 }

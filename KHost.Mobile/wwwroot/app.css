@@ -935,6 +935,10 @@ body.kh-sheet-open { overflow: hidden; }
     display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700;
 }
 .setrow__main { min-width: 0; flex: 1 1 auto; }
+/* Tapping the row body opens the song's detail card — the drag handle and the ✓ / ✕ buttons beside it keep their
+   own jobs, so only this part is the tap target. */
+.setrow__main--tappable { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.setrow__main--tappable:active { opacity: 0.6; }
 .setrow__title { font-weight: 600; font-size: 0.92rem; color: var(--kh-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .setrow__artist { font-size: 0.76rem; color: var(--kh-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .setrow__check {

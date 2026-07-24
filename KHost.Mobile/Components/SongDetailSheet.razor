@@ -1,0 +1,392 @@
+@using KHost.Mobile.Models
+@inject IAppSettings Settings
+@inject IJSRuntime JS
+@implements IDisposable
+
+@* Shared song detail card. Shown when @Item is set: the song's fields, its ratings and history, the quick links,
+   and (when AllowEdit) an edit form. Presentational — it owns only the edit buffers and its own pull-down-to-dismiss;
+   the host owns the @Item state, does every store write and link launch, and supplies the values it can't derive on
+   its own (album art, the rating math, whether the song is in tonight). Reused by My Songs and the Tonight tab.
+   An action's button renders only when the host wired its callback, so a host that can't service one (Tonight has
+   no lyrics or history sheet of its own) simply doesn't offer it. *@
+@if (Item is not null)
+{
+    <div class="sheet-backdrop" @onclick="CloseAsync"></div>
+    <div class="sheet" role="dialog" aria-modal="true" @ref="_sheet">
+        <button type="button" class="sheet__close" @onclick="CloseAsync" aria-label="Close">✕</button>
+
+        @if (!_editing)
+        {
+            <div class="sheet__header @(string.IsNullOrEmpty(ArtStyle) ? "" : "sheet__header--art")" style="@ArtStyle">
+                <div class="sheet__title">@Item.Title</div>
+                @if (!string.IsNullOrWhiteSpace(Item.Artist))
+                {
+                    <div class="sheet__subtitle">@Item.Artist</div>
+                }
+            </div>
+            <div class="sheet__rows">
+                <div class="sheet__row">
+                    <span class="sheet__key">Genre</span>
+                    <span class="sheet__val">
+                        @if (!string.IsNullOrWhiteSpace(Item.Genre))
+                        {
+                            @Item.Genre
+                        }
+                        else
+                        {
+                            <span class="sheet__muted">@(SuggestionLoading ? "…" : "—")</span>
+                        }
+                    </span>
+                </div>
+                <div class="sheet__row">
+                    <span class="sheet__key">Year</span>
+                    <span class="sheet__val">
+                        @if (Item.Year.HasValue)
+                        {
+                            @Item.Year
+                        }
+                        else
+                        {
+                            <span class="sheet__muted">@(SuggestionLoading ? "…" : "—")</span>
+                        }
+                    </span>
+                </div>
+                @if (Settings.TagsEnabled)
+                {
+                    <div class="sheet__row">
+                        <span class="sheet__key">Tags</span>
+                        <span class="sheet__val">
+                            @if (Item.Tags.Count > 0)
+                            {
+                                <span class="sheet__tags">
+                                    @foreach (var tag in Item.Tags)
+                                    {
+                                        <span class="tag-chip">@tag</span>
+                                    }
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="sheet__muted">—</span>
+                            }
+                        </span>
+                    </div>
+                }
+                <div class="sheet__row">
+                    <span class="sheet__key">How it went</span>
+                    <span class="sheet__val">
+                        @if (Item.Performances.Count == 0)
+                        {
+                            <span class="sheet__muted">unsung</span>
+                        }
+                        else if (BayesScore is { } score)
+                        {
+                            <StarRating Value="RoundedAverage" Tone="hot" Sung="true" ReadOnly="true" />
+                            <span class="rating-num">@score.ToString("0.0")</span>
+                        }
+                        else
+                        {
+                            <span class="sheet__muted">sung, not rated</span>
+                        }
+                    </span>
+                </div>
+                <div class="sheet__row">
+                    <span class="sheet__key">Enjoyment</span>
+                    <span class="sheet__val">
+                        <StarRating Value="Item.Enjoyment" Tone="cool" Sung="true" ValueChanged="OnEnjoymentChanged" />
+                    </span>
+                </div>
+                <div class="sheet__row">
+                    <span class="sheet__key">Notes</span>
+                    <span class="sheet__val">@(string.IsNullOrWhiteSpace(Item.Notes) ? "—" : Item.Notes)</span>
+                </div>
+                <div class="sheet__row">
+                    <span class="sheet__key">Last sung</span>
+                    <span class="sheet__val">
+                        @if (Item.LastSungAt.HasValue && OnOpenHistory.HasDelegate)
+                        {
+                            <button class="btn-link sheet__history-link" @onclick="OnOpenHistory">
+                                @Item.LastSungAt.Value.ToString("MMM d, yyyy · h:mm tt")
+                                <span class="sheet__history-count">(@Item.Performances.Count)</span>
+                            </button>
+                        }
+                        else if (Item.LastSungAt.HasValue)
+                        {
+                            @Item.LastSungAt.Value.ToString("MMM d, yyyy · h:mm tt")
+                        }
+                        else
+                        {
+                            <span class="sheet__muted">never</span>
+                        }
+                    </span>
+                </div>
+                <div class="sheet__row">
+                    <span class="sheet__key">Added</span>
+                    <span class="sheet__val">@Item.AddedAt.ToString("MMM d, yyyy")</span>
+                </div>
+            </div>
+            @if (AutoFilledNote is not null)
+            {
+                <div class="suggest-match">@AutoFilledNote</div>
+            }
+            <button class="btn btn-secondary sheet__sang-btn" @onclick="OnMarkSung">
+                @(Item.Performances.Count > 0 ? "Sang it again" : "Mark sung")
+            </button>
+            @if (Settings.TonightEnabled && OnToggleTonight.HasDelegate)
+            {
+                <button class="btn sheet__tonight @(InTonight ? "is-on" : "")" @onclick="OnToggleTonight">
+                    @(InTonight ? "🎤 In tonight ✓" : "🎤 Add to tonight")
+                </button>
+            }
+            @if (Settings.YouTubeSearchEnabled && OnOpenYouTube.HasDelegate)
+            {
+                <button class="btn sheet__youtube" @onclick="OnOpenYouTube">▶ Find on YouTube</button>
+            }
+            @if (Settings.SpotifySearchEnabled && OnOpenSpotify.HasDelegate)
+            {
+                <button class="btn sheet__spotify" @onclick="OnOpenSpotify">
+                    <SpotifyIcon Size="18" Fill="#fff" />
+                    Find on Spotify
+                </button>
+            }
+            @if (KaraFunAvailable)
+            {
+                @if (Settings.TonightEnabled && !InTonight)
+                {
+                    @* Split button: the main segment opens KaraFun; the chevron queues the song for tonight first,
+                       then opens it. Degrades to a plain button below when Tonight is off (no menu to offer) OR the
+                       song is already queued for tonight (the "add to tonight" shortcut would be a no-op — the
+                       sheet's "🎤 In tonight ✓" row above already shows it's on deck). *@
+                    <SplitButton Class="kh-split--karafun" PrimaryLabel="🎙 Find on KaraFun"
+                                 OnPrimary="OnOpenKaraFun" Direction="SplitDirection.Up"
+                                 ToggleAriaLabel="More KaraFun options">
+                        <SplitButtonItem Icon="🎤" Description="Queue it for tonight, then open KaraFun"
+                                         OnClick="OnAddToTonightAndOpenKaraFun">
+                            Add to tonight &amp; open
+                        </SplitButtonItem>
+                    </SplitButton>
+                }
+                else
+                {
+                    <button class="btn sheet__karafun" @onclick="OnOpenKaraFun">🎙 Find on KaraFun</button>
+                }
+            }
+            @if (Settings.LyricsEnabled && OnOpenLyrics.HasDelegate)
+            {
+                <button class="btn sheet__lyrics" @onclick="OnOpenLyrics">📖 Lyrics</button>
+            }
+            @if (AllowEdit)
+            {
+                <div class="sheet__actions">
+                    <button class="btn btn-primary" @onclick="StartEdit">Edit</button>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="sheet__title">Edit song</div>
+            <div class="field">
+                <label class="field__label" for="e-title">Song title</label>
+                <input id="e-title" class="input" @bind="_editTitle" @bind:event="oninput" />
+            </div>
+            <div class="field">
+                <label class="field__label" for="e-artist">Artist</label>
+                <input id="e-artist" class="input" @bind="_editArtist" @bind:event="oninput" />
+            </div>
+            <div class="field">
+                <label class="field__label" for="e-genre">Genre <span class="field__hint">— optional</span></label>
+                <select id="e-genre" class="input" @bind="_editGenre">
+                    <option value=""></option>
+                    @foreach (var g in Genres.All)
+                    {
+                        <option value="@g">@g</option>
+                    }
+                </select>
+            </div>
+            <div class="field">
+                <label class="field__label" for="e-year">Release year <span class="field__hint">— optional</span></label>
+                <input id="e-year" class="input num-year" type="text" inputmode="numeric" maxlength="4"
+                       @bind="_editYear" @bind:event="oninput" />
+                @if (_editYear.HasValue && !EditYearValid)
+                {
+                    <div class="field__error">Enter a year between 1 and @CurrentYear.</div>
+                }
+            </div>
+            <div class="field">
+                <label class="field__label" for="e-notes">Notes</label>
+                <textarea id="e-notes" class="input sheet__notes" rows="3"
+                          placeholder="e.g. start slow, key of G" @bind="_editNotes" @bind:event="oninput"></textarea>
+            </div>
+            @if (Settings.TagsEnabled)
+            {
+                <div class="field">
+                    <label class="field__label">Tags <span class="field__hint">— optional</span></label>
+                    <TagInput Tags="_editTags" TagsChanged="v => _editTags = v" Suggestions="UsedTags" />
+                </div>
+            }
+            <div class="sheet__actions">
+                <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveEditAsync" disabled="@(!CanSaveEdit)">Save</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The song to show. Null hides the sheet; setting a different song reopens it in view mode.</summary>
+    [Parameter] public SongListItem? Item { get; set; }
+
+    /// <summary>Inline style that paints the song's cover behind the header; null/empty renders the plain header.</summary>
+    [Parameter] public string? ArtStyle { get; set; }
+
+    /// <summary>True while a metadata lookup is in flight, so blank genre/year read as "…" rather than "—".</summary>
+    [Parameter] public bool SuggestionLoading { get; set; }
+
+    /// <summary>"We filled in X" note from the last auto-fill, shown under the fields. Null hides it.</summary>
+    [Parameter] public string? AutoFilledNote { get; set; }
+
+    /// <summary>Whether the song is already on tonight's set — drives the Tonight button's label and the KaraFun split.</summary>
+    [Parameter] public bool InTonight { get; set; }
+
+    /// <summary>Whether to offer KaraFun: the host resolves the setting AND the active venue's KaraFun ID.</summary>
+    [Parameter] public bool KaraFunAvailable { get; set; }
+
+    /// <summary>Confidence-weighted star for "how it went"; null renders "sung, not rated".</summary>
+    [Parameter] public double? BayesScore { get; set; }
+
+    /// <summary>Whole-star value the "how it went" rating draws, paired with <see cref="BayesScore"/>.</summary>
+    [Parameter] public int RoundedAverage { get; set; }
+
+    /// <summary>Existing tags across the list, offered as suggestions in the edit form.</summary>
+    [Parameter] public IReadOnlyList<string> UsedTags { get; set; } = [];
+
+    /// <summary>Whether to offer Edit. Tonight opens the card read-only — a set list is for singing, not curating.</summary>
+    [Parameter] public bool AllowEdit { get; set; } = true;
+
+    /// <summary>Raised on ✕, the backdrop, or a pull-down dismiss. The host clears <see cref="Item"/>.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised by "Mark sung" / "Sang it again" — the host runs its rating prompt.</summary>
+    [Parameter] public EventCallback OnMarkSung { get; set; }
+
+    /// <summary>Raised by the Tonight button; the host adds or removes the song.</summary>
+    [Parameter] public EventCallback OnToggleTonight { get; set; }
+
+    /// <summary>Raised by the "last sung" link; the host opens its history sheet.</summary>
+    [Parameter] public EventCallback OnOpenHistory { get; set; }
+
+    /// <summary>Quick-link taps. The host owns the URL building and the launch.</summary>
+    [Parameter] public EventCallback OnOpenYouTube { get; set; }
+
+    /// <inheritdoc cref="OnOpenYouTube" />
+    [Parameter] public EventCallback OnOpenSpotify { get; set; }
+
+    /// <inheritdoc cref="OnOpenYouTube" />
+    [Parameter] public EventCallback OnOpenKaraFun { get; set; }
+
+    /// <inheritdoc cref="OnOpenYouTube" />
+    [Parameter] public EventCallback OnOpenLyrics { get; set; }
+
+    /// <summary>The KaraFun split button's menu action: queue the song for tonight, then open KaraFun.</summary>
+    [Parameter] public EventCallback OnAddToTonightAndOpenKaraFun { get; set; }
+
+    /// <summary>New enjoyment rating; the host persists it.</summary>
+    [Parameter] public EventCallback<int> OnEnjoymentChanged { get; set; }
+
+    /// <summary>The edited values, on Save. The host applies them to the song and persists.</summary>
+    [Parameter] public EventCallback<Edit> OnSave { get; set; }
+
+    /// <summary>The edit form's values, handed to the host to apply. Tags are raw — the host normalizes.</summary>
+    public sealed record Edit(string Title, string Artist, string Genre, int? Year, string Notes, List<string> Tags);
+
+    private bool _editing;
+    private string _editTitle = string.Empty;
+    private string _editArtist = string.Empty;
+    private string _editGenre = string.Empty;
+    private string _editNotes = string.Empty;
+    private int? _editYear;
+    private List<string> _editTags = [];
+    private Guid? _openFor;   // the song the sheet is currently showing; a change means a fresh open → leave edit mode
+
+    private ElementReference _sheet;
+    private DotNetObjectReference<SongDetailSheet>? _selfRef;
+    private bool _bound;
+    private bool _editFieldsBound;
+
+    private static int CurrentYear => DateTime.Now.Year;
+    private bool EditYearValid => !_editYear.HasValue || (_editYear.Value >= 1 && _editYear.Value <= CurrentYear);
+    private bool CanSaveEdit => !string.IsNullOrWhiteSpace(_editTitle) && EditYearValid;
+
+    protected override void OnParametersSet()
+    {
+        if (Item?.Id != _openFor)
+        {
+            _openFor = Item?.Id;
+            _editing = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Bind pull-down-to-dismiss while shown. The sheet element remounts on each open, so re-bind then and reset
+        // the flag when it's hidden.
+        if (Item is not null && !_bound)
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("khSheet.register", _sheet, _selfRef);
+            _bound = true;
+        }
+        else if (Item is null)
+        {
+            _bound = false;
+        }
+
+        // The edit form's year input needs the digit-only guard once it's rendered.
+        if (_editing && !_editFieldsBound)
+        {
+            await JS.InvokeVoidAsync("khNumeric.register");
+            _editFieldsBound = true;
+        }
+        else if (!_editing)
+        {
+            _editFieldsBound = false;
+        }
+    }
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+
+    private void StartEdit()
+    {
+        if (Item is null)
+            return;
+        _editTitle = Item.Title;
+        _editArtist = Item.Artist;
+        _editGenre = Item.Genre ?? string.Empty;
+        _editNotes = Item.Notes ?? string.Empty;
+        _editYear = Item.Year;
+        _editTags = [.. Item.Tags];
+        _editing = true;
+    }
+
+    private void CancelEdit() => _editing = false;
+
+    private async Task SaveEditAsync()
+    {
+        if (Item is null || !CanSaveEdit)
+            return;
+
+        await OnSave.InvokeAsync(new Edit(_editTitle.Trim(), _editArtist.Trim(), _editGenre, _editYear, _editNotes, _editTags));
+        _editing = false;
+    }
+
+    // Pull-down-to-dismiss from khSheet: the sheet already animated off-screen, so just report the close. Named for
+    // khSheet's default closeMethod.
+    [JSInvokable]
+    public async Task CloseDetailFromSwipe()
+    {
+        await OnClose.InvokeAsync();
+        StateHasChanged();
+    }
+
+    public void Dispose() => _selfRef?.Dispose();
+}

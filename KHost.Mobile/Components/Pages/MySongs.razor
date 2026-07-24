@@ -443,221 +443,20 @@ else
     </div>
 }
 
-@if (_detailItem is not null)
-{
-    <div class="sheet-backdrop" @onclick="CloseDetail"></div>
-    <div class="sheet" role="dialog" aria-modal="true" @ref="_detailSheet">
-        <button type="button" class="sheet__close" @onclick="CloseDetail" aria-label="Close">✕</button>
-
-        @if (!_editing)
-        {
-            <div class="sheet__header @(HasArt(_detailItem) ? "sheet__header--art" : "")" style="@ArtStyle(_detailItem)">
-                <div class="sheet__title">@_detailItem.Title</div>
-                @if (!string.IsNullOrWhiteSpace(_detailItem.Artist))
-                {
-                    <div class="sheet__subtitle">@_detailItem.Artist</div>
-                }
-            </div>
-            <div class="sheet__rows">
-                <div class="sheet__row">
-                    <span class="sheet__key">Genre</span>
-                    <span class="sheet__val">
-                        @if (!string.IsNullOrWhiteSpace(_detailItem.Genre))
-                        {
-                            @_detailItem.Genre
-                        }
-                        else
-                        {
-                            <span class="sheet__muted">@(_suggestionLoading ? "…" : "—")</span>
-                        }
-                    </span>
-                </div>
-                <div class="sheet__row">
-                    <span class="sheet__key">Year</span>
-                    <span class="sheet__val">
-                        @if (_detailItem.Year.HasValue)
-                        {
-                            @_detailItem.Year
-                        }
-                        else
-                        {
-                            <span class="sheet__muted">@(_suggestionLoading ? "…" : "—")</span>
-                        }
-                    </span>
-                </div>
-                @if (Settings.TagsEnabled)
-                {
-                    <div class="sheet__row">
-                        <span class="sheet__key">Tags</span>
-                        <span class="sheet__val">
-                            @if (_detailItem.Tags.Count > 0)
-                            {
-                                <span class="sheet__tags">
-                                    @foreach (var tag in _detailItem.Tags)
-                                    {
-                                        <span class="tag-chip">@tag</span>
-                                    }
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="sheet__muted">—</span>
-                            }
-                        </span>
-                    </div>
-                }
-                <div class="sheet__row">
-                    <span class="sheet__key">How it went</span>
-                    <span class="sheet__val">
-                        @if (_detailItem.Performances.Count == 0)
-                        {
-                            <span class="sheet__muted">unsung</span>
-                        }
-                        else if (BayesStar(_detailItem) is { } score)
-                        {
-                            <StarRating Value="RoundedAvg(_detailItem)" Tone="hot" Sung="true" ReadOnly="true" />
-                            <span class="rating-num">@score.ToString("0.0")</span>
-                        }
-                        else
-                        {
-                            <span class="sheet__muted">sung, not rated</span>
-                        }
-                    </span>
-                </div>
-                <div class="sheet__row">
-                    <span class="sheet__key">Enjoyment</span>
-                    <span class="sheet__val">
-                        <StarRating Value="_detailItem.Enjoyment" Tone="cool" Sung="true" ValueChanged="v => UpdateEnjoymentAsync(_detailItem, v)" />
-                    </span>
-                </div>
-                <div class="sheet__row">
-                    <span class="sheet__key">Notes</span>
-                    <span class="sheet__val">@(string.IsNullOrWhiteSpace(_detailItem.Notes) ? "—" : _detailItem.Notes)</span>
-                </div>
-                <div class="sheet__row">
-                    <span class="sheet__key">Last sung</span>
-                    <span class="sheet__val">
-                        @if (_detailItem.LastSungAt.HasValue)
-                        {
-                            <button class="btn-link sheet__history-link" @onclick="OpenHistory">
-                                @_detailItem.LastSungAt.Value.ToString("MMM d, yyyy · h:mm tt")
-                                <span class="sheet__history-count">(@_detailItem.Performances.Count)</span>
-                            </button>
-                        }
-                        else
-                        {
-                            <span class="sheet__muted">never</span>
-                        }
-                    </span>
-                </div>
-                <div class="sheet__row">
-                    <span class="sheet__key">Added</span>
-                    <span class="sheet__val">@_detailItem.AddedAt.ToString("MMM d, yyyy")</span>
-                </div>
-            </div>
-            @if (_autoFilledNote is not null)
-            {
-                <div class="suggest-match">@_autoFilledNote</div>
-            }
-            <button class="btn btn-secondary sheet__sang-btn" @onclick="() => OpenRatingPrompt(_detailItem)">
-                @(_detailItem.Performances.Count > 0 ? "Sang it again" : "Mark sung")
-            </button>
-            @if (Settings.TonightEnabled)
-            {
-                <button class="btn sheet__tonight @(IsInTonight(_detailItem) ? "is-on" : "")" @onclick="ToggleDetailTonightAsync">
-                    @(IsInTonight(_detailItem) ? "🎤 In tonight ✓" : "🎤 Add to tonight")
-                </button>
-            }
-            @if (Settings.YouTubeSearchEnabled)
-            {
-                <button class="btn sheet__youtube" @onclick="OpenYouTubeAsync">▶ Find on YouTube</button>
-            }
-            @if (Settings.SpotifySearchEnabled)
-            {
-                <button class="btn sheet__spotify" @onclick="OpenSpotifyAsync">
-                    <SpotifyIcon Size="18" Fill="#fff" />
-                    Find on Spotify
-                </button>
-            }
-            @if (Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))
-            {
-                @if (Settings.TonightEnabled && !IsInTonight(_detailItem))
-                {
-                    @* Split button: the main segment opens KaraFun; the chevron queues the song for tonight first,
-                       then opens it. Degrades to a plain button below when Tonight is off (no menu to offer) OR the
-                       song is already queued for tonight (the "add to tonight" shortcut would be a no-op — the
-                       sheet's "🎤 In tonight ✓" row above already shows it's on deck). *@
-                    <SplitButton Class="kh-split--karafun" PrimaryLabel="🎙 Find on KaraFun"
-                                 OnPrimary="OpenKaraFunAsync" Direction="SplitDirection.Up"
-                                 ToggleAriaLabel="More KaraFun options">
-                        <SplitButtonItem Icon="🎤" Description="Queue it for tonight, then open KaraFun"
-                                         OnClick="AddToTonightAndOpenKaraFunAsync">
-                            Add to tonight &amp; open
-                        </SplitButtonItem>
-                    </SplitButton>
-                }
-                else
-                {
-                    <button class="btn sheet__karafun" @onclick="OpenKaraFunAsync">🎙 Find on KaraFun</button>
-                }
-            }
-            @if (Settings.LyricsEnabled)
-            {
-                <button class="btn sheet__lyrics" @onclick="OpenLyricsAsync">📖 Lyrics</button>
-            }
-            <div class="sheet__actions">
-                <button class="btn btn-primary" @onclick="StartEdit">Edit</button>
-            </div>
-        }
-        else
-        {
-            <div class="sheet__title">Edit song</div>
-            <div class="field">
-                <label class="field__label" for="e-title">Song title</label>
-                <input id="e-title" class="input" @bind="_editTitle" @bind:event="oninput" />
-            </div>
-            <div class="field">
-                <label class="field__label" for="e-artist">Artist</label>
-                <input id="e-artist" class="input" @bind="_editArtist" @bind:event="oninput" />
-            </div>
-            <div class="field">
-                <label class="field__label" for="e-genre">Genre <span class="field__hint">— optional</span></label>
-                <select id="e-genre" class="input" @bind="_editGenre">
-                    <option value=""></option>
-                    @foreach (var g in Genres.All)
-                    {
-                        <option value="@g">@g</option>
-                    }
-                </select>
-            </div>
-            <div class="field">
-                <label class="field__label" for="e-year">Release year <span class="field__hint">— optional</span></label>
-                <input id="e-year" class="input num-year" type="text" inputmode="numeric" maxlength="4"
-                       @bind="_editYear" @bind:event="oninput" />
-                @if (_editYear.HasValue && !EditYearValid)
-                {
-                    <div class="field__error">Enter a year between 1 and @CurrentYear.</div>
-                }
-            </div>
-            <div class="field">
-                <label class="field__label" for="e-notes">Notes</label>
-                <textarea id="e-notes" class="input sheet__notes" rows="3"
-                          placeholder="e.g. start slow, key of G" @bind="_editNotes" @bind:event="oninput"></textarea>
-            </div>
-            @if (Settings.TagsEnabled)
-            {
-                <div class="field">
-                    <label class="field__label">Tags <span class="field__hint">— optional</span></label>
-                    <TagInput Tags="_editTags" TagsChanged="v => _editTags = v" Suggestions="UsedTags" />
-                </div>
-            }
-            <div class="sheet__actions">
-                <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
-                <button class="btn btn-primary" @onclick="SaveEditAsync" disabled="@(!CanSaveEdit)">Save</button>
-            </div>
-        }
-    </div>
-}
+@* The card itself is Components/SongDetailSheet.razor — the Tonight tab opens the same one (read-only). *@
+<SongDetailSheet Item="_detailItem" ArtStyle="@(_detailItem is not null && HasArt(_detailItem) ? ArtStyle(_detailItem) : null)"
+                 SuggestionLoading="_suggestionLoading" AutoFilledNote="_autoFilledNote"
+                 InTonight="IsInTonight(_detailItem)"
+                 KaraFunAvailable="@(Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
+                 BayesScore="@(_detailItem is null ? null : BayesStar(_detailItem))"
+                 RoundedAverage="@(_detailItem is null ? 0 : RoundedAvg(_detailItem))"
+                 UsedTags="UsedTags"
+                 OnClose="CloseDetail" OnMarkSung="() => OpenRatingPrompt(_detailItem!)"
+                 OnToggleTonight="ToggleDetailTonightAsync" OnOpenHistory="OpenHistory"
+                 OnOpenYouTube="OpenYouTubeAsync" OnOpenSpotify="OpenSpotifyAsync"
+                 OnOpenKaraFun="OpenKaraFunAsync" OnAddToTonightAndOpenKaraFun="AddToTonightAndOpenKaraFunAsync"
+                 OnOpenLyrics="OpenLyricsAsync" OnEnjoymentChanged="v => UpdateEnjoymentAsync(_detailItem!, v)"
+                 OnSave="SaveDetailEditAsync" />
 
 <RatingPromptSheet Item="_ratingPromptItem" RatePerformances="Settings.RatePerformances"
                    OnCommit="OnRatingCommitAsync" OnCancel="CloseRatingPrompt" />
@@ -799,9 +598,6 @@ else
     private bool _infiniteBound;
     private bool _pagingReset;   // set when a filter/sort change rewound paging → OnAfterRender scrolls back to top
 
-    // Detail-sheet drag-to-dismiss (pull down to close; the page behind is locked while it's open).
-    private ElementReference _detailSheet;
-    private bool _sheetBound;
     private ElementReference _historySheet;
     private bool _historySheetBound;
     private ElementReference _lyricsSheet;
@@ -836,17 +632,10 @@ else
     private static string ScrollKeyFor(Guid? singerId) => singerId is { } id ? $"mysongs:{id:N}" : "mysongs";
     private bool _scrollRestored;
 
-    // Song detail / edit sheet (opened by tapping a card).
+    // The song whose detail card is open (tapped from a card). The card itself — including its edit form and
+    // pull-down-to-dismiss — is SongDetailSheet; this page owns the selection and every store write behind it.
     private SongListItem? _detailItem;
-    private bool _editing;
-    private bool _editFieldsBound;   // khNumeric bound to the edit-form year input
     private bool _addFieldsBound;    // khNumeric bound to the add-form year input (re-bind when the form reopens)
-    private string _editTitle = string.Empty;
-    private string _editArtist = string.Empty;
-    private string _editGenre = string.Empty;
-    private string _editNotes = string.Empty;
-    private int? _editYear;
-    private List<string> _editTags = [];   // edit-sheet tags buffer; normalized back onto the song on save
 
     // Metadata auto-fill: look up a not-yet-looked-up song's blank year/genre and fill it from the match.
     // Runs in the background on add, and again when the detail sheet opens (which also shows a note of what
@@ -890,9 +679,6 @@ else
             : $"You already have \"{_title.Trim()}\" by {_artist.Trim()} in your list.";
 
     private void OnAddFieldChanged() => _confirmedDuplicate = false;
-
-    private bool EditYearValid => !_editYear.HasValue || (_editYear.Value >= 1 && _editYear.Value <= CurrentYear);
-    private bool CanSaveEdit => !string.IsNullOrWhiteSpace(_editTitle) && EditYearValid;
 
     private void SortBy(SortColumn column)
     {
@@ -1313,18 +1099,6 @@ else
             _infiniteBound = false;
         }
 
-        // Detail sheet: bind pull-down-to-dismiss + lock the page behind it. Re-bind on each open.
-        if (_detailItem is not null && !_sheetBound)
-        {
-            _swipeRef ??= DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("khSheet.register", _detailSheet, _swipeRef);
-            _sheetBound = true;
-        }
-        else if (_detailItem is null)
-        {
-            _sheetBound = false;
-        }
-
         // Load album art for the newly-rendered page, once per page change (filter / sort / search / grew a page).
         // Reloads (RefreshAsync) and single-item autofills trigger LoadArtAsync directly, since those change content
         // without changing the page signature.
@@ -1411,17 +1185,6 @@ else
         else if (!sliderPresent)
         {
             _rangeBound = false;
-        }
-
-        // The edit sheet's year input needs the digit-only guard once it's rendered.
-        if (_editing && !_editFieldsBound)
-        {
-            await JS.InvokeVoidAsync("khNumeric.register");
-            _editFieldsBound = true;
-        }
-        else if (!_editing)
-        {
-            _editFieldsBound = false;
         }
 
         // A favorite toggle just re-sorted the list; scroll the affected card into its new position.
@@ -1529,7 +1292,6 @@ else
         if (Guid.TryParse(id, out var guid))
         {
             _detailItem = _items.FirstOrDefault(i => i.Id == guid);
-            _editing = false;
             _ = LoadDetailSuggestionAsync(_detailItem);
             StateHasChanged();
         }
@@ -1728,7 +1490,6 @@ else
         _autoFilledNote = null;
         _suggestionLoading = false;
         _detailItem = null;
-        _editing = false;
         // The page-scroll lock is reconciled from state in OnAfterRenderAsync — no explicit unlock needed here.
     }
 
@@ -1749,29 +1510,6 @@ else
         return false;
     }
 
-    // Pull-down-to-dismiss from khSheet: the sheet already animated off-screen, so just close.
-    [JSInvokable]
-    public void CloseDetailFromSwipe()
-    {
-        CloseDetail();
-        StateHasChanged();
-    }
-
-    private void StartEdit()
-    {
-        if (_detailItem is null)
-            return;
-        _editTitle = _detailItem.Title;
-        _editArtist = _detailItem.Artist;
-        _editGenre = _detailItem.Genre ?? string.Empty;
-        _editNotes = _detailItem.Notes ?? string.Empty;
-        _editYear = _detailItem.Year;
-        _editTags = [.. _detailItem.Tags];
-        _editing = true;
-    }
-
-    private void CancelEdit() => _editing = false;
-
     // Human list: "Genre", "Genre & Year", or (3+) "A, B, & C" — Oxford comma, ampersand before the last.
     private static string JoinFields(IReadOnlyList<string> parts) => parts.Count switch
     {
@@ -1781,13 +1519,15 @@ else
         _ => $"{string.Join(", ", parts.Take(parts.Count - 1))}, & {parts[^1]}",
     };
 
-    private async Task SaveEditAsync()
+    // Applies the detail card's edit form. The card collects and validates the values; the write, the art
+    // invalidation and the re-lookup are this page's job.
+    private async Task SaveDetailEditAsync(SongDetailSheet.Edit edit)
     {
-        if (_detailItem is null || !CanSaveEdit)
+        if (_detailItem is null)
             return;
 
-        var newTitle = _editTitle.Trim();
-        var newArtist = _editArtist.Trim();
+        var newTitle = edit.Title;
+        var newArtist = edit.Artist;
         // A title/artist change makes the current cover art belong to a different song — clear it so a fresh cover is
         // fetched for the new title/artist (rather than keeping the old, now-wrong image).
         var identityChanged = !string.Equals(newTitle, _detailItem.Title, StringComparison.Ordinal)
@@ -1795,10 +1535,10 @@ else
 
         _detailItem.Title = newTitle;
         _detailItem.Artist = newArtist;
-        _detailItem.Genre = string.IsNullOrWhiteSpace(_editGenre) ? null : _editGenre.Trim();
-        _detailItem.Notes = string.IsNullOrWhiteSpace(_editNotes) ? null : _editNotes.Trim();
-        _detailItem.Year = _editYear;
-        _detailItem.Tags = SongTags.Normalize(_editTags);
+        _detailItem.Genre = string.IsNullOrWhiteSpace(edit.Genre) ? null : edit.Genre.Trim();
+        _detailItem.Notes = string.IsNullOrWhiteSpace(edit.Notes) ? null : edit.Notes.Trim();
+        _detailItem.Year = edit.Year;
+        _detailItem.Tags = SongTags.Normalize(edit.Tags);
 
         if (identityChanged)
         {
@@ -1809,7 +1549,6 @@ else
         }
 
         await Store.UpdateAsync(_detailItem);
-        _editing = false;
 
         if (identityChanged)
             await LoadDetailSuggestionAsync(_detailItem);   // fetch + cache a fresh cover for the new song
