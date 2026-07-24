@@ -45,6 +45,25 @@ dotnet run --project KHost.Mobile -f net10.0-maccatalyst "-p:BaseOutputPath=./ob
 
 > `-p:BaseOutputPath=./obj/_build` keeps build output out of the IDE's `bin/` folder so it doesn't get locked while the IDE is open.
 
+### Backing up on-device data (before a risky redeploy)
+
+Deploying with `-t:Run` **updates the app in place** — the on-device data (`files/*.json`, `shared_prefs/`) survives. It's only wiped by an **uninstall**, and the sneaky way that happens is a *reinstall you didn't ask for*: deploying a build signed with a **different debug keystore** (fresh machine, regenerated `~/.android/debug.keystore`) fails to install over the existing app with a signature mismatch, and the tooling falls back to uninstall + reinstall — taking your singers, song lists, tonight sets, venues and settings with it. A manual "uninstall to fix a launch crash" does the same.
+
+The host test suites (Unit + Integration) run against a throwaway temp folder and **never touch device data** — so the risk is device deploys, not tests. **Back up before any redeploy that might reinstall, or before any manual uninstall:**
+
+```bash
+dotnet run scripts/backup-device-data.cs -- backup                 # timestamped .tar.gz -> device-backups/ (gitignored)
+dotnet run scripts/backup-device-data.cs -- list                   # what backups exist
+dotnet run scripts/backup-device-data.cs -- inspect <file.tar.gz>  # peek inside one
+dotnet run scripts/backup-device-data.cs -- restore <file.tar.gz>  # push a backup back onto the device
+#   -s, --serial <serial>   target one of several attached devices (also honors $ANDROID_SERIAL)
+#   restore also takes -y/--yes to skip the confirmation
+```
+
+The script is a **[.NET 10 file-based app](https://learn.microsoft.com/dotnet/csharp/fundamentals/program-structure/top-level-statements)** (`scripts/*.cs` run with `dotnet run`) — our convention for repo scripts, so they run identically on Windows, Linux, and macOS with no extra dependency beyond the .NET SDK everyone already has. (On Unix you can also `chmod +x scripts/backup-device-data.cs` and run it directly via its shebang.) It uses `adb run-as khost.mobile` (works only on the **Debug**, debuggable build — no root needed) to stream a tar of the app's private data dir off the device, gzipped in-process (no host `tar`/`gzip` needed). Backups land in `device-backups/`, gitignored so real singer data never reaches GitHub. `restore` force-stops the app, then extracts the tarball back in place; relaunch to see the restored data.
+
+> **Wireless adb tip:** the wireless-debugging **port rotates each session** — read it live from Settings → Developer options → Wireless debugging. If `adb connect` wedges after a failed attempt, `adb kill-server && adb start-server` clears it.
+
 ### Sample data for testing
 
 Need songs to populate the list while testing? This public **YouTube Music** playlist imports cleanly via **Import & Export → YouTube Music**:
