@@ -581,7 +581,25 @@ else
             }
             @if (Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))
             {
-                <button class="btn sheet__karafun" @onclick="OpenKaraFunAsync">🎙 Find on KaraFun</button>
+                @if (Settings.TonightEnabled && !IsInTonight(_detailItem))
+                {
+                    @* Split button: the main segment opens KaraFun; the chevron queues the song for tonight first,
+                       then opens it. Degrades to a plain button below when Tonight is off (no menu to offer) OR the
+                       song is already queued for tonight (the "add to tonight" shortcut would be a no-op — the
+                       sheet's "🎤 In tonight ✓" row above already shows it's on deck). *@
+                    <SplitButton Class="kh-split--karafun" PrimaryLabel="🎙 Find on KaraFun"
+                                 OnPrimary="OpenKaraFunAsync" Direction="SplitDirection.Up"
+                                 ToggleAriaLabel="More KaraFun options">
+                        <SplitButtonItem Icon="🎤" Description="Queue it for tonight, then open KaraFun"
+                                         OnClick="AddToTonightAndOpenKaraFunAsync">
+                            Add to tonight &amp; open
+                        </SplitButtonItem>
+                    </SplitButton>
+                }
+                else
+                {
+                    <button class="btn sheet__karafun" @onclick="OpenKaraFunAsync">🎙 Find on KaraFun</button>
+                }
             }
             @if (Settings.LyricsEnabled)
             {
@@ -1920,6 +1938,17 @@ else
         _detailItem is null || string.IsNullOrWhiteSpace(_activeVenueKaraFunId)
             ? Task.CompletedTask
             : Links.OpenAsync(KaraFunSearch.UrlFor(_activeVenueKaraFunId, _detailItem.Title, _detailItem.Artist));
+
+    // Split-button variant of the KaraFun action: queue the song for tonight (unless it's already there), then open
+    // KaraFun — the common "I'm about to sing this" move in one tap.
+    private async Task AddToTonightAndOpenKaraFunAsync()
+    {
+        if (_detailItem is null)
+            return;
+        if (!IsInTonight(_detailItem))
+            await Tonight.AddAsync(_detailItem.Id);
+        await OpenKaraFunAsync();
+    }
 
     // The active venue's KaraFun ID (null when there's no active venue or it has none). Tracked reactively so the
     // "Find on KaraFun" button appears/disappears as the venue is switched or its KaraFun ID is edited.

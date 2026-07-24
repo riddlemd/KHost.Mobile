@@ -220,6 +220,7 @@ button { text-transform: none; }
 
 .kh-split__main { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .kh-split__toggle {
+    flex: none;   /* the chevron segment is content-width; the main segment takes the rest */
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     min-width: 2.6rem;
@@ -228,6 +229,10 @@ button { text-transform: none; }
     /* Divider adapts to the segment's own text color, so it reads on the solid, tonal, and secondary fills alike. */
     border-left: 1px solid color-mix(in srgb, currentColor 28%, transparent);
 }
+/* A .btn variant (e.g. .btn-primary) can set width:100%; neutralize it on the segments so they size to the split,
+   not the whole row — otherwise both segments claim 100% and the layout collapses. */
+.kh-split > .kh-split__main,
+.kh-split > .kh-split__toggle { width: auto; }
 .kh-split__chev { font-size: 0.85em; line-height: 1; transition: transform 0.18s ease; }
 .kh-split.is-open .kh-split__chev { transform: rotate(180deg); }
 
@@ -271,6 +276,18 @@ button { text-transform: none; }
 .kh-split__item-icon { font-size: 1.05rem; line-height: 1; width: 1.3rem; text-align: center; flex: none; }
 .kh-split__item-body { display: flex; flex-direction: column; min-width: 0; }
 .kh-split__item-desc { font-size: 0.76rem; font-weight: 400; color: var(--kh-text-muted); }
+
+/* KaraFun-branded, full-width split button for the song detail sheet's "Find on KaraFun" action — the main segment
+   opens KaraFun, the chevron queues the song for tonight first. Full width + bottom margin to match the sibling
+   sheet__* link buttons; both segments painted KaraFun pink (overriding the .btn variant fill). */
+.kh-split--karafun { display: flex; width: 100%; margin-bottom: 0.6rem; }
+.kh-split--karafun .kh-split__main { flex: 1; }
+.kh-split--karafun .kh-split__main,
+.kh-split--karafun .kh-split__toggle { background: #e1477e; color: #fff; border-color: transparent; }
+.kh-split--karafun .kh-split__main:hover,
+.kh-split--karafun .kh-split__toggle:hover { background: #c9356a; }
+.kh-split--karafun .kh-split__main:active,
+.kh-split--karafun .kh-split__toggle:active { background: #b52e5d; }
 
 /* ---- About page -------------------------------------------------------- */
 /* Box model matches the Settings/Import pages (both rely on .app-content's padding + max-width);

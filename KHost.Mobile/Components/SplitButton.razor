@@ -4,7 +4,7 @@
 @* Concept-1 split button: a primary action segment + a chevron that drops a menu of related actions. Reusable —
    pass the default action via OnPrimary and the extra actions as <SplitButtonItem> children. Dismissed by tapping
    outside (the scrim) or the Android back button (via IBackButtonService), exactly like the header ⋮ menu. *@
-<div class="kh-split @(_open ? "is-open" : "")">
+<div class="kh-split @Class @(_open ? "is-open" : "")">
     <button type="button" class="btn @VariantBtnClass kh-split__main" disabled="@Disabled" @onclick="PrimaryClickAsync">
         @if (PrimaryContent is not null)
         {
@@ -59,6 +59,9 @@
 
     /// <summary>Accessible label for the chevron toggle (the visible glyph is decorative).</summary>
     [Parameter] public string ToggleAriaLabel { get; set; } = "More options";
+
+    /// <summary>Extra CSS classes appended to the container — e.g. a brand/layout modifier like <c>kh-split--karafun</c>.</summary>
+    [Parameter] public string? Class { get; set; }
 
     private bool _open;
     private BackButtonOverlayGuard? _backGuard;
