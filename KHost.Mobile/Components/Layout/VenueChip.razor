@@ -60,7 +60,7 @@
                 }
             </div>
             <div class="venue-switcher__foot">
-                @if (Settings.LocationAutoDetect)
+                @if (Settings.LocationAutoDetect && AnyGeolocatedVenue)
                 {
                     @* Two modes, not an on/off: 📍 Auto follows your location, 📌 Pinned holds the manual pick. *@
                     <div class="venue-switcher__seg" role="group" aria-label="Venue update mode">
@@ -122,6 +122,11 @@
     // The switcher's quick list only. _venues stays the full set (so an active hidden venue is still resolved for
     // the chip, and management still sees everything); only the dropdown rows honor ShowInSwitcher.
     private IEnumerable<Venue> ListedVenues => _venues.Where(v => v.ShowInSwitcher);
+
+    // Auto-detect can't do anything until some venue has a saved point — MauiVenueLocator short-circuits on the
+    // same check — so until then Auto/Pinned is a choice with no effect. Counts hidden venues too: they're still
+    // matched on proximity.
+    private bool AnyGeolocatedVenue => _venues.Any(v => v.HasLocation);
 
     // One-time move of the old single global KaraFun venue ID into a real venue, so upgraders start with one saved.
     private async Task MigrateLegacyVenueAsync()
