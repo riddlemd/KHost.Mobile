@@ -1786,7 +1786,12 @@ body.kh-sheet-open { overflow: hidden; }
 /* Advanced filters in a bottom sheet (opened from the funnel). */
 .filter-sheet__title { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .filter-sheet__clear { flex: 0 0 auto; font-size: 0.85rem; font-weight: 700; padding: 0.2rem 0.4rem; }
-.filter-sheet__grid { margin-top: 1rem; }
+/* The bottom padding is head-room for the filter menus, not decoration. They float downward and the
+   sheet is a scroll container, so without slack under the last field a menu extends the sheet's
+   scroll area instead of just opening, stranding its options below the fold. The sheet is
+   bottom-anchored, so this pushes the fields up rather than growing off-screen. Sized for the
+   tallest menu (6 rating rows ≈ 13.5rem) against the ~7rem that sits below a rating field. */
+.filter-sheet__grid { margin-top: 1rem; padding-bottom: 9rem; }
 
 /* ---- Multi-select filter (native <details>/<summary> + checkboxes) ------- */
 /* Native disclosure so mobile WebViews render it reliably. The panel floats over the content below
