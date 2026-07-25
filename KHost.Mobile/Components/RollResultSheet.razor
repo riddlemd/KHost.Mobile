@@ -10,8 +10,13 @@
 
         @* No Changed subscription of its own — the host must re-render this on AlbumArt.Changed. *@
         var art = AlbumArt.ViewFor(item);
+        @* Tappable, because it's a song card and reads as one — the shared .song-card styling carries a
+           pointer cursor and press feedback, so leaving it inert made the whole card look broken. Does what
+           the Open song button does; that button stays as the labelled, reachable route. *@
         <div class="song-card song-card--roll @(art.HasArt ? "song-card--art" : "") @(art.Loading ? "kh-art-loading" : "")"
-             data-art-song="@item.Id" style="@art.Style">
+             data-art-song="@item.Id" style="@art.Style"
+             role="button" tabindex="0" aria-label="Open @item.Title"
+             @onclick="OnOpen" @onkeydown="OpenOnEnterOrSpace">
             <div class="song-card__title">@item.Title</div>
             @if (!string.IsNullOrWhiteSpace(item.Artist))
             {
@@ -103,4 +108,8 @@
 
     /// <summary>Raised by the ✕, the backdrop and a pull-down dismiss.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    // The card is a div playing the part of a button, so it has to answer the keys a real one would.
+    private Task OpenOnEnterOrSpace(KeyboardEventArgs e)
+        => e.Key is "Enter" or " " ? OnOpen.InvokeAsync() : Task.CompletedTask;
 }
