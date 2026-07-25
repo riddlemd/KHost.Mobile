@@ -3,7 +3,10 @@
    platform date pickers show years in a grid. Years that would put the two range handles the wrong way round
    are rendered disabled rather than silently clamped, so the pick you make is the pick you get. *@
 
-<Sheet Open="Open" Class="sheet--year" BackdropClass="sheet-backdrop--year" AriaLabel="@Title" OnClose="OnClose">
+@* ClosePx matches the other sheets with an inner scrolling list, so a scroll-flick in the grid can't
+   dismiss the sheet by accident. *@
+<Sheet Open="Open" Class="sheet--year" BackdropClass="sheet-backdrop--year" AriaLabel="@Title"
+       ClosePx="150" OnClose="OnClose">
     <div class="sheet__title">@Title</div>
     <div class="year-grid" role="listbox" aria-label="@Title">
         @foreach (var year in Years)

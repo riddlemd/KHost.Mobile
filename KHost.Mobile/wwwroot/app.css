@@ -1925,16 +1925,26 @@ body.kh-sheet-open { overflow: hidden; }
 .sheet--year { z-index: 43; }
 .sheet-backdrop--year { z-index: 42; }
 .year-grid {
+    --kh-year-row: 2.75rem;
+    --kh-year-gap: 0.5rem;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(4.25rem, 1fr));
-    gap: 0.5rem;
+    grid-auto-rows: var(--kh-year-row);   /* fixed, so the ten-row cap below is exact */
+    gap: var(--kh-year-gap);
     margin-top: 1rem;
+    /* Ten rows, then scroll the grid rather than the sheet: a full library runs 60+ years, which
+       would otherwise drive the sheet to its 85vh cap and carry the title off the top with it.
+       sheet.js defers to an inner scroller, so pull-down-to-dismiss still works from the top. */
+    max-height: calc(10 * var(--kh-year-row) + 9 * var(--kh-year-gap));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 .year-grid__item {
     font-family: inherit;
     font-size: 0.95rem;
     font-weight: 700;
-    padding: 0.6rem 0.25rem;
+    padding: 0 0.25rem;   /* the row height sets the tile height; the button centres its own label */
     color: var(--kh-text);
     background-color: var(--kh-surface-2);
     border: 1px solid var(--kh-border);
