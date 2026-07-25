@@ -1,16 +1,12 @@
 // Adds a deliberately misspelled song and captures the ⚠ typo hint end-to-end (live iTunes lookup).
-import { attach, shot, TAP } from './khdrive.mjs';
+import { attach, resetToList, shot, TAP } from './khdrive.mjs';
 
 const TITLE = process.env.KH_TITLE || 'Bohemian Rapsody';
 const ARTIST = process.env.KH_ARTIST || 'Queen';
 
 const { browser, page } = await attach();
 
-// Smart landing may have opened Tonight; My Songs is where the add FAB lives.
-if (!page.url().endsWith('/')) {
-    await page.locator('a[href="/"], a[href=""]').first().click(TAP);
-    await page.waitForSelector('.mysongs-fab', { timeout: 10000 });
-}
+await resetToList(page);
 
 await page.click('.mysongs-fab:not(.mysongs-fab--surprise)', TAP);
 await page.waitForSelector('.sheet input', { timeout: 10000 });

@@ -1,4 +1,5 @@
 using System.Net;
+using KHost.Mobile.Clients.Matching;
 
 namespace KHost.Mobile.Clients.Enrichment;
 
@@ -15,7 +16,9 @@ public sealed class ITunesTrackMetadataLookup(HttpClient httpClient) : ITrackMet
         if (string.IsNullOrWhiteSpace(title))
             return TrackLookupResult.None;
 
-        var term = string.IsNullOrWhiteSpace(artist) ? title.Trim() : $"{artist.Trim()} {title.Trim()}";
+        var term = string.IsNullOrWhiteSpace(artist)
+            ? SearchText(title)
+            : $"{SearchText(artist)} {SearchText(title)}";
         // Pull a handful of candidates (not just the top hit) so the real recording can still be found when
         // iTunes ranks a cover first; ParseBestMatch then keeps only a genuine artist+title match.
         var url = $"https://itunes.apple.com/search?term={Uri.EscapeDataString(term)}&entity=song&limit=25&country=US";
@@ -45,4 +48,12 @@ public sealed class ITunesTrackMetadataLookup(HttpClient httpClient) : ITrackMet
         var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return ITunesResponseParser.ParseBestMatch(json, title, artist);
     }
+
+    // Search on the same normalized text the parser verifies against, rather than the raw title/artist.
+    // iTunes' typo tolerance is inconsistent once punctuation is in the term — "All Time Low Dear Maria,
+    // Count Me Inn" comes back empty while the same query without the comma finds the song. Costs nothing:
+    // every candidate is re-checked against the raw text here anyway, so the term is only for retrieval.
+    // Falls back to the raw text when normalizing empties it (a title that is nothing but "(…)").
+    private static string SearchText(string value)
+        => TrackTextNormalizer.Normalize(value) is { Length: > 0 } normalized ? normalized : value.Trim();
 }

@@ -1,14 +1,11 @@
 // Reports what a given song's card actually shows right now (badge, art, meta chips).
-import { attach, shot, TAP } from './khdrive.mjs';
+import { attach, resetToList, shot, TAP } from './khdrive.mjs';
 
 const TITLE = process.env.KH_TITLE || 'Dear Maria';
 
 const { browser, page } = await attach();
 
-if (!page.url().endsWith('/')) {
-    await page.locator('a[href="/"], a[href=""]').first().click(TAP);
-    await page.waitForSelector('.mysongs-fab', { timeout: 10000 });
-}
+await resetToList(page);
 
 await page.locator('input[placeholder*="Search" i]').first().fill(TITLE);
 const card = page.locator('.song-card', { hasText: TITLE }).first();

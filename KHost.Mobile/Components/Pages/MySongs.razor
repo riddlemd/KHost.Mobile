@@ -1363,14 +1363,23 @@ else
         return Task.CompletedTask;
     }
 
-    // A song is eligible for auto-fill when the toggle is on, we haven't looked it up before, it has a title
-    // to search on, and at least one of genre/year is still blank. A guard so callers can skip the work (and
-    // the detail sheet's spinner) when there's nothing to do; re-enabling the toggle lets a later attempt run.
-    private bool ShouldAutoFill(SongListItem item) =>
+    // Whether to spend a lookup on this song: the toggle is on, we haven't looked it up before, and there's a
+    // title AND artist to search on (the parser rejects an artist-less result outright, so a call without one
+    // can only come back empty).
+    //
+    // Deliberately NOT gated on genre/year still being blank. The lookup also decides whether the title looks
+    // misspelled, and a song can have complete metadata and a wrong title — gating on blank fields meant an
+    // edited title was never re-checked, so no ⚠ could ever appear for it.
+    private bool ShouldLookUp(SongListItem item) =>
         Settings.AutoFillMetadata &&
         !item.MetadataLookedUp &&
         !string.IsNullOrWhiteSpace(item.Title) &&
-        (string.IsNullOrWhiteSpace(item.Genre) || !item.Year.HasValue);
+        !string.IsNullOrWhiteSpace(item.Artist);
+
+    // Whether a lookup could still fill something the user can see. Drives the detail sheet's spinner only —
+    // a lookup that can only produce a spelling suggestion shouldn't make the genre/year rows read as pending.
+    private static bool WouldFillFields(SongListItem item) =>
+        string.IsNullOrWhiteSpace(item.Genre) || !item.Year.HasValue;
 
     // Look up a year/genre and fill any blank field straight from the match — no chip, no confirmation. Runs
     // at most once per song (gated on MetadataLookedUp). Persists the fills + the looked-up flag; returns an
@@ -1378,7 +1387,7 @@ else
     // stamping the flag, so a later add/open can retry. Shared by the add-form and detail-sheet paths.
     private async Task<string?> TryAutoFillMetadataAsync(SongListItem item, CancellationToken token)
     {
-        if (!ShouldAutoFill(item))
+        if (!ShouldLookUp(item))
             return null;
 
         Log.LogDebug("Auto-fill lookup start: “{Title}” — “{Artist}”", item.Title, item.Artist);
@@ -1474,23 +1483,18 @@ else
         if (item is null)
             return;
 
-        var needAutoFill = ShouldAutoFill(item);
-        if (!needAutoFill)
+        if (!ShouldLookUp(item))
             return;
 
         _suggestCts = new CancellationTokenSource();
         var token = _suggestCts.Token;
-        _suggestionLoading = needAutoFill;   // the spinner is for the visible year/genre fill only
+        _suggestionLoading = WouldFillFields(item);   // the spinner is for the visible year/genre fill only
         try
         {
-            if (needAutoFill)
-            {
-                var note = await TryAutoFillMetadataAsync(item, token);
-                if (token.IsCancellationRequested || _detailItem?.Id != item.Id)
-                    return;
-                _autoFilledNote = note;
-            }
-
+            var note = await TryAutoFillMetadataAsync(item, token);
+            if (token.IsCancellationRequested || _detailItem?.Id != item.Id)
+                return;
+            _autoFilledNote = note;
         }
         catch (OperationCanceledException) { return; }
         finally

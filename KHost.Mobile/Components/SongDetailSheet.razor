@@ -20,12 +20,35 @@
             var art = AlbumArt.ViewFor(Item);
             <div class="sheet__header @(art.HasArt ? "sheet__header--art" : "") @(art.Loading ? "kh-art-loading" : "")"
                  data-art-song="@Item.Id" style="@art.Style">
-                <div class="sheet__title">@Item.Title</div>
+                <div class="sheet__title">
+                    @Item.Title
+                    @if (HasSuggestion)
+                    {
+                        @* Beside the name, because the name is what's wrong. The offer itself stays folded away
+                           until asked for — it's a guess, and it shouldn't push the song's own details down. *@
+                        <button type="button" class="sheet__typo" aria-expanded="@_suggestionOpen"
+                                aria-label="Possible misspelling — show the suggested spelling"
+                                title="Possible misspelling"
+                                @onclick="() => _suggestionOpen = !_suggestionOpen">⚠</button>
+                    }
+                </div>
                 @if (!string.IsNullOrWhiteSpace(Item.Artist))
                 {
                     <div class="sheet__subtitle">@Item.Artist</div>
                 }
             </div>
+            @if (HasSuggestion && _suggestionOpen)
+            {
+                <div class="typo-hint">
+                    <div class="typo-hint__text">
+                        Did you mean <strong>@Item.SuggestedTitle</strong> — <strong>@Item.SuggestedArtist</strong>?
+                    </div>
+                    <div class="typo-hint__actions">
+                        <button class="btn btn-primary typo-hint__apply" @onclick="OnApplySuggestion">Use this</button>
+                        <button class="btn-link typo-hint__dismiss" @onclick="OnDismissSuggestion">Not a typo</button>
+                    </div>
+                </div>
+            }
             <div class="sheet__rows">
                 <div class="sheet__row">
                     <span class="sheet__key">Genre</span>
@@ -130,21 +153,6 @@
             @if (AutoFilledNote is not null)
             {
                 <div class="suggest-match">@AutoFilledNote</div>
-            }
-            @* Shown only when the host wired both answers — the read-only Tonight host can't service either. *@
-            @if (Item.HasSuggestion && OnApplySuggestion.HasDelegate && OnDismissSuggestion.HasDelegate)
-            {
-                <div class="typo-hint">
-                    <div class="typo-hint__text">
-                        <span class="typo-hint__mark" aria-hidden="true">⚠</span>
-                        No exact match. Did you mean
-                        <strong>@Item.SuggestedTitle</strong> — <strong>@Item.SuggestedArtist</strong>?
-                    </div>
-                    <div class="typo-hint__actions">
-                        <button class="btn btn-primary typo-hint__apply" @onclick="OnApplySuggestion">Use this</button>
-                        <button class="btn-link typo-hint__dismiss" @onclick="OnDismissSuggestion">Not a typo</button>
-                    </div>
-                </div>
             }
             @if (OnMarkSung.HasDelegate)
             {
@@ -338,13 +346,22 @@
     private bool EditYearValid => !_editYear.HasValue || (_editYear.Value >= 1 && _editYear.Value <= CurrentYear);
     private bool CanSaveEdit => !string.IsNullOrWhiteSpace(_editTitle) && EditYearValid;
 
+    // Shown only when the host wired both answers — the read-only Tonight host can't service either.
+    private bool HasSuggestion =>
+        Item is { HasSuggestion: true } && OnApplySuggestion.HasDelegate && OnDismissSuggestion.HasDelegate;
+
+    private bool _suggestionOpen;
+
     protected override void OnParametersSet()
     {
         if (Item?.Id != _openFor)
         {
             _openFor = Item?.Id;
             _editing = false;
+            _suggestionOpen = false;   // a different song's offer starts folded away
         }
+        if (!HasSuggestion)
+            _suggestionOpen = false;   // applied or dismissed: nothing left to show
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

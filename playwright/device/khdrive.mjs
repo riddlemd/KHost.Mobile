@@ -32,6 +32,24 @@ export async function attach(port = process.env.CDP_PORT || 9333) {
 // skips that check — safe here because we always target a specific, known-visible control.
 export const TAP = { force: true };
 
+// Put the app back on a bare My Songs list: close any sheet a previous script left open and clear the
+// search box. Scripts share one long-lived app process, so without this the first click lands on a backdrop.
+export async function resetToList(page) {
+    for (let i = 0; i < 4; i++) {
+        const close = page.locator('.sheet__close');
+        if (!(await close.count())) break;
+        await close.first().click(TAP).catch(() => {});
+        await page.waitForTimeout(400);
+    }
+    if (!page.url().endsWith('/')) {
+        await page.locator('a[href="/"], a[href=""]').first().click(TAP);
+        await page.waitForSelector('.mysongs-fab', { timeout: 10000 });
+    }
+    const search = page.locator('input[placeholder*="Search" i]');
+    if (await search.count()) await search.first().fill('');
+    await page.waitForTimeout(400);
+}
+
 /** Open the header ⋮ menu and click the item whose text contains `label` (case-insensitive). */
 export async function menuTo(page, label) {
     await page.click('.header-menu__btn', TAP);

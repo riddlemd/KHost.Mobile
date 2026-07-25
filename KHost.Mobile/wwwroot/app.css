@@ -1284,11 +1284,27 @@ body.kh-sheet-open { overflow: hidden; }
     color: var(--kh-text-muted);
 }
 
-/* "Did you mean …?" block in the detail sheet, when the lookup found only a near-miss. Tinted rather than
-   plain muted text like .suggest-match: this one asks a question and needs to be found, not just read. */
+/* The ⚠ beside the song's name in the detail sheet — the affordance that opens the suggestion. Sized and
+   coloured to sit with the title without competing with it; the header may be over a cover, so it carries
+   the same text-shadow treatment the title gets there. */
+.sheet__typo {
+    background: none;
+    border: none;
+    padding: 0 0.15rem;
+    margin-left: 0.3rem;
+    font-size: 0.9em;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--kh-warn);
+    vertical-align: baseline;
+}
+.sheet__header--art .sheet__typo { color: #fbbf24; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75); }
+
+/* "Did you mean …?" panel, revealed by that ⚠. Tinted rather than plain muted text like .suggest-match:
+   this one asks a question and needs to be found, not just read. */
 .typo-hint {
-    margin-top: 0.65rem;
-    margin-bottom: 0.9rem;
+    margin-top: 0.75rem;
+    margin-bottom: 0.25rem;
     padding: 0.6rem 0.7rem;
     border: 1px solid color-mix(in srgb, var(--kh-warn) 40%, transparent);
     border-radius: var(--kh-radius);
@@ -1298,10 +1314,6 @@ body.kh-sheet-open { overflow: hidden; }
     font-size: 0.8rem;
     line-height: 1.45;
     color: var(--kh-text);
-}
-.typo-hint__mark {
-    color: var(--kh-warn);
-    margin-right: 0.15rem;
 }
 .typo-hint__actions {
     display: flex;
