@@ -88,7 +88,7 @@ Neither test project needs the MAUI workload: they target plain `net10.0`. The M
 
 ### Driving the running UI
 
-Neither suite touches the UI; gesture- and sheet-shaped changes are verified by driving the app's WebView over CDP with the tools in **[`playwright/`](playwright/README.md)**. Two drivers: `khdrive.mjs` (full Playwright, use on a physical device) and `cdp.mjs` (raw CDP with real-touch `tap`/`swipeDown`, use on the emulator — its older WebView rejects Playwright's connect handshake). The README there has the attach flow, examples, and the on-device gotchas.
+Neither suite touches the UI; gesture- and sheet-shaped changes are verified by driving the app's WebView over CDP with the tools in **[`playwright/`](playwright/README.md)**. Split by target: **`playwright/device/`** (full Playwright) and **`playwright/emulator/`** (raw CDP with real-touch `tap`/`swipeDown` — the emulator's older WebView rejects Playwright's connect handshake). Each has a `walk_tutorial.mjs`; the README there has the attach flow, examples, and the on-device gotchas.
 
 ## 📸 Screenshots
 

@@ -45,7 +45,7 @@ export async function menuTo(page, label) {
 // the app's WebView is full-screen so the device frame IS the page. `page` is accepted for a uniform
 // signature but unused. Set KH_SERIAL to target a specific device.
 export function shot(_page, name) {
-    const out = fileURLToPath(new URL(`./shots/${name}.png`, import.meta.url));
+    const out = fileURLToPath(new URL(`../shots/${name}.png`, import.meta.url));
     const serial = process.env.KH_SERIAL;
     const args = [...(serial ? ['-s', serial] : []), 'exec-out', 'screencap', '-p'];
     const png = execFileSync('adb', args, { maxBuffer: 64 * 1024 * 1024 });

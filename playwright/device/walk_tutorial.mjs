@@ -6,7 +6,7 @@
 import { attach, menuTo, shot, TAP } from './khdrive.mjs';
 import { mkdirSync } from 'node:fs';
 
-mkdirSync(new URL('./shots/', import.meta.url), { recursive: true });
+mkdirSync(new URL('../shots/', import.meta.url), { recursive: true });
 
 const { browser, page } = await attach();
 

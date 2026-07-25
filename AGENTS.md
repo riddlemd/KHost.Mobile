@@ -69,7 +69,7 @@ dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-android -t:Run "-p:Base
 
 ### UI automation (`playwright/`)
 
-To drive the running app's WebView (walk the tour, exercise a flow, screenshot), use the tools in `playwright/` rather than hand-rolling a client: `khdrive.mjs` (full Playwright) on a physical device, `cdp.mjs` (raw CDP with real-touch `tap`/`swipeDown`) on the emulator, whose older WebView rejects Playwright's connect. **`playwright/README.md` is the canonical how-to** — attach flow, examples, and the on-device gotchas.
+To drive the running app's WebView (walk the tour, exercise a flow, screenshot), use the tools in `playwright/` rather than hand-rolling a client — `device/` (full Playwright) for a physical device, `emulator/` (raw CDP with real-touch `tap`/`swipeDown`) for the emulator, whose older WebView rejects Playwright's connect. **`playwright/README.md` is the canonical how-to** — attach flow, examples, and the on-device gotchas.
 
 ## Local features (current focus — no server yet)
 
