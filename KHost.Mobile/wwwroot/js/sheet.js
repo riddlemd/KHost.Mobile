@@ -101,4 +101,11 @@ window.khSheet = {
     setLock(on) {
         document.body.classList.toggle('kh-sheet-open', !!on);
     },
+
+    // Same lock, but read off the DOM instead of a caller's state: any .sheet on the page means locked. Sheets
+    // stack (a detail sheet under a history sheet), so a caller-driven lock has to know about every other open
+    // sheet to avoid unlocking the page out from under one still showing. The DOM already knows.
+    syncLock() {
+        document.body.classList.toggle('kh-sheet-open', !!document.querySelector('.sheet'));
+    },
 };

@@ -1,16 +1,15 @@
-@inject IJSRuntime JS
-@implements IDisposable
 
 @* Shared "Sang it" prompt. Shown when @Item is set; marking a song sung records a performance, and the singer
    rates how it went (or skips → unrated). Presentational only: it owns the star value + note and its own
    pull-down-to-dismiss, and raises OnCommit (Save / Skip / swipe-away) or OnCancel (✕ / backdrop, no log). The
    host owns the @Item state, decides what "commit" means (log a performance, and — from Tonight — check the row
    off), and reconciles the page-scroll lock. Reused by My Songs ("Mark sung") and the Tonight tab (check-off). *@
-@if (Item is not null)
-{
-    <div class="sheet-backdrop sheet-backdrop--history" @onclick="CancelAsync"></div>
-    <div class="sheet sheet--history rating-prompt" role="dialog" aria-modal="true" @ref="_sheet">
-        <button type="button" class="sheet__close" @onclick="CancelAsync" aria-label="Close">✕</button>
+@* A pull-down dismiss here LOGS the sing unrated (same as Skip) rather than discarding it, so it takes the
+   OnSwipeDismiss path instead of OnClose. *@
+<Sheet Open="Item is not null" Class="sheet--history rating-prompt" BackdropClass="sheet-backdrop--history"
+       AriaLabel="How did it go?" OnClose="CancelAsync" OnSwipeDismiss="DismissFromSwipeAsync">
+    @if (Item is not null)
+    {
         <div class="sheet__title">@(RatePerformances ? "How did it go?" : "Have any notes?")</div>
         <div class="sheet__subtitle">@Item.Title · just now</div>
         @if (RatePerformances)
@@ -27,8 +26,8 @@
         {
             <button type="button" class="btn-link rating-prompt__skip" @onclick="SkipAsync">Skip — just log that I sang it</button>
         }
-    </div>
-}
+    }
+</Sheet>
 
 @code {
     /// <summary>The song being marked sung. Null hides the sheet; setting it (re)opens the prompt reset to blank.</summary>
@@ -47,10 +46,6 @@
     private int _value;
     private string _note = string.Empty;
     private Guid? _openFor;   // the item id the current buffers belong to; a change means a fresh open → reset
-
-    private ElementReference _sheet;
-    private DotNetObjectReference<RatingPromptSheet>? _selfRef;
-    private bool _bound;
 
     private string Hint => _value switch
     {
@@ -72,35 +67,12 @@
         }
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        // Bind pull-down-to-dismiss while shown; a dismiss logs the sing unrated (same as Skip). The sheet element
-        // remounts on each open, so re-bind then and reset the flag when it's hidden.
-        if (Item is not null && !_bound)
-        {
-            _selfRef ??= DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("khSheet.register", _sheet, _selfRef, new { closeMethod = "DismissFromSwipe" });
-            _bound = true;
-        }
-        else if (Item is null)
-        {
-            _bound = false;
-        }
-    }
-
     private Task SaveAsync() => OnCommit.InvokeAsync((_value, _note));
 
     private Task SkipAsync() => OnCommit.InvokeAsync((0, _note));
 
     private Task CancelAsync() => OnCancel.InvokeAsync();
 
-    // Pull-down-to-dismiss from khSheet: log the sing without a rating (the sheet already animated off-screen).
-    [JSInvokable]
-    public async Task DismissFromSwipe()
-    {
-        await OnCommit.InvokeAsync((0, _note));
-        StateHasChanged();
-    }
-
-    public void Dispose() => _selfRef?.Dispose();
+    // A pull-down dismiss logs the sing without a rating, same as Skip.
+    private Task DismissFromSwipeAsync() => OnCommit.InvokeAsync((0, _note));
 }

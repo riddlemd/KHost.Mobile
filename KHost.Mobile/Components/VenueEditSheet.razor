@@ -5,13 +5,10 @@
 @using Microsoft.Maui.Devices
 @inject IQrScanner Scanner
 @inject ILocationProvider Geo
-@inject IJSRuntime JS
-@implements IDisposable
-@if (Editing is not null)
-{
-    <div class="sheet-backdrop sheet-backdrop--history" @onclick="OnClose"></div>
-    <div class="sheet sheet--history" role="dialog" aria-modal="true" @ref="_sheet">
-        <button type="button" class="sheet__close" @onclick="OnClose" aria-label="Close">✕</button>
+<Sheet Open="Editing is not null" Class="sheet--history" BackdropClass="sheet-backdrop--history"
+       AriaLabel="Edit venue" OnClose="OnClose">
+    @if (Editing is not null)
+    {
         <div class="sheet__title">@(IsNew ? "Add venue" : "Edit venue")</div>
 
         <div class="field" style="margin-top:0.85rem">
@@ -91,8 +88,8 @@
             <button class="btn btn-secondary" @onclick="OnClose">Cancel</button>
             <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(string.IsNullOrWhiteSpace(_name))">Save</button>
         </div>
-    </div>
-}
+    }
+</Sheet>
 
 @code {
     /// <summary>The venue being added/edited. Null hides the sheet. The host passes a fresh <see cref="Venue"/> to
@@ -121,10 +118,6 @@
     private Guid? _seededFor;   // the venue id the buffers belong to; a change means a fresh open → reseed
     private bool _scanning;
     private string? _scanError;
-
-    private ElementReference _sheet;
-    private DotNetObjectReference<VenueEditSheet>? _selfRef;
-    private bool _bound;
 
     // The QR scanner is native to Android/iOS only; hide the button on other heads (where IQrScanner is a no-op).
     private static bool _scanSupported =>
@@ -173,28 +166,7 @@
 
     // Bind pull-down-to-dismiss while shown (same interop as the song detail / rating sheets); a swipe closes
     // without saving, like Cancel. The sheet element remounts on each open, so re-bind then and reset when hidden.
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (Editing is not null && !_bound)
-        {
-            _selfRef ??= DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("khSheet.register", _sheet, _selfRef, new { closeMethod = "DismissFromSwipe" });
-            _bound = true;
-        }
-        else if (Editing is null)
-        {
-            _bound = false;
-        }
-    }
-
     // Pull-down-to-dismiss from khSheet (the sheet already animated off-screen): discard, same as Cancel.
-    [JSInvokable]
-    public async Task DismissFromSwipe()
-    {
-        await OnClose.InvokeAsync();
-        StateHasChanged();
-    }
-
     // Strict host check (not the loose paste parser) so an arbitrary scanned string can't silently become a venue.
     private async Task ScanAsync()
     {
@@ -236,6 +208,4 @@
 
         await OnSave.InvokeAsync(v);
     }
-
-    public void Dispose() => _selfRef?.Dispose();
 }

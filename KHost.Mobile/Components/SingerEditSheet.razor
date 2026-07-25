@@ -2,13 +2,10 @@
    host owns whether it's new). Collects the name + accent color, writes them onto the passed instance, and raises
    OnSave with it. Delete is offered on an existing singer via OnDelete, unless this is the only singer (CanDelete
    false). Uses --history stacking so it sits above any page content, matching VenueEditSheet. *@
-@inject IJSRuntime JS
-@implements IDisposable
-@if (Editing is not null)
-{
-    <div class="sheet-backdrop sheet-backdrop--history" @onclick="OnClose"></div>
-    <div class="sheet sheet--history" role="dialog" aria-modal="true" @ref="_sheet">
-        <button type="button" class="sheet__close" @onclick="OnClose" aria-label="Close">✕</button>
+<Sheet Open="Editing is not null" Class="sheet--history" BackdropClass="sheet-backdrop--history"
+       AriaLabel="Edit singer" OnClose="OnClose">
+    @if (Editing is not null)
+    {
         <div class="sheet__title">@(IsNew ? "Add singer" : "Edit singer")</div>
 
         @* Tap the avatar to open the color + emoji picker (collapsed by default). *@
@@ -44,8 +41,8 @@
         {
             <div class="singer-edit__hint">This is your only singer — add another before removing this one.</div>
         }
-    </div>
-}
+    }
+</Sheet>
 
 @code {
     /// <summary>The singer being added/edited. Null hides the sheet. The host passes a fresh <see cref="Singer"/> to
@@ -86,10 +83,6 @@
     private string Initial =>
         string.IsNullOrWhiteSpace(_name) ? "?" : char.ToUpperInvariant(_name.TrimStart()[0]).ToString();
 
-    private ElementReference _sheet;
-    private DotNetObjectReference<SingerEditSheet>? _selfRef;
-    private bool _bound;
-
     // A fresh open (different singer id) reseeds the buffers, else edits from a prior open would leak across.
     protected override void OnParametersSet()
     {
@@ -103,27 +96,6 @@
     }
 
     // Bind pull-down-to-dismiss while shown (same interop as the venue sheets); a swipe closes without saving.
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (Editing is not null && !_bound)
-        {
-            _selfRef ??= DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("khSheet.register", _sheet, _selfRef, new { closeMethod = "DismissFromSwipe" });
-            _bound = true;
-        }
-        else if (Editing is null)
-        {
-            _bound = false;
-        }
-    }
-
-    [JSInvokable]
-    public async Task DismissFromSwipe()
-    {
-        await OnClose.InvokeAsync();
-        StateHasChanged();
-    }
-
     private async Task SaveAsync()
     {
         if (Editing is not { } s || string.IsNullOrWhiteSpace(_name))
@@ -147,6 +119,4 @@
         if (Editing is { } s)
             await OnDelete.InvokeAsync(s);
     }
-
-    public void Dispose() => _selfRef?.Dispose();
 }

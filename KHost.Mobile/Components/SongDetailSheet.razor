@@ -1,7 +1,6 @@
 @using KHost.Mobile.Models
 @inject IAppSettings Settings
 @inject IJSRuntime JS
-@implements IDisposable
 
 @* Shared song detail card. Shown when @Item is set: the song's fields, its ratings and history, the quick links,
    and (when AllowEdit) an edit form. Presentational — it owns only the edit buffers and its own pull-down-to-dismiss;
@@ -9,11 +8,9 @@
    its own (album art, the rating math, whether the song is in tonight). Reused by My Songs and the Tonight tab.
    An action's button renders only when the host wired its callback, so a host that can't service one (Tonight has
    no lyrics or history sheet of its own) simply doesn't offer it. *@
-@if (Item is not null)
-{
-    <div class="sheet-backdrop" @onclick="CloseAsync"></div>
-    <div class="sheet" role="dialog" aria-modal="true" @ref="_sheet">
-        <button type="button" class="sheet__close" @onclick="CloseAsync" aria-label="Close">✕</button>
+<Sheet Open="Item is not null" OnClose="OnClose" AriaLabel="Song details">
+    @if (Item is not null)
+    {
 
         @if (!_editing)
         {
@@ -229,8 +226,8 @@
                 <button class="btn btn-primary" @onclick="SaveEditAsync" disabled="@(!CanSaveEdit)">Save</button>
             </div>
         }
-    </div>
-}
+    }
+</Sheet>
 
 @code {
     /// <summary>The song to show. Null hides the sheet; setting a different song reopens it in view mode.</summary>
@@ -308,9 +305,6 @@
     private List<string> _editTags = [];
     private Guid? _openFor;   // the song the sheet is currently showing; a change means a fresh open → leave edit mode
 
-    private ElementReference _sheet;
-    private DotNetObjectReference<SongDetailSheet>? _selfRef;
-    private bool _bound;
     private bool _editFieldsBound;
 
     private static int CurrentYear => DateTime.Now.Year;
@@ -328,19 +322,6 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Bind pull-down-to-dismiss while shown. The sheet element remounts on each open, so re-bind then and reset
-        // the flag when it's hidden.
-        if (Item is not null && !_bound)
-        {
-            _selfRef ??= DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("khSheet.register", _sheet, _selfRef);
-            _bound = true;
-        }
-        else if (Item is null)
-        {
-            _bound = false;
-        }
-
         // The edit form's year input needs the digit-only guard once it's rendered.
         if (_editing && !_editFieldsBound)
         {
@@ -352,8 +333,6 @@
             _editFieldsBound = false;
         }
     }
-
-    private Task CloseAsync() => OnClose.InvokeAsync();
 
     private void StartEdit()
     {
@@ -379,14 +358,4 @@
         _editing = false;
     }
 
-    // Pull-down-to-dismiss from khSheet: the sheet already animated off-screen, so just report the close. Named for
-    // khSheet's default closeMethod.
-    [JSInvokable]
-    public async Task CloseDetailFromSwipe()
-    {
-        await OnClose.InvokeAsync();
-        StateHasChanged();
-    }
-
-    public void Dispose() => _selfRef?.Dispose();
 }
