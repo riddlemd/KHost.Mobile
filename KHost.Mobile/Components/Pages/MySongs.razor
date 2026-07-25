@@ -199,12 +199,15 @@
             {
                 <div class="field filters__field filters__field--wide">
                     <label class="field__label">Release year</label>
+                    @* Tapping either bound opens the year grid; the slider still drags the same two values. *@
                     <div class="range-row">
-                        <input type="text" inputmode="numeric" maxlength="4" class="input input--sm range-num num-year"
-                               value="@YearLo" @onchange="OnYearLoInput" aria-label="Earliest year" />
+                        <button type="button" class="input input--sm range-num range-num--btn"
+                                @onclick="() => OpenYearPicker(high: false)"
+                                aria-haspopup="dialog" aria-label="Earliest year">@YearLo</button>
                         <span class="range-row__dash">–</span>
-                        <input type="text" inputmode="numeric" maxlength="4" class="input input--sm range-num num-year"
-                               value="@YearHi" @onchange="OnYearHiInput" aria-label="Latest year" />
+                        <button type="button" class="input input--sm range-num range-num--btn"
+                                @onclick="() => OpenYearPicker(high: true)"
+                                aria-haspopup="dialog" aria-label="Latest year">@YearHi</button>
                     </div>
                     <div class="range">
                         <div class="range__fill" style="left:@Pct(YearLo)%;right:@PctFromRight(YearHi)%"></div>
@@ -218,6 +221,16 @@
         </div>
     </div>
 }
+
+@* Year grid, stacked above the filter sheet that opens it. *@
+<YearPickerSheet Open="_yearPickerOpen"
+                 Title="@(_yearPickerHigh ? "Latest year" : "Earliest year")"
+                 Years="_libraryYears"
+                 Selected="@(_yearPickerHigh ? YearHi : YearLo)"
+                 Min="@(_yearPickerHigh ? YearLo : _yearMin)"
+                 Max="@(_yearPickerHigh ? _yearMax : YearHi)"
+                 OnPick="PickYear"
+                 OnClose="CloseYearPicker" />
 
 @* Add-a-song sheet — opened by the floating "+". Same bottom-sheet + pull-to-dismiss treatment as the other sheets. *@
 @if (_addOpen)
@@ -576,6 +589,9 @@ else
     private int _yearMin;
     private int _yearMax;
     private int _yearDistinctCount;
+    private IReadOnlyList<int> _libraryYears = [];   // distinct release years, ascending — the year grid's options
+    private bool _yearPickerOpen;
+    private bool _yearPickerHigh;   // which bound the open grid is setting: true = latest, false = earliest
 
     private enum SortColumn { Added, Title, Artist, HowItWent, Enjoyment }
     private SortColumn _sort = SortColumn.Title;
@@ -717,6 +733,24 @@ else
             _filterYearHi = Math.Max(Math.Clamp(v, _yearMin, _yearMax), YearLo);   // never cross the low handle
     }
 
+    private void OpenYearPicker(bool high)
+    {
+        _yearPickerHigh = high;
+        _yearPickerOpen = true;
+    }
+
+    private void CloseYearPicker() => _yearPickerOpen = false;
+
+    // The grid already disables years that would cross the other handle; the clamp is a backstop.
+    private void PickYear(int year)
+    {
+        if (_yearPickerHigh)
+            _filterYearHi = Math.Max(Math.Clamp(year, _yearMin, _yearMax), YearLo);
+        else
+            _filterYearLo = Math.Min(Math.Clamp(year, _yearMin, _yearMax), YearHi);
+        _yearPickerOpen = false;
+    }
+
     // Handle position as a % of the track, for the selected-range fill. Invariant culture so CSS never gets a comma.
     private string Pct(int value) =>
         (_yearMax > _yearMin ? (value - _yearMin) * 100.0 / (_yearMax - _yearMin) : 0)
@@ -729,7 +763,8 @@ else
     private void RecomputeYearBounds()
     {
         var years = _items.Where(i => i.Year.HasValue).Select(i => i.Year!.Value).ToList();
-        _yearDistinctCount = years.Distinct().Count();
+        _libraryYears = years.Distinct().Order().ToList();
+        _yearDistinctCount = _libraryYears.Count;
         if (years.Count > 0)
         {
             _yearMin = years.Min();
@@ -884,7 +919,12 @@ else
 
     private void OpenFilterSheet() => _filterSheetOpen = true;
 
-    private void CloseFilterSheet() => _filterSheetOpen = false;
+    // Takes the year grid with it — it's opened from this sheet, so it must never outlive it.
+    private void CloseFilterSheet()
+    {
+        _filterSheetOpen = false;
+        _yearPickerOpen = false;
+    }
 
     // Pull-down-to-dismiss from khSheet (the filter sheet already animated off-screen).
     [JSInvokable]
@@ -1174,7 +1214,6 @@ else
         if (sliderPresent && !_rangeBound)
         {
             await JS.InvokeVoidAsync("khRange.register");
-            await JS.InvokeVoidAsync("khNumeric.register");   // filter From/To year inputs
             _rangeBound = true;
         }
         else if (!sliderPresent)

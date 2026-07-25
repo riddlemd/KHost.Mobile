@@ -1915,7 +1915,41 @@ body.kh-sheet-open { overflow: hidden; }
     margin-bottom: 0.4rem;
 }
 .range-num { width: 5rem; text-align: center; }
+/* The two bounds are buttons that open the year grid, styled to read as the fields they replaced. */
+.range-num--btn { font-family: inherit; cursor: pointer; }
+.range-num--btn:active { border-color: var(--kh-primary); }
 .range-row__dash { color: var(--kh-text-muted); }
+
+/* ---- Year picker sheet -------------------------------------------------- */
+/* Stacks above the filter sheet (41) that opens it. */
+.sheet--year { z-index: 43; }
+.sheet-backdrop--year { z-index: 42; }
+.year-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(4.25rem, 1fr));
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+.year-grid__item {
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 0.6rem 0.25rem;
+    color: var(--kh-text);
+    background-color: var(--kh-surface-2);
+    border: 1px solid var(--kh-border);
+    border-radius: 0.55rem;
+    cursor: pointer;
+}
+.year-grid__item:active { transform: scale(0.96); }
+.year-grid__item.is-sel {
+    background-color: var(--kh-primary);
+    border-color: var(--kh-primary);
+    color: var(--kh-primary-contrast);
+}
+/* Out of range against the other handle — dimmed rather than hidden, so the span stays readable. */
+.year-grid__item:disabled { opacity: 0.35; cursor: default; }
+.year-grid__item:disabled:active { transform: none; }
 
 /* Two overlaid native range inputs. Only the thumbs are interactive (pointer-events),
    so each handle stays independently grabbable regardless of which input is on top. */
