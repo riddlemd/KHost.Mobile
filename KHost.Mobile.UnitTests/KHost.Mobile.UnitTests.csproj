@@ -50,6 +50,7 @@
 
     <!-- Bayesian how-it-went scoring (MAUI-free, pure): the confidence-weighted star + list prior. -->
     <Compile Include="..\KHost.Mobile\Services\RatingScore.cs" Link="Linked\Services\RatingScore.cs" />
+    <Compile Include="..\KHost.Mobile\Services\SurprisePicker.cs" Link="Linked\Services\SurprisePicker.cs" />
   </ItemGroup>
 
 </Project>

@@ -25,6 +25,10 @@ public sealed class MauiAppSettings : IAppSettings
     private const string TagsKey = "settings.tags";
     private const string AlbumArtKey = "settings.album_art";
     private const string SurpriseSkipSungTodayKey = "settings.surprise_skip_sung_today";
+    private const string SurpriseFavourWellSungKey = "settings.surprise_favour_well_sung";
+    private const string SurpriseNeverSungOnlyKey = "settings.surprise_never_sung_only";
+    private const string SurpriseFavoritesOnlyKey = "settings.surprise_favorites_only";
+    private const string SurpriseRespectFiltersKey = "settings.surprise_respect_filters";
     private const string RatePerformancesKey = "settings.rate_performances";
     private const string RecencyWeightedRatingsKey = "settings.recency_weighted_ratings";
     private const string UpdateCheckKey = "settings.update_check";
@@ -135,6 +139,30 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(SurpriseSkipSungTodayKey, true);
         set => Preferences.Default.Set(SurpriseSkipSungTodayKey, value);
+    }
+
+    public bool SurpriseFavourWellSung
+    {
+        get => Preferences.Default.Get(SurpriseFavourWellSungKey, true);
+        set => Preferences.Default.Set(SurpriseFavourWellSungKey, value);
+    }
+
+    public bool SurpriseNeverSungOnly
+    {
+        get => Preferences.Default.Get(SurpriseNeverSungOnlyKey, false);
+        set => Preferences.Default.Set(SurpriseNeverSungOnlyKey, value);
+    }
+
+    public bool SurpriseFavoritesOnly
+    {
+        get => Preferences.Default.Get(SurpriseFavoritesOnlyKey, false);
+        set => Preferences.Default.Set(SurpriseFavoritesOnlyKey, value);
+    }
+
+    public bool SurpriseRespectFilters
+    {
+        get => Preferences.Default.Get(SurpriseRespectFiltersKey, true);
+        set => Preferences.Default.Set(SurpriseRespectFiltersKey, value);
     }
 
     public bool RatePerformances

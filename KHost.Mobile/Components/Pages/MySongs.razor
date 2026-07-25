@@ -30,6 +30,29 @@
     <span class="mysongs-fab__plus" aria-hidden="true">＋</span>
 </button>
 
+@* 🎲 rides above the "+". Needs two songs to be worth offering — with one there's nothing to be surprised by. *@
+@if (Settings.SurpriseEnabled && _items.Count >= 2)
+{
+    <SurpriseFab NoNav="!Settings.TonightEnabled" Hidden="AnyOverlayOpen"
+                 OnRoll="RollSurpriseAsync" OnOptions="OpenSurpriseOptions" />
+}
+
+<SurpriseSheet Open="_surpriseSheetOpen" OnRoll="RollFromSheetAsync" OnClose="CloseSurpriseOptions" />
+
+@* The roll's result, as a sheet showing the pick's own card. Rerolling leaves it open, so trying a few costs
+   one tap each rather than a close-then-roll. *@
+<RollResultSheet Item="_rollPick"
+                 ArtStyle="@(_rollPick is not null && HasArt(_rollPick) ? ArtStyle(_rollPick) : null)"
+                 InTonight="IsInTonight(_rollPick)"
+                 ShowTonight="Settings.TonightEnabled"
+                 BayesScore="@(_rollPick is null ? null : BayesStar(_rollPick))"
+                 RoundedAverage="@(_rollPick is null ? 0 : RoundedAvg(_rollPick))"
+                 OnAddToTonight="AddRolledToTonightAsync"
+                 OnOpen="OpenRolledAsync"
+                 OnReroll="RollSurpriseAsync"
+                 OnOptions="OpenSurpriseOptions"
+                 OnClose="() => _rollPick = null" />
+
 @if (_items.Count > 0)
 {
     @* Search floats sticky under the header (see .mysongs-floatbar) so a new search never needs a scroll-to-top;
@@ -304,11 +327,6 @@
 {
     <div class="section-title section-title--songs">
         <span>My songs (@(AnyFilterActive ? $"{visible.Count} of {_items.Count}" : $"{_items.Count}"))</span>
-        @if (Settings.SurpriseEnabled && visible.Count >= 2)
-        {
-            <button type="button" class="sort-bar__surprise" aria-label="Pick a random song"
-                    @onclick="() => SurpriseMe(visible)">🎲 Surprise me</button>
-        }
     </div>
 }
 
@@ -952,7 +970,7 @@ else
     private bool AnyOverlayOpen =>
         _addOpen || _filterSheetOpen || _detailItem is not null || _historyItem is not null
         || _lyricsItem is not null || _ratingPromptItem is not null || _historyConfirmIndex is not null
-        || _undoItem is not null;
+        || _undoItem is not null || _surpriseSheetOpen || _rollPick is not null;
 
     // ---- Multi-select filter helpers ----
     private void SetGenreFilter(string genre, bool on) { if (on) _filterGenres.Add(genre); else _filterGenres.Remove(genre); }
@@ -1268,56 +1286,94 @@ else
             await Store.RestoreAsync(item);   // Store.Changed → refresh puts the row back
     }
 
+    // ---- 🎲 Surprise me ----
+    // A tap on the FAB rolls straight away and reports the pick in the snackbar; a press-and-hold opens the
+    // options sheet. The narrowing and weighting live in SurprisePicker so they can be tested without a UI.
     private Guid? _lastSurpriseId;
+    private SongListItem? _rollPick;        // the current suggestion, shown in the snackbar
+    private bool _surpriseSheetOpen;
 
-    // 🎲 Surprise me: pick a random song from the currently visible (filtered) list and open its
-    // detail sheet. Rerolls once so it won't immediately repeat the previous pick on lists of 2+.
-    private Task SurpriseMe(IReadOnlyList<SongListItem> pool)
+    private SurpriseOptions SurpriseOptions => new(
+        SkipSungToday: Settings.SurpriseSkipSungToday,
+        FavourWellSung: Settings.SurpriseFavourWellSung,
+        NeverSungOnly: Settings.SurpriseNeverSungOnly,
+        FavoritesOnly: Settings.SurpriseFavoritesOnly);
+
+    private void OpenSurpriseOptions()
     {
-        if (pool.Count == 0)
+        _rollPick = null;   // the sheet replaces the snackbar; leaving both up stacks them
+        _surpriseSheetOpen = true;
+    }
+
+    private void CloseSurpriseOptions() => _surpriseSheetOpen = false;
+
+    private Task RollFromSheetAsync()
+    {
+        _surpriseSheetOpen = false;
+        return RollSurpriseAsync();
+    }
+
+    private Task RollSurpriseAsync()
+    {
+        // "Stick to my current filters" is the difference between the visible list and the whole library.
+        IReadOnlyList<SongListItem> pool = Settings.SurpriseRespectFilters ? Filtered().ToList() : _items;
+        var candidates = SurprisePicker.Narrow(pool, SurpriseOptions, DateTime.Today);
+
+        var pick = Roll(candidates);
+        // One reroll so a tap on "Reroll" never lands on the same song twice in a row.
+        if (pick is not null && pick.Id == _lastSurpriseId && candidates.Count >= 2)
+            pick = Roll(candidates);
+
+        if (pick is null)
             return Task.CompletedTask;
 
-        // Optionally drop songs already sung today so the shuffle suggests something fresh. If that
-        // leaves nothing (everything's been sung today), fall back to the full pool rather than dead-end.
-        IReadOnlyList<SongListItem> candidates = pool;
-        if (Settings.SurpriseSkipSungToday)
-        {
-            var fresh = pool.Where(i => !SungToday(i)).ToList();
-            if (fresh.Count > 0)
-                candidates = fresh;
-        }
-
-        var pick = WeightedPick(candidates);
-        if (pick.Id == _lastSurpriseId && candidates.Count >= 2)
-            pick = WeightedPick(candidates);
-
         _lastSurpriseId = pick.Id;
+        _rollPick = pick;
+        _ = EnsureRollArtAsync(pick);
+        return Task.CompletedTask;
+    }
+
+    // Covers are cached only for the rendered page, but a roll can land on any song in the library — so without
+    // this the result sheet shows a plain card for a song that has perfectly good art. The current page rides
+    // along in the same call because LoadAsync cancels the previous run, and dropping the page's in-flight
+    // downloads to fetch one cover would blank the list behind the sheet.
+    private async Task EnsureRollArtAsync(SongListItem pick)
+    {
+        if (!Settings.AlbumArtEnabled || pick.ArtworkUrl is null || AlbumArt.UriFor(pick.Id) is not null)
+            return;
+
+        try
+        {
+            await AlbumArt.LoadAsync(Sorted().Take(_renderCount).Append(pick));
+            await InvokeAsync(StateHasChanged);   // the sheet's art style is rendered by Blazor, not set from JS
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Loading album art for the surprise pick {SongId} failed", pick.Id);
+        }
+    }
+
+    private SongListItem? Roll(IReadOnlyList<SongListItem> candidates) =>
+        SurprisePicker.Pick(candidates, SurpriseOptions, Random.Shared.NextDouble(),
+            BayesStar, neutralStar: _ratingContext.PriorMean ?? 3.0);
+
+    // "Open song" — hand the pick to the normal detail sheet and close the result.
+    private Task OpenRolledAsync()
+    {
+        if (_rollPick is not { } pick)
+            return Task.CompletedTask;
+        _rollPick = null;
         return OpenDetail(pick.Id.ToString());
     }
 
-    // Pick a song at random, weighted by its Bayesian how-it-went star so the shuffle leans toward songs you sing
-    // well — while still able to surface anything. An unrated song gets the list's average as a neutral weight (so
-    // it isn't excluded), and everything keeps a small floor so nothing is ever impossible to draw.
-    private SongListItem WeightedPick(IReadOnlyList<SongListItem> candidates)
+    // The primary action: line the pick up for tonight. The sheet stays open showing it as added, so a reroll
+    // can queue several in a row without reopening.
+    private async Task AddRolledToTonightAsync()
     {
-        var neutral = _ratingContext.PriorMean ?? 3.0;
-        var weights = candidates.Select(c => Math.Max(0.25, BayesStar(c) ?? neutral)).ToList();
-        var total = weights.Sum();
-        if (total <= 0)
-            return candidates[Random.Shared.Next(candidates.Count)];
-
-        var roll = Random.Shared.NextDouble() * total;
-        for (var i = 0; i < candidates.Count; i++)
-        {
-            roll -= weights[i];
-            if (roll <= 0)
-                return candidates[i];
-        }
-        return candidates[^1];   // floating-point guard: the roll landed exactly on the total
+        if (_rollPick is not { } pick || IsInTonight(pick))
+            return;
+        await Tonight.AddAsync(pick.Id);
     }
-
-    private static bool SungToday(SongListItem item) =>
-        item.Performances.Any(p => p.Date.LocalDateTime.Date == DateTime.Today);
 
     // A tap on a row (routed from swipe.js) opens that song's detail sheet.
     [JSInvokable]
@@ -1540,6 +1596,8 @@ else
         if (_lyricsItem is not null) { CloseLyrics(); return true; }
         if (_addOpen) { CloseAdd(); return true; }
         if (_filterSheetOpen) { CloseFilterSheet(); return true; }
+        if (_surpriseSheetOpen) { CloseSurpriseOptions(); return true; }
+        if (_rollPick is not null) { _rollPick = null; return true; }   // back dismisses the suggestion
         if (_detailItem is not null) { CloseDetail(); return true; }
         return false;
     }

@@ -1,0 +1,86 @@
+@inject IAppSettings Prefs
+
+@* Options for the 🎲 picker, reached by pressing and holding it (or from the "Options" action on a roll's
+   snackbar). The toggles write straight through to IAppSettings, so a roll always uses what's shown here and
+   there's no apply step to forget.
+
+   The first, second and fifth rows describe what the picker already did before this sheet existed — scoping
+   to the filtered list, weighting by how-it-went, and skipping today's songs were fixed behaviour. Showing
+   them as toggles is most of the point of the sheet. *@
+<Sheet Open="Open" Class="sheet--surprise" BackdropClass="sheet-backdrop--surprise"
+       AriaLabel="Surprise me options" ClosePx="150" OnClose="OnClose">
+    <div class="sheet__title">Surprise me</div>
+
+    <label class="setting">
+        <span class="setting__text">
+            <span class="setting__title">Skip songs I've sung today</span>
+            <span class="setting__desc">
+                Leaves out anything already sung today. If that rules out everything, it picks from the whole list anyway.
+            </span>
+        </span>
+        <span class="switch">
+            <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseSkipSungToday" />
+            <span class="switch__track"><span class="switch__thumb"></span></span>
+        </span>
+    </label>
+
+    <label class="setting">
+        <span class="setting__text">
+            <span class="setting__title">Favour songs I sing well</span>
+            <span class="setting__desc">
+                Leans the draw toward your higher &ldquo;how it went&rdquo; ratings. Unrated songs count as average, and
+                every song keeps a small chance.
+            </span>
+        </span>
+        <span class="switch">
+            <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseFavourWellSung" />
+            <span class="switch__track"><span class="switch__thumb"></span></span>
+        </span>
+    </label>
+
+    <label class="setting">
+        <span class="setting__text">
+            <span class="setting__title">Only songs I've never sung</span>
+            <span class="setting__desc">Sticks to songs with no history yet — good for working through a backlog.</span>
+        </span>
+        <span class="switch">
+            <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseNeverSungOnly" />
+            <span class="switch__track"><span class="switch__thumb"></span></span>
+        </span>
+    </label>
+
+    <label class="setting">
+        <span class="setting__text">
+            <span class="setting__title">Only my favourites</span>
+            <span class="setting__desc">Sticks to songs you've starred.</span>
+        </span>
+        <span class="switch">
+            <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseFavoritesOnly" />
+            <span class="switch__track"><span class="switch__thumb"></span></span>
+        </span>
+    </label>
+
+    <label class="setting">
+        <span class="setting__text">
+            <span class="setting__title">Stick to my current filters</span>
+            <span class="setting__desc">Picks from the songs on screen now. Turn off to draw from your whole list.</span>
+        </span>
+        <span class="switch">
+            <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseRespectFilters" />
+            <span class="switch__track"><span class="switch__thumb"></span></span>
+        </span>
+    </label>
+
+    <button type="button" class="btn surprise-sheet__roll" @onclick="OnRoll">🎲 Roll the dice</button>
+</Sheet>
+
+@code {
+    /// <summary>Whether the sheet is showing.</summary>
+    [Parameter] public bool Open { get; set; }
+
+    /// <summary>Raised by the roll button — the host closes the sheet and picks.</summary>
+    [Parameter] public EventCallback OnRoll { get; set; }
+
+    /// <summary>Raised by the ✕, the backdrop and a pull-down dismiss.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+}

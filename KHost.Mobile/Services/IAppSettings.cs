@@ -103,6 +103,27 @@ public interface IAppSettings
     bool SurpriseSkipSungToday { get; set; }
 
     /// <summary>
+    /// When true, the "Surprise me" draw is weighted by each song's "how it went" star, so it leans toward songs
+    /// you sing well; unrated songs draw on the list average and everything keeps a small floor. When false every
+    /// candidate is equally likely. Defaults to <c>true</c> — this was the picker's fixed behaviour before the
+    /// options sheet existed.
+    /// </summary>
+    bool SurpriseFavourWellSung { get; set; }
+
+    /// <summary>When true, the "Surprise me" draw is limited to songs with no performance history yet.</summary>
+    bool SurpriseNeverSungOnly { get; set; }
+
+    /// <summary>When true, the "Surprise me" draw is limited to songs marked as a favorite.</summary>
+    bool SurpriseFavoritesOnly { get; set; }
+
+    /// <summary>
+    /// When true, the "Surprise me" draw uses only the currently filtered/visible songs rather than the whole
+    /// list. Defaults to <c>true</c> — the picker always scoped itself to the filtered list before the options
+    /// sheet made the choice explicit.
+    /// </summary>
+    bool SurpriseRespectFilters { get; set; }
+
+    /// <summary>
     /// When true, marking a song sung shows a "how it went" star rating on the prompt. Turn off for singers who'd
     /// rather just log the performance (and jot a note) without judging it — the prompt then only asks for a note.
     /// </summary>

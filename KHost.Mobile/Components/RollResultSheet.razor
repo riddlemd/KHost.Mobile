@@ -1,0 +1,110 @@
+@* What the 🎲 picked. The result is rendered as the app's own song card — same classes, same album-art
+   treatment — just taller, so the suggestion looks like it was lifted straight out of the list rather than
+   announced by a system toast. (It replaced a snackbar that borrowed the undo toast's dark pill and, worse,
+   offered no way out that wasn't a navigation.) Being a Sheet means the backdrop, the ✕, pull-down-to-dismiss
+   and the scroll lock all come for free and behave like every other sheet.
+
+   The card here is display-only: the list's own cards carry ★ and tonight buttons, but on a suggestion those
+   would compete with the actions right underneath it. *@
+<Sheet Open="Item is not null" Class="sheet--roll" BackdropClass="sheet-backdrop--roll"
+       AriaLabel="Your random pick" ClosePx="150" OnClose="OnClose">
+    @if (Item is { } item)
+    {
+        <div class="roll-result__label">Your pick</div>
+
+        <div class="song-card song-card--roll @(ArtStyle is not null ? "song-card--art" : "")" style="@ArtStyle">
+            <div class="song-card__title">@item.Title</div>
+            @if (!string.IsNullOrWhiteSpace(item.Artist))
+            {
+                <div class="song-card__artist">@item.Artist</div>
+            }
+            <div class="song-card__meta">
+                <span class="song-card__tags">
+                    @if (!string.IsNullOrWhiteSpace(item.Genre))
+                    {
+                        <span class="song-card__genre">@item.Genre</span>
+                    }
+                    @if (item.Year.HasValue)
+                    {
+                        <span class="song-card__year">@item.Year</span>
+                    }
+                </span>
+            </div>
+            <div class="song-card__ratings-row">
+                <span class="song-card__ratings">
+                    <span class="rating-grp">
+                        @if (BayesScore is { } score)
+                        {
+                            <StarRating Value="RoundedAverage" Tone="hot" Sung="true" ReadOnly="true" />
+                            <span class="rating-num">@score.ToString("0.0")</span>
+                        }
+                        else
+                        {
+                            <span class="rating-num rating-num--muted">—</span>
+                        }
+                    </span>
+                    <span class="rating-sep"></span>
+                    <span class="rating-grp">
+                        @if (item.Enjoyment >= 1)
+                        {
+                            <StarRating Value="item.Enjoyment" Tone="cool" Sung="true" ReadOnly="true" />
+                        }
+                        else
+                        {
+                            <span class="rating-num rating-num--muted">—</span>
+                        }
+                    </span>
+                </span>
+            </div>
+        </div>
+
+        @* Lining the song up for tonight is what a singer usually wants from a suggestion — opening it to read
+           the details is the follow-up, not the goal — so Tonight takes the primary button. *@
+        @if (ShowTonight)
+        {
+            <button type="button" class="btn btn-primary roll-result__primary" @onclick="OnAddToTonight" disabled="@InTonight">
+                @(InTonight ? "🎤 Already in tonight's set" : "🎤 Add to tonight")
+            </button>
+        }
+        <div class="roll-result__row">
+            <button type="button" class="btn btn-tonal" @onclick="OnOpen">Open song</button>
+            <button type="button" class="btn btn-tonal" @onclick="OnReroll">🎲 Reroll</button>
+        </div>
+        <button type="button" class="btn-link roll-result__options" @onclick="OnOptions">Options</button>
+    }
+</Sheet>
+
+@code {
+    /// <summary>The picked song; null closes the sheet.</summary>
+    [Parameter] public SongListItem? Item { get; set; }
+
+    /// <summary>Inline <c>--kh-card-art</c> style when a cover is cached, or null for a plain surface card.</summary>
+    [Parameter] public string? ArtStyle { get; set; }
+
+    /// <summary>Whether the pick is already in tonight's set — the primary action then reads as done.</summary>
+    [Parameter] public bool InTonight { get; set; }
+
+    /// <summary>Whether the Tonight feature is on; with it off there's no primary action to offer.</summary>
+    [Parameter] public bool ShowTonight { get; set; } = true;
+
+    /// <summary>Confidence-weighted how-it-went star, or null when the song has never been rated.</summary>
+    [Parameter] public double? BayesScore { get; set; }
+
+    /// <summary>Rounded how-it-went average, for the filled star count.</summary>
+    [Parameter] public int RoundedAverage { get; set; }
+
+    /// <summary>Adds the pick to tonight's set.</summary>
+    [Parameter] public EventCallback OnAddToTonight { get; set; }
+
+    /// <summary>Opens the pick's detail sheet.</summary>
+    [Parameter] public EventCallback OnOpen { get; set; }
+
+    /// <summary>Draws again, leaving the sheet open.</summary>
+    [Parameter] public EventCallback OnReroll { get; set; }
+
+    /// <summary>Opens the picker's options.</summary>
+    [Parameter] public EventCallback OnOptions { get; set; }
+
+    /// <summary>Raised by the ✕, the backdrop and a pull-down dismiss.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+}
