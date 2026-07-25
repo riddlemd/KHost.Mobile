@@ -36,7 +36,10 @@
     --kh-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
 
     --kh-header-h: 3.5rem;
-    --kh-nav-h: 3.75rem;
+    /* Tall enough to leave air above and below the tab icons. Emoji glyphs draw well outside the
+       line box `line-height: 1` gives them, so the icon reaches ~3px higher than its own metrics
+       suggest and a bar sized to the text alone looks like it's clipping them. */
+    --kh-nav-h: 4.5rem;
     --kh-radius: 0.85rem;
 }
 
