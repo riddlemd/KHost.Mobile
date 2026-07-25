@@ -1,21 +1,14 @@
 @inject IAlbumArtService AlbumArt
 
-@* What the 🎲 picked. The result is rendered as the app's own song card — same classes, same album-art
-   treatment — just taller, so the suggestion looks like it was lifted straight out of the list rather than
-   announced by a system toast. (It replaced a snackbar that borrowed the undo toast's dark pill and, worse,
-   offered no way out that wasn't a navigation.) Being a Sheet means the backdrop, the ✕, pull-down-to-dismiss
-   and the scroll lock all come for free and behave like every other sheet.
-
-   The card here is display-only: the list's own cards carry ★ and tonight buttons, but on a suggestion those
-   would compete with the actions right underneath it. *@
+@* What the 🎲 picked, shown as the app's own song card so a suggestion reads like it came from the list.
+   Display-only — no ★ or tonight buttons; they'd compete with the actions right below the card. *@
 <Sheet Open="Item is not null" Class="sheet--roll" BackdropClass="sheet-backdrop--roll"
        AriaLabel="Your random pick" ClosePx="150" OnClose="OnClose">
     @if (Item is { } item)
     {
         <div class="roll-result__label">Your pick</div>
 
-        @* Asks the art service straight out rather than being handed a style: the request is what fetches the
-           cover, so a pick whose art nobody has needed yet gets one. The host re-renders us on Changed. *@
+        @* No Changed subscription of its own — the host must re-render this on AlbumArt.Changed. *@
         var art = AlbumArt.ViewFor(item);
         <div class="song-card song-card--roll @(art.HasArt ? "song-card--art" : "") @(art.Loading ? "kh-art-loading" : "")"
              data-art-song="@item.Id" style="@art.Style">

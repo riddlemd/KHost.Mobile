@@ -2,14 +2,8 @@
 @inject IHaptics Haptics
 @implements IDisposable
 
-@* The 🎲 floating button. A tap rolls straight away; a press-and-hold opens the options instead — the fast
-   path stays one tap, and the settings live behind the gesture rather than in front of every roll.
-
-   Deliberately smaller than the "+" and offset up and to its right: this is the secondary action on the
-   screen, and matching the + would read as an equal partner to it.
-
-   No assistive-tech gesture maps to a press-and-hold, so whatever hosts this must offer another way to the
-   options — MySongs puts an "Options" action in the roll's snackbar. *@
+@* The 🎲 FAB: tap rolls, press-and-hold opens the options. No assistive-tech gesture maps to a long press,
+   so the host must offer another route to the options — My Songs uses the result sheet's "Options" action. *@
 <button type="button" @ref="_el"
         class="mysongs-fab mysongs-fab--surprise @(NoNav ? "mysongs-fab--no-nav" : "") @(Hidden ? "is-hidden" : "")"
         aria-label="Surprise me — pick a song at random. Press and hold for options."

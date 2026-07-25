@@ -1,15 +1,8 @@
-// Tells .NET which songs' covers are actually on screen.
+// Tells .NET which songs' covers are actually on screen — rendered is not visible; My Songs keeps every
+// scrolled-past card in the DOM (see DEVELOPMENT.md → Design notes).
 //
-// WHY: album art used to be fetched for everything *rendered*, and My Songs keeps every card you've scrolled
-// past in the DOM — so a long scroll queued hundreds of lookups and held every cover forever. "Rendered" was
-// never the right signal; "visible" is, and only the DOM knows it. This is also what makes eviction safe: with
-// a real visibility set, the cache can drop what you're not looking at without dropping what you are.
-//
-// Any element that paints a cover carries data-art-song="<song id>" — cards, set rows, sheet headers alike —
-// so one observer covers every surface and a new surface only has to add the attribute.
-//
-// rootMargin pre-loads a screen's worth either side, so covers are ready by the time a card scrolls in rather
-// than popping in after it arrives.
+// One observer covers every surface: any element painting a cover carries data-art-song="<song id>".
+// rootMargin pre-loads a screen's worth either side, so covers are ready before a card scrolls in.
 window.khArtVisibility = {
     _observer: null,
     _ref: null,

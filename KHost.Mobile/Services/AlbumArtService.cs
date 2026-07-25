@@ -10,9 +10,8 @@ namespace KHost.Mobile.Services;
 /// <remarks>
 /// <para>Covers are streamed to the WebView and turned into <c>blob:</c> URLs by <c>wwwroot/js/album-art.js</c> —
 /// see DEVELOPMENT.md for why that hop exists instead of serving the cached files directly.</para>
-/// <para>Work is drained one song at a time from a queue rather than run in parallel. That keeps the single-writer
-/// guarantee the old loader had (two overlapping passes could have one revoke a blob the other just installed,
-/// leaving a card pointing at a dead URL), and the drain runs on the UI context so its JS interop stays valid.</para>
+/// <para>The queue drains one song at a time, on the UI context: overlapping passes can revoke a blob the other
+/// just installed, and the JS interop needs the Blazor sync context.</para>
 /// </remarks>
 public sealed class AlbumArtService(
     IJSRuntime js,
@@ -29,18 +28,14 @@ public sealed class AlbumArtService(
         logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<AlbumArtService>.Instance;
 
     /// <summary>
-    /// Pause after each lookup that actually went to the network. Most libraries are mostly coverless (~80%), so
-    /// without this a sweep fires back-to-back iTunes calls and earns a rate-limit block. Downloads of an
-    /// already-known cover URL hit the artwork CDN instead and aren't paced.
+    /// Pause after each lookup that hits the network — an unpaced sweep over a mostly-coverless library fires
+    /// enough back-to-back iTunes calls to get rate-limited. Cover downloads (CDN) aren't paced.
     /// </summary>
     private static readonly TimeSpan DiscoveryPause = TimeSpan.FromMilliseconds(300);
 
     /// <summary>
-    /// How many covers to hold once they've scrolled away. Only songs that are NOT currently on screen are ever
-    /// evicted, so this is headroom for scrolling back, not a limit on what you can see at once.
-    /// <para>An earlier cap keyed off what was <em>rendered</em> rather than visible, and thrashed: My Songs
-    /// keeps every card you've scrolled past in the DOM, so evicting one had the next render ask for it straight
-    /// back. The viewport set is what makes a cap safe.</para>
+    /// Off-screen covers held as headroom for scrolling back before the longest-gone are dropped. Never limits
+    /// what's on screen — visible covers are exempt from eviction.
     /// </summary>
     private const int OffScreenCovers = 40;
 
@@ -57,9 +52,7 @@ public sealed class AlbumArtService(
     /// <inheritdoc />
     public event EventHandler? Changed;
 
-    // The cached cover, or null — and, when there isn't one, the thing that gets it moving. Private because
-    // ViewFor is the surfaces' single entry point; splitting "the URL" from "is it loading" is what let the
-    // detail sheet quietly miss the loading state.
+    // The cached cover, or null — and, when null, what queues the fetch. Surfaces go through ViewFor.
     private string? UriFor(SongListItem song)
     {
         ArgumentNullException.ThrowIfNull(song);
@@ -116,7 +109,6 @@ public sealed class AlbumArtService(
             if (!_visible.Add(id))
                 continue;
             _leftView.Remove(id);
-            // Came into view and someone had asked for it — now it's worth fetching.
             if (_wanted.TryGetValue(id, out var song) && !_queued.Contains(id) && !_uris.ContainsKey(id))
             {
                 Enqueue(song);
@@ -222,8 +214,7 @@ public sealed class AlbumArtService(
                 }
                 finally
                 {
-                    // However it ended — cover, no cover, or a failure — this song is no longer on its way in, so
-                    // the placeholder must come down.
+                    // Done one way or another — the placeholder must come down.
                     if (_fetching.Remove(song.Id))
                         Changed?.Invoke(this, EventArgs.Empty);
                 }
@@ -240,8 +231,6 @@ public sealed class AlbumArtService(
         if (!settings.AlbumArtEnabled)
             return;
 
-        // Discovering where the cover lives is part of fetching it. Doing this here is the point of the service:
-        // it used to live on My Songs, so any other surface showing an unvisited song got a blank card.
         if (song.ArtworkUrl is null)
         {
             if (song.ArtworkLookedUp)
@@ -250,8 +239,7 @@ public sealed class AlbumArtService(
             await Task.Delay(DiscoveryPause);
             if (song.ArtworkUrl is null)
                 return;
-            // Discovery just proved there IS a cover coming, which is what IsFetching keys off — repaint so the
-            // placeholder appears for the download that follows.
+            // A cover is now known to be coming — repaint so the placeholder shows during the download.
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
@@ -277,8 +265,8 @@ public sealed class AlbumArtService(
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    // iTunes is primary; Deezer is consulted only when iTunes carries no cover, because its popularity-ranked
-    // search misses album deep cuts. Either way the attempt is recorded so a coverless song is never re-chased.
+    // iTunes first; Deezer only when iTunes has no cover. The attempt is recorded hit or miss, so a coverless
+    // song is never re-chased.
     private async Task DiscoverArtworkUrlAsync(SongListItem song)
     {
         if (string.IsNullOrWhiteSpace(song.Title) || string.IsNullOrWhiteSpace(song.Artist))
@@ -316,9 +304,8 @@ public sealed class AlbumArtService(
         await store.UpdateAsync(song);
     }
 
-    // Drops the covers that have been off screen longest, once there are more of them than the headroom allows.
-    // Anything currently visible is untouchable, which is the whole reason this can't thrash the way a
-    // render-count-based cap did: the next render can only re-ask for what's on screen, and that's never evicted.
+    // Visible covers are untouchable — a cap that evicts what's still rendered thrashes, because the next
+    // render immediately re-asks (see DEVELOPMENT.md → Design notes).
     private async Task EvictOffScreenAsync()
     {
         var offScreen = _uris.Keys.Where(id => !_visible.Contains(id)).ToList();

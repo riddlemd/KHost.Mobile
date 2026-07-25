@@ -1,12 +1,8 @@
 // Tells a tap apart from a press-and-hold on a single element, and reports each back to .NET.
 //
-// Why not @onclick plus a C# timer: the WebView fires its own long-press behaviours (text callout, context
-// menu, drag) well before a Blazor handler could suppress them, and a click still arrives after a long press
-// — so a hold would run and then immediately roll as well. Owning the pointer sequence here lets us cancel
-// the click, kill the callout, and drive the hold-progress class off the same state.
-//
-// Kept separate from swipe.js: that one is a row state machine (tap vs hold vs swipe across a list, with
-// horizontal travel and per-list options). This is one element and one axis of decision.
+// Not @onclick + a C# timer: the WebView fires its own long-press behaviours (callout, context menu) before
+// a Blazor handler could suppress them, and a click still arrives after a hold — the hold would fire and then
+// the tap action too. Not swipe.js either — that's a per-list row state machine; this is one element.
 //
 // Idempotent per element (guarded by a data attribute), so it's safe to call on every render.
 window.khPressHold = {

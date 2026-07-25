@@ -678,9 +678,6 @@ else
     private CancellationTokenSource? _suggestCts;                // detail-sheet lookup; cancelled when the sheet closes
     private readonly CancellationTokenSource _bgFillCts = new(); // add-time background lookups; cancelled on dispose
 
-    // Album art needs no bookkeeping here any more: a card asking for its cover is what fetches it.
-
-
     // A release year is optional, but when supplied it must be a real year: 1..this year.
     private static int CurrentYear => DateTime.Now.Year;
     private bool YearValid => !_year.HasValue || (_year.Value >= 1 && _year.Value <= CurrentYear);
@@ -1150,7 +1147,6 @@ else
             _infiniteBound = false;
         }
 
-
         // History sheet: same pull-down-to-dismiss, but it has an inner scrolling list — khSheet's scroller
         // detection only lets the drag take over at the list's top, and a bigger threshold means it takes a
         // deliberate, stronger swipe to close (so a normal scroll-flick doesn't dismiss it).
@@ -1449,8 +1445,6 @@ else
         if (item is null)
             return;
 
-        // Artwork isn't chased here any more — the sheet asking for the cover is what fetches it, discovery
-        // included (AlbumArtService). This path is only about the visible year/genre fill.
         var needAutoFill = ShouldAutoFill(item);
         if (!needAutoFill)
             return;

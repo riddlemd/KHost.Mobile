@@ -1,10 +1,6 @@
-@* Picks one release year from a grid of the years actually present in the library. A grid rather than a long
-   list because a span like 1960–2025 is 60+ rows to scroll but only ~13 rows as a grid — the same reason the
-   platform date pickers show years in a grid. Years that would put the two range handles the wrong way round
-   are rendered disabled rather than silently clamped, so the pick you make is the pick you get. *@
-
-@* ClosePx matches the other sheets with an inner scrolling list, so a scroll-flick in the grid can't
-   dismiss the sheet by accident. *@
+@* Picks one release year from a grid of the years actually in the library (see DEVELOPMENT.md → Design notes).
+   Years that would cross the other range handle render disabled rather than silently clamped, so the pick you
+   make is the pick you get. ClosePx: a scroll-flick in the grid must not dismiss the sheet. *@
 <Sheet Open="Open" Class="sheet--year" BackdropClass="sheet-backdrop--year" AriaLabel="@Title"
        ClosePx="150" OnClose="OnClose">
     <div class="sheet__title">@Title</div>
