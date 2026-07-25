@@ -11,7 +11,7 @@
 @inject ICoverArtLookup ArtFallback
 @inject ILyricsClient Lyrics
 @inject ILyricsCache LyricsCache
-@inject IAlbumArtLoader AlbumArt
+@inject IAlbumArtService AlbumArt
 @inject IAppSettings Settings
 @inject IAppSession Session
 @inject IVenueStore Venues
@@ -320,7 +320,6 @@
     if (listSig != _lastListSig) { _renderCount = PageSize; _lastListSig = listSig; _pagingReset = true; }
     var page = visible.Take(_renderCount).ToList();
     _listRendered = !_loading && visible.Count > 0;
-    _artPageSig = $"{listSig}:{_renderCount}";   // OnAfterRender loads art for this page only when the signature changes
 }
 
 @if (!_loading)
@@ -679,14 +678,8 @@ else
     private CancellationTokenSource? _suggestCts;                // detail-sheet lookup; cancelled when the sheet closes
     private readonly CancellationTokenSource _bgFillCts = new(); // add-time background lookups; cancelled on dispose
 
-    // Album-art card backgrounds (gated by Settings.AlbumArtEnabled, on by default). Maps a song id to a blob:
-    // object URL once its cover has been cached + handed to the WebView (js/album-art.js); the card reads it via
+    // Album art needs no bookkeeping here any more: a card asking for its cover is what fetches it.
 
-    // Art is loaded only for the CURRENTLY-PAGED cards, so memory is bounded by what's on screen rather than by the
-    // whole library. _artPageSig (filter/sort signature + paged count) captures the rendered page; OnAfterRender
-    // kicks a load whenever it changes (a filter, sort, search, or the sentinel growing the page).
-    private string _artPageSig = "";
-    private string _artLoadedSig = " ";   // distinct from any real signature so the first page always loads
 
     // A release year is optional, but when supplied it must be a real year: 1..this year.
     private static int CurrentYear => DateTime.Now.Year;
@@ -859,9 +852,8 @@ else
     private void ResetViewBuffers()
     {
         // The incoming singer's list replaces this one, so drop every cover and free its blob URL (the ids won't
-        // recur, so keeping them would leak). Their images reload for the new singer's paged cards.
+        // recur, so keeping them would leak). The new singer's cards re-request theirs as they render.
         _ = AlbumArt.ClearAsync();
-        _artLoadedSig = " ";   // force the next page to (re)load art for the new singer
 
         _filterSearch = string.Empty;
         _filterGenres.Clear();
@@ -1061,6 +1053,9 @@ else
             notifyStateChanged: StateHasChanged);
         Store.Changed += OnStoreChanged;
         Tonight.Changed += OnTonightChanged;
+        // Covers land one at a time after the render that asked for them, and the card's art is a Blazor-rendered
+        // inline style — so without this the page would only pick them up on some unrelated re-render.
+        AlbumArt.Changed += OnArtChanged;
         // Track the active venue's KaraFun ID so the detail-sheet "Find on KaraFun" button follows it.
         Session.ActiveVenueChanged += OnVenueContextChanged;
         Venues.Changed += OnVenueContextChanged;
@@ -1152,14 +1147,6 @@ else
             _infiniteBound = false;
         }
 
-        // Load album art for the newly-rendered page, once per page change (filter / sort / search / grew a page).
-        // Reloads (RefreshAsync) and single-item autofills trigger LoadArtAsync directly, since those change content
-        // without changing the page signature.
-        if (_artPageSig != _artLoadedSig)
-        {
-            _artLoadedSig = _artPageSig;
-            _ = LoadArtAsync();
-        }
 
         // History sheet: same pull-down-to-dismiss, but it has an inner scrolling list — khSheet's scroller
         // detection only lets the drag take over at the list's top, and a bigger threshold means it takes a
@@ -1329,28 +1316,7 @@ else
 
         _lastSurpriseId = pick.Id;
         _rollPick = pick;
-        _ = EnsureRollArtAsync(pick);
         return Task.CompletedTask;
-    }
-
-    // Covers are cached only for the rendered page, but a roll can land on any song in the library — so without
-    // this the result sheet shows a plain card for a song that has perfectly good art. The current page rides
-    // along in the same call because LoadAsync cancels the previous run, and dropping the page's in-flight
-    // downloads to fetch one cover would blank the list behind the sheet.
-    private async Task EnsureRollArtAsync(SongListItem pick)
-    {
-        if (!Settings.AlbumArtEnabled || pick.ArtworkUrl is null || AlbumArt.UriFor(pick.Id) is not null)
-            return;
-
-        try
-        {
-            await AlbumArt.LoadAsync(Sorted().Take(_renderCount).Append(pick));
-            await InvokeAsync(StateHasChanged);   // the sheet's art style is rendered by Blazor, not set from JS
-        }
-        catch (Exception ex)
-        {
-            Log.LogWarning(ex, "Loading album art for the surprise pick {SongId} failed", pick.Id);
-        }
     }
 
     private SongListItem? Roll(IReadOnlyList<SongListItem> candidates) =>
@@ -1468,64 +1434,9 @@ else
             : null;
     }
 
-    // A song is eligible for a cover-art lookup when album art is on, we've not looked before, and it has a title
-    // AND artist to match on (iTunes rejects an artist-less match, so there'd be nothing to verify the cover against).
-    private bool ShouldFetchArtwork(SongListItem item) =>
-        Settings.AlbumArtEnabled &&
-        item.ArtworkUrl is null &&
-        !item.ArtworkLookedUp &&
-        !string.IsNullOrWhiteSpace(item.Title) &&
-        !string.IsNullOrWhiteSpace(item.Artist);
-
-    // Fetch just the cover URL for a song that autofill didn't already cover (e.g. it already had year+genre, or
-    // autofill is off). One iTunes call, gated on ArtworkLookedUp so a coverless song is never re-chased. The image
-    // bytes are downloaded later by LoadArtAsync; here we only record where to get them.
-    private async Task TryFetchArtworkUrlAsync(SongListItem item, CancellationToken token)
-    {
-        if (!ShouldFetchArtwork(item))
-            return;
-
-        Log.LogDebug("Artwork lookup start: “{Title}” — “{Artist}”", item.Title, item.Artist);
-        string? art;
-        try
-        {
-            var meta = await Metadata.LookupAsync(item.Title, item.Artist, token);
-            // iTunes is primary; fall back to Deezer only when iTunes carries no cover. Logged as two branches so
-            // the diagnostics say whether Deezer was even consulted and what it returned (the on-device mystery).
-            if (meta?.ArtworkUrl is string itunesArt)
-            {
-                art = itunesArt;
-                Log.LogDebug("Artwork from iTunes for “{Title}” — “{Artist}”", item.Title, item.Artist);
-            }
-            else
-            {
-                art = await ArtFallback.FindCoverArtUrlAsync(item.Title, item.Artist, token);
-                Log.LogDebug("iTunes had no cover for “{Title}” — “{Artist}”; Deezer fallback → {Result}",
-                    item.Title, item.Artist, art is null ? "no cover found" : "cover found");
-            }
-        }
-        catch (Exception ex) when (ex is MetadataLookupException or DeezerCoverArtException)
-        {
-            // network/rate-limit failure on either source — leave the flag unset to retry later
-            Log.LogWarning(ex, "Artwork lookup failed for “{Title}” — “{Artist}”; will retry later", item.Title, item.Artist);
-            return;
-        }
-
-        if (token.IsCancellationRequested)
-            return;
-
-        if (art is not null)
-            item.ArtworkUrl = art;
-        item.ArtworkLookedUp = true;    // record the attempt (hit or miss) so we never re-spend on it
-        Log.LogDebug("Artwork lookup done: “{Title}” — “{Artist}” → {Result}",
-            item.Title, item.Artist, item.ArtworkUrl is null ? "no cover found" : "cover found");
-        await Store.UpdateAsync(item);   // Store.Changed → RefreshAsync → LoadArtAsync caches + shows the image
-    }
-
     // Detail-sheet entry point: enrich the open song and surface the year/genre result as the sheet's note. The
-    // spinner + note are sheet-only UI; the actual fill/persist lives in TryAutoFillMetadataAsync. Also grabs the
-    // cover URL (once) when album art is on, then caches its image so the card fills in. Skips all network when
-    // there's nothing to do.
+    // spinner + note are sheet-only UI; the actual fill/persist lives in TryAutoFillMetadataAsync. Skips all
+    // network when there's nothing to fill — the cover is the art service's job, driven by the sheet rendering.
     private async Task LoadDetailSuggestionAsync(SongListItem? item)
     {
         _suggestCts?.Cancel();
@@ -1535,8 +1446,10 @@ else
         if (item is null)
             return;
 
+        // Artwork isn't chased here any more — the sheet asking for the cover is what fetches it, discovery
+        // included (AlbumArtService). This path is only about the visible year/genre fill.
         var needAutoFill = ShouldAutoFill(item);
-        if (!needAutoFill && !ShouldFetchArtwork(item))
+        if (!needAutoFill)
             return;
 
         _suggestCts = new CancellationTokenSource();
@@ -1552,16 +1465,6 @@ else
                 _autoFilledNote = note;
             }
 
-            // Autofill may have captured the cover from the same match; fetch separately only if it's still missing.
-            if (ShouldFetchArtwork(item))
-                await TryFetchArtworkUrlAsync(item, token);
-
-            if (token.IsCancellationRequested || _detailItem?.Id != item.Id)
-                return;
-
-            // Make sure the (possibly just-discovered) cover image is cached + shown on the card behind the sheet.
-            if (Settings.AlbumArtEnabled && item.ArtworkUrl is not null && AlbumArt.UriFor(item.Id) is null)
-                _ = LoadArtAsync();
         }
         catch (OperationCanceledException) { return; }
         finally
@@ -1917,10 +1820,7 @@ else
         try
         {
             await TryAutoFillMetadataAsync(item, _bgFillCts.Token);
-            // If album art is on but autofill didn't capture a cover (autofill off, or nothing was blank to look
-            // up), fetch it now so a newly added song gets its card background without waiting to be opened. A
-            // no-op when autofill already grabbed the URL (ShouldFetchArtwork is then false — no duplicate call).
-            await TryFetchArtworkUrlAsync(item, _bgFillCts.Token);
+            // No cover fetch here: the new card rendering asks the service for one, which discovers it if needed.
         }
         catch (OperationCanceledException) { }
         catch { /* best-effort background enrichment */ }
@@ -1957,12 +1857,14 @@ else
 
     // A card shows its cover only when the feature is on AND the image has finished caching (in _artUris). Until
     // then the card renders normally, so nothing pops or shifts — the cover just fades in when ready.
-    private bool HasArt(SongListItem item) => AlbumArt.UriFor(item.Id) is not null;
+    private void OnArtChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    private bool HasArt(SongListItem item) => AlbumArt.UriFor(item) is not null;
 
     // Feed the cover's blob: URL to the card via a CSS custom property the stylesheet's ::before reads. Single-quoted
     // url() is safe: a blob: URL has no single quotes. Null (no inline style) whenever there's no cover to show.
     private string? ArtStyle(SongListItem item) =>
-        AlbumArt.UriFor(item.Id) is { } uri ? $"--kh-card-art: url('{uri}');" : null;
+        AlbumArt.UriFor(item) is { } uri ? $"--kh-card-art: url('{uri}');" : null;
 
     // Edit the per-song enjoyment rating (blue). Independent of sung-state.
     private async Task UpdateEnjoymentAsync(SongListItem item, int rating)
@@ -2015,15 +1917,7 @@ else
         await Tonight.PruneAsync(_items.Select(i => i.Id).ToList());
         _tonight = await Tonight.GetAllAsync();
         await InvokeAsync(StateHasChanged);
-
-        // Kick off (or refresh) the album-art load for any songs that now have a cover but no cached image yet.
-        _ = LoadArtAsync();
     }
-
-    // Load covers for the cards currently paged in — art memory stays bounded by the visible page, not the whole
-    // library. Only songs that already carry an ArtworkUrl are touched; discovering new URLs stays on the throttled
-    // add / detail-open paths.
-    private Task LoadArtAsync() => AlbumArt.LoadAsync(Sorted().Take(_renderCount));
 
     // Tonight store changed (add/remove/reorder/complete/clear) — reload just the set and re-render.
     private void OnTonightChanged(object? sender, EventArgs e) => _ = RefreshTonightAsync();
@@ -2084,6 +1978,9 @@ else
         _lyricsCts?.Dispose();
         _bgFillCts.Cancel();
         _bgFillCts.Dispose();
-        _ = JS.InvokeVoidAsync("khAlbumArt.revokeAll");   // free every cover's blob URL as the page tears down
+        AlbumArt.Changed -= OnArtChanged;
+        // Through the service, not khAlbumArt.revokeAll directly: revoking behind its back left it holding URLs
+        // that no longer resolve, so the next request returned a dead blob: instead of re-fetching.
+        _ = AlbumArt.ClearAsync();
     }
 }

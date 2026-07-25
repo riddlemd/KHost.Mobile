@@ -8,7 +8,7 @@
 @inject IBackButtonService BackButton
 @inject ILinkLauncher Links
 @inject IVenueStore Venues
-@inject IAlbumArtLoader AlbumArt
+@inject IAlbumArtService AlbumArt
 @implements IDisposable
 
 @* The "Tonight" on-deck set — its own tab. Drag the ⠿ handle to reorder, tap ✓ to check a song off (which logs
@@ -361,8 +361,7 @@ else
         await TonightStore.PruneAsync(_items.Select(i => i.Id).ToList());
         _tonight = await TonightStore.GetAllAsync();
         await InvokeAsync(StateHasChanged);
-        // Only the songs actually on the set — the shared loader skips whatever My Songs already fetched.
-        _ = AlbumArt.LoadAsync(Rows().Select(r => r.song));
+        // No art pre-load here: rendering a row asks the service for its cover, and that request is what fetches it.
     }
 
     public void Dispose()
@@ -384,9 +383,10 @@ else
 
     private void CloseDetail() => _detailItem = null;
 
-    // The row's cover, as the same CSS variable the song cards use; null when art is off or not loaded yet.
+    // The row's cover, as the same CSS variable the song cards use; null when art is off or not fetched yet —
+    // asking is what starts the fetch, and Changed brings us back to paint it.
     private string? ArtStyle(SongListItem song) =>
-        AlbumArt.UriFor(song.Id) is { } uri ? $"--kh-card-art: url('{uri}');" : null;
+        AlbumArt.UriFor(song) is { } uri ? $"--kh-card-art: url('{uri}');" : null;
 
     private void OnArtChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
 

@@ -862,6 +862,15 @@
                     applied++;
             }
             row.Item.MetadataLookedUp = true;   // looked up in this pass — don't auto-look-up again
+
+            // Keep the cover URL this pass already found, even for a row the user didn't select: it costs nothing
+            // here, and throwing it away means the art service re-spends a rate-limited lookup on the same song
+            // the first time a card for it renders.
+            if (row.Item.ArtworkUrl is null && row.Suggestion?.ArtworkUrl is string art)
+            {
+                row.Item.ArtworkUrl = art;
+                row.Item.ArtworkLookedUp = true;
+            }
         }
 
         await Store.UpdateRangeAsync(done.Select(r => r.Item));   // one write; Store.Changed → reload _items

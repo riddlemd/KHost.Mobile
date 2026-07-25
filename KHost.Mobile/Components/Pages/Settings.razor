@@ -4,6 +4,7 @@
 @inject ISongListStore Store
 @inject ILyricsCache LyricsCache
 @inject IAlbumArtCache AlbumArt
+@inject IAlbumArtService AlbumArtService
 @inject IAppSession Session
 @inject NavigationManager Nav
 @inject IBackButtonService BackButton
@@ -437,6 +438,9 @@
     private async Task ClearAlbumArtCacheAsync()
     {
         await AlbumArt.ClearAsync();   // AlbumArt.Changed → RefreshCountAsync updates the count + button
+        // The images already handed to the WebView are a separate copy: without this, deleting the files leaves
+        // every visible card still showing its cover, so the button looks like it did nothing.
+        await AlbumArtService.ClearAsync();
     }
 
     private void AskClear()

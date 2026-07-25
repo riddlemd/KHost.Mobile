@@ -77,7 +77,7 @@ public static class MauiProgram
         // hold every cover twice. SCOPED, not singleton — it talks to the WebView through IJSRuntime, which is
         // itself scoped; a singleton would capture a JS runtime that isn't attached to this WebView and every
         // transfer would fail. Blazor Hybrid has one scope per WebView, so scoped is still app-wide here.
-        builder.Services.AddScoped<IAlbumArtLoader, AlbumArtLoader>();
+        builder.Services.AddScoped<IAlbumArtService, AlbumArtService>();
 
         builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
 
