@@ -83,9 +83,17 @@
     private string Initial =>
         string.IsNullOrWhiteSpace(_name) ? "?" : char.ToUpperInvariant(_name.TrimStart()[0]).ToString();
 
-    // A fresh open (different singer id) reseeds the buffers, else edits from a prior open would leak across.
+    // Reseed the buffers on every fresh open. Clearing _seededFor on close matters as much as the id check: the
+    // component stays mounted while hidden, so without it, reopening the SAME singer keeps the last open's buffers
+    // and abandoned edits read back as if they'd been saved.
     protected override void OnParametersSet()
     {
+        if (Editing is null)
+        {
+            _seededFor = null;
+            return;
+        }
+
         if (Editing is { } s && s.Id != _seededFor)
         {
             _seededFor = s.Id;

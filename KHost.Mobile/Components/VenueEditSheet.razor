@@ -123,9 +123,17 @@
     private static bool _scanSupported =>
         DeviceInfo.Current.Platform == DevicePlatform.Android || DeviceInfo.Current.Platform == DevicePlatform.iOS;
 
-    // A fresh open (different venue id) must reseed the buffers, else edits from a prior open would leak across.
+    // Reseed the buffers on every fresh open. Clearing _seededFor on close matters as much as the id check: the
+    // component stays mounted while hidden, so without it, reopening the SAME venue keeps the last open's buffers
+    // and abandoned edits read back as if they'd been saved.
     protected override void OnParametersSet()
     {
+        if (Editing is null)
+        {
+            _seededFor = null;
+            return;
+        }
+
         if (Editing is { } v && v.Id != _seededFor)
         {
             _seededFor = v.Id;
