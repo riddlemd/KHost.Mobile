@@ -121,7 +121,10 @@ button, input, optgroup, select, textarea {
     font-family: inherit;
     margin: 0;
 }
-button { text-transform: none; }
+/* Buttons don't inherit colour: left alone, WebKit paints their text in a system colour (a blue with nothing to
+   do with the palette — it was showing up on Import & Export's actions). Inherit instead, so a button that sets a
+   background but no colour still reads as app text; every .btn variant sets its own colour and overrides this. */
+button { text-transform: none; color: inherit; }
 
 /* ---- App shell ---------------------------------------------------------- */
 
