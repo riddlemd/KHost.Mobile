@@ -21,38 +21,46 @@ public sealed class AlbumArtService(
     ISongListStore store,
     ITrackMetadataLookup metadata,
     ICoverArtLookup artFallback,
-    ILogger<AlbumArtService>? logger = null) : IAlbumArtService
+    ILogger<AlbumArtService>? logger = null) : IAlbumArtService, IDisposable
 {
+    private DotNetObjectReference<AlbumArtService>? _selfRef;
+
     private readonly ILogger<AlbumArtService> _log =
         logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<AlbumArtService>.Instance;
 
-    // NO SIZE CAP, deliberately — don't add one without reading this.
-    //
-    // An LRU cap was tried and thrashes. My Songs keeps every card it has scrolled past in the DOM and asks for
-    // all of their covers on every render, so a cap below the number of rendered cards evicts a cover that the
-    // very next render asks for again: measured on-device as an endless fetch/evict loop that never settled.
-    // Capping safely needs to know which cards are actually in the viewport, which this service cannot see and
-    // the renderer doesn't track. So covers are held until something explicitly drops them — a singer switch, an
-    // edit, or clearing the cache — which is what the previous design did in practice anyway.
     /// <summary>
-    /// Pause after each lookup that actually went to the network. Scrolling a long list now asks about every
-    /// song it renders, and most libraries are mostly coverless (~80%), so without this a scroll fires hundreds
-    /// of back-to-back iTunes calls and earns a rate-limit block. Downloads of an already-known cover URL hit the
-    /// artwork CDN instead and aren't paced.
+    /// Pause after each lookup that actually went to the network. Most libraries are mostly coverless (~80%), so
+    /// without this a sweep fires back-to-back iTunes calls and earns a rate-limit block. Downloads of an
+    /// already-known cover URL hit the artwork CDN instead and aren't paced.
     /// </summary>
     private static readonly TimeSpan DiscoveryPause = TimeSpan.FromMilliseconds(300);
 
+    /// <summary>
+    /// How many covers to hold once they've scrolled away. Only songs that are NOT currently on screen are ever
+    /// evicted, so this is headroom for scrolling back, not a limit on what you can see at once.
+    /// <para>An earlier cap keyed off what was <em>rendered</em> rather than visible, and thrashed: My Songs
+    /// keeps every card you've scrolled past in the DOM, so evicting one had the next render ask for it straight
+    /// back. The viewport set is what makes a cap safe.</para>
+    /// </summary>
+    private const int OffScreenCovers = 40;
+
     private readonly Dictionary<Guid, string> _uris = [];
-    private readonly HashSet<Guid> _queued = [];     // queued or already attempted this session
-    private readonly HashSet<Guid> _fetching = [];   // still to finish — drives the loading placeholder
+    private readonly HashSet<Guid> _queued = [];      // queued or already attempted this session
+    private readonly HashSet<Guid> _fetching = [];    // still to finish — drives the loading placeholder
+    private readonly Dictionary<Guid, SongListItem> _wanted = [];   // asked for, waiting to become visible
+    private readonly HashSet<Guid> _visible = [];     // reported by the viewport observer
+    private readonly Dictionary<Guid, long> _leftView = [];   // when each cover last went off screen, for eviction
     private readonly Queue<SongListItem> _pending = new();
+    private long _tick;
     private bool _draining;
 
     /// <inheritdoc />
     public event EventHandler? Changed;
 
-    /// <inheritdoc />
-    public string? UriFor(SongListItem song)
+    // The cached cover, or null — and, when there isn't one, the thing that gets it moving. Private because
+    // ViewFor is the surfaces' single entry point; splitting "the URL" from "is it loading" is what let the
+    // detail sheet quietly miss the loading state.
+    private string? UriFor(SongListItem song)
     {
         ArgumentNullException.ThrowIfNull(song);
         if (!settings.AlbumArtEnabled)
@@ -63,25 +71,102 @@ public sealed class AlbumArtService(
 
         // Nothing to chase if the song has no cover and we've already been told so.
         var findable = song.ArtworkUrl is not null || !song.ArtworkLookedUp;
-        if (findable && _queued.Add(song.Id))
-        {
-            _fetching.Add(song.Id);
-            _pending.Enqueue(song);
-            StartDraining();
-        }
+        if (!findable || _queued.Contains(song.Id))
+            return null;
+
+        // Remember the ask, but don't fetch until the viewport observer says this song is actually on screen.
+        // Rendering is not the same as being seen: My Songs keeps hundreds of scrolled-past cards in the DOM.
+        _wanted[song.Id] = song;
+        if (_visible.Contains(song.Id))
+            Enqueue(song);
         return null;
     }
 
     /// <inheritdoc />
-    public bool IsFetching(SongListItem song)
+    public AlbumArtView ViewFor(SongListItem song)
     {
         ArgumentNullException.ThrowIfNull(song);
+        var uri = UriFor(song);
+        if (uri is not null)
+            return new AlbumArtView($"--kh-card-art: url('{uri}');", Loading: false);
+
         // ArtworkUrl is the "we know there's an image coming" part: before discovery runs it's null, and
         // promising a cover we might not find would flash a placeholder across most of the list.
-        return settings.AlbumArtEnabled
+        var loading = settings.AlbumArtEnabled
             && song.ArtworkUrl is not null
-            && _fetching.Contains(song.Id)
-            && !_uris.ContainsKey(song.Id);
+            && _fetching.Contains(song.Id);
+        return loading ? new AlbumArtView(null, Loading: true) : AlbumArtView.None;
+    }
+
+    /// <inheritdoc />
+    public Task SetVisibleAsync(IReadOnlyCollection<Guid> songIds)
+    {
+        ArgumentNullException.ThrowIfNull(songIds);
+
+        var gone = _visible.Where(id => !songIds.Contains(id)).ToList();
+        foreach (var id in gone)
+        {
+            _visible.Remove(id);
+            _leftView[id] = ++_tick;   // eviction order is "longest off screen"
+        }
+
+        var started = false;
+        foreach (var id in songIds)
+        {
+            if (!_visible.Add(id))
+                continue;
+            _leftView.Remove(id);
+            // Came into view and someone had asked for it — now it's worth fetching.
+            if (_wanted.TryGetValue(id, out var song) && !_queued.Contains(id) && !_uris.ContainsKey(id))
+            {
+                Enqueue(song);
+                started = true;
+            }
+        }
+
+        if (started)
+            Changed?.Invoke(this, EventArgs.Empty);   // paint the placeholders for what just started
+        return EvictOffScreenAsync();
+    }
+
+    /// <inheritdoc />
+    public async Task ObserveAsync()
+    {
+        if (!settings.AlbumArtEnabled)
+            return;
+        _selfRef ??= DotNetObjectReference.Create(this);
+        try
+        {
+            await js.InvokeVoidAsync("khArtVisibility.register", _selfRef, new { method = nameof(VisibleArtChanged) });
+        }
+        catch (JSException ex)
+        {
+            _log.LogWarning(ex, "Wiring the album-art viewport observer failed");
+        }
+    }
+
+    /// <summary>Called by the viewport observer with the ids currently on screen.</summary>
+    [JSInvokable]
+    public Task VisibleArtChanged(string[] songIds)
+    {
+        var ids = new List<Guid>(songIds.Length);
+        foreach (var id in songIds)
+        {
+            if (Guid.TryParse(id, out var guid))
+                ids.Add(guid);
+        }
+        return SetVisibleAsync(ids);
+    }
+
+    public void Dispose() => _selfRef?.Dispose();
+
+    private void Enqueue(SongListItem song)
+    {
+        if (!_queued.Add(song.Id))
+            return;
+        _fetching.Add(song.Id);
+        _pending.Enqueue(song);
+        StartDraining();
     }
 
     /// <inheritdoc />
@@ -91,6 +176,7 @@ public sealed class AlbumArtService(
             await RevokeAsync(songId);
         _queued.Remove(songId);        // let the next request re-fetch it
         _fetching.Remove(songId);
+        _wanted.Remove(songId);
     }
 
     /// <inheritdoc />
@@ -100,6 +186,9 @@ public sealed class AlbumArtService(
         _queued.Clear();
         _fetching.Clear();
         _pending.Clear();
+        _wanted.Clear();
+        _leftView.Clear();
+        _visible.Clear();   // the observer re-reports what's on screen on its next pass
         try { await js.InvokeVoidAsync("khAlbumArt.revokeAll"); }
         catch (JSException ex) { _log.LogWarning(ex, "Revoking album-art blob URLs failed"); }
         Changed?.Invoke(this, EventArgs.Empty);
@@ -225,6 +314,28 @@ public sealed class AlbumArtService(
             song.ArtworkUrl = art;
         song.ArtworkLookedUp = true;   // record the attempt, hit or miss, so we never re-spend on it
         await store.UpdateAsync(song);
+    }
+
+    // Drops the covers that have been off screen longest, once there are more of them than the headroom allows.
+    // Anything currently visible is untouchable, which is the whole reason this can't thrash the way a
+    // render-count-based cap did: the next render can only re-ask for what's on screen, and that's never evicted.
+    private async Task EvictOffScreenAsync()
+    {
+        var offScreen = _uris.Keys.Where(id => !_visible.Contains(id)).ToList();
+        if (offScreen.Count <= OffScreenCovers)
+            return;
+
+        foreach (var id in offScreen
+            .OrderBy(id => _leftView.TryGetValue(id, out var at) ? at : 0)
+            .Take(offScreen.Count - OffScreenCovers))
+        {
+            _uris.Remove(id);
+            _queued.Remove(id);     // evicted, not failed — coming back into view should re-fetch it
+            _fetching.Remove(id);
+            _leftView.Remove(id);
+            await RevokeAsync(id);
+        }
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private async Task RevokeAsync(Guid songId)

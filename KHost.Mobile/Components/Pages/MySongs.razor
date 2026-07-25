@@ -370,8 +370,9 @@ else
     <div class="song-cards" @ref="_swipeRoot">
         @foreach (var item in page)
         {
-            <div class="song-card @(HasArt(item) ? "song-card--art" : "") @(AlbumArt.IsFetching(item) ? "kh-art-loading" : "")"
-                 @key="item.Id" data-song-id="@item.Id" style="@ArtStyle(item)">
+            var art = AlbumArt.ViewFor(item);
+            <div class="song-card @(art.HasArt ? "song-card--art" : "") @(art.Loading ? "kh-art-loading" : "")"
+                 @key="item.Id" data-song-id="@item.Id" data-art-song="@item.Id" style="@art.Style">
                 @if (Settings.TonightEnabled)
                 {
                     @* data-tut is on every card's button; the tour's querySelector spotlights the first one. *@
@@ -473,7 +474,7 @@ else
 }
 
 @* The card itself is Components/SongDetailSheet.razor — the Tonight tab opens the same one (read-only). *@
-<SongDetailSheet Item="_detailItem" ArtStyle="@(_detailItem is not null && HasArt(_detailItem) ? ArtStyle(_detailItem) : null)"
+<SongDetailSheet Item="_detailItem"
                  SuggestionLoading="_suggestionLoading" AutoFilledNote="@_autoFilledNote"
                  InTonight="IsInTonight(_detailItem)"
                  KaraFunAvailable="@(Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
@@ -1087,6 +1088,9 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Pick up the art elements this render added, so only the covers actually on screen get fetched.
+        await AlbumArt.ObserveAsync();
+
         // Attaching the listener only AFTER restoring is deliberate: on a tab change the incoming page fires a
         // mount-time scroll-to-0, and a listener attached earlier would record that 0 (during the loading delay)
         // and clobber the saved position before we restore it. Waiting for !_loading means the list has painted,
@@ -1854,16 +1858,7 @@ else
     // Sort key for "how it went": the Bayesian star; unrated/unsung songs sort below every rated one.
     private double AvgSortKey(SongListItem item) => BayesStar(item) ?? -1;
 
-    // A card shows its cover only when the feature is on AND the image has finished caching (in _artUris). Until
-    // then the card renders normally, so nothing pops or shifts — the cover just fades in when ready.
     private void OnArtChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
-
-    private bool HasArt(SongListItem item) => AlbumArt.UriFor(item) is not null;
-
-    // Feed the cover's blob: URL to the card via a CSS custom property the stylesheet's ::before reads. Single-quoted
-    // url() is safe: a blob: URL has no single quotes. Null (no inline style) whenever there's no cover to show.
-    private string? ArtStyle(SongListItem item) =>
-        AlbumArt.UriFor(item) is { } uri ? $"--kh-card-art: url('{uri}');" : null;
 
     // Edit the per-song enjoyment rating (blue). Independent of sung-state.
     private async Task UpdateEnjoymentAsync(SongListItem item, int rating)

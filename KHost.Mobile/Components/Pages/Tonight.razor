@@ -44,8 +44,9 @@ else
             @foreach (var (entry, song) in Rows())
             {
                 @* data-tut anchors are on every row; the tour's querySelector spotlights the first one. *@
-                <div class="setrow @(entry.Completed ? "done" : "") @(ArtStyle(song) is null ? "" : "setrow--art") @(AlbumArt.IsFetching(song) ? "kh-art-loading" : "")"
-                     style="@ArtStyle(song)" @key="entry.SongId" data-song-id="@entry.SongId">
+                var art = AlbumArt.ViewFor(song);
+                <div class="setrow @(entry.Completed ? "done" : "") @(art.HasArt ? "setrow--art" : "") @(art.Loading ? "kh-art-loading" : "")"
+                     style="@art.Style" @key="entry.SongId" data-song-id="@entry.SongId" data-art-song="@entry.SongId">
                     <span class="setrow__handle" title="Drag to reorder" data-tut="tonight-reorder">⠿</span>
                     <span class="setrow__pos">@(entry.Order + 1)</span>
                     <div class="setrow__main setrow__main--tappable" role="button" tabindex="0"
@@ -78,7 +79,6 @@ else
    either (a check-off also completes the row; the card's wouldn't). Lyrics and history stay unwired because their
    sheets live in My Songs. The card renders a button only for the callbacks it's given, so each just disappears. *@
 <SongDetailSheet Item="_detailItem" AllowEdit="false"
-                 ArtStyle="@(_detailItem is null ? null : ArtStyle(_detailItem))"
                  InTonight="true"
                  KaraFunAvailable="@(Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
                  BayesScore="DetailStar"
@@ -166,6 +166,9 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Pick up the art elements this render added, so only the covers actually on screen get fetched.
+        await AlbumArt.ObserveAsync();
+
         // Attaching the listener only AFTER restoring is deliberate: on a tab change the incoming page fires a
         // mount-time scroll-to-0, and a listener attached earlier would record that 0 (during the loading delay)
         // and clobber the saved offset before we restore it. Waiting for !_loading means the set has painted, so
@@ -382,11 +385,6 @@ else
     }
 
     private void CloseDetail() => _detailItem = null;
-
-    // The row's cover, as the same CSS variable the song cards use; null when art is off or not fetched yet —
-    // asking is what starts the fetch, and Changed brings us back to paint it.
-    private string? ArtStyle(SongListItem song) =>
-        AlbumArt.UriFor(song) is { } uri ? $"--kh-card-art: url('{uri}');" : null;
 
     private void OnArtChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
 

@@ -16,9 +16,9 @@
 
         @* Asks the art service straight out rather than being handed a style: the request is what fetches the
            cover, so a pick whose art nobody has needed yet gets one. The host re-renders us on Changed. *@
-        var art = AlbumArt.UriFor(item);
-        <div class="song-card song-card--roll @(art is not null ? "song-card--art" : "") @(AlbumArt.IsFetching(item) ? "kh-art-loading" : "")"
-             style="@(art is not null ? $"--kh-card-art: url('{art}');" : null)">
+        var art = AlbumArt.ViewFor(item);
+        <div class="song-card song-card--roll @(art.HasArt ? "song-card--art" : "") @(art.Loading ? "kh-art-loading" : "")"
+             data-art-song="@item.Id" style="@art.Style">
             <div class="song-card__title">@item.Title</div>
             @if (!string.IsNullOrWhiteSpace(item.Artist))
             {

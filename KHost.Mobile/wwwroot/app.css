@@ -808,16 +808,20 @@ body.kh-sheet-open { overflow: hidden; }
 .sheet__subtitle { color: var(--kh-text-muted); margin-top: 0.15rem; }
 
 /* Album-cover header in the song detail sheet: same bottom-scrim treatment as the cards, bled to the sheet's
-   top edges so the cover sits behind the title + artist. Only applied (via --art) when the cover is cached. */
-.sheet__header--art {
+   top edges so the cover sits behind the title + artist.
+   The banner GEOMETRY is shared with the loading state, so a header waiting on its cover already occupies the
+   shape the cover will fill — otherwise the placeholder rendered as a grey block inset from the sheet's edges
+   and then jumped to full width when the image arrived. Only the white text belongs to the cover itself. */
+.sheet__header--art,
+.sheet__header.kh-art-loading {
     position: relative;
     z-index: 0;                                   /* own stacking context so ::before/::after stay behind the text */
     overflow: hidden;
     margin: -1.25rem -1.15rem 0.75rem;            /* cancel the sheet's top + side padding to bleed edge-to-edge */
     padding: 1.6rem 1.15rem 1rem;
     border-radius: var(--kh-radius) var(--kh-radius) 0 0;   /* match the sheet's rounded top */
-    color: #fff;
 }
+.sheet__header--art { color: #fff; }
 .sheet__header--art::before {
     content: "";
     position: absolute;

@@ -1,11 +1,12 @@
 @using KHost.Mobile.Models
 @inject IAppSettings Settings
+@inject IAlbumArtService AlbumArt
 @inject IJSRuntime JS
 
 @* Shared song detail card. Shown when @Item is set: the song's fields, its ratings and history, the quick links,
    and (when AllowEdit) an edit form. Presentational — it owns only the edit buffers and its own pull-down-to-dismiss;
    the host owns the @Item state, does every store write and link launch, and supplies the values it can't derive on
-   its own (album art, the rating math, whether the song is in tonight). Reused by My Songs and the Tonight tab.
+   its own (the rating math, whether the song is in tonight). Reused by My Songs and the Tonight tab.
    An action's button renders only when the host wired its callback, so a host that can't service one (Tonight has
    no lyrics or history sheet of its own) simply doesn't offer it. *@
 <Sheet Open="Item is not null" OnClose="OnClose" AriaLabel="Song details">
@@ -14,7 +15,11 @@
 
         @if (!_editing)
         {
-            <div class="sheet__header @(string.IsNullOrEmpty(ArtStyle) ? "" : "sheet__header--art")" style="@ArtStyle">
+            @* Asks the art service itself rather than being handed a style, like every other art surface. That
+               also means opening a song nobody has scrolled to yet fetches its cover. *@
+            var art = AlbumArt.ViewFor(Item);
+            <div class="sheet__header @(art.HasArt ? "sheet__header--art" : "") @(art.Loading ? "kh-art-loading" : "")"
+                 data-art-song="@Item.Id" style="@art.Style">
                 <div class="sheet__title">@Item.Title</div>
                 @if (!string.IsNullOrWhiteSpace(Item.Artist))
                 {
@@ -235,9 +240,6 @@
 @code {
     /// <summary>The song to show. Null hides the sheet; setting a different song reopens it in view mode.</summary>
     [Parameter] public SongListItem? Item { get; set; }
-
-    /// <summary>Inline style that paints the song's cover behind the header; null/empty renders the plain header.</summary>
-    [Parameter] public string? ArtStyle { get; set; }
 
     /// <summary>True while a metadata lookup is in flight, so blank genre/year read as "…" rather than "—".</summary>
     [Parameter] public bool SuggestionLoading { get; set; }
