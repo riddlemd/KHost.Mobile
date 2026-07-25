@@ -79,9 +79,7 @@
 @* ---- Detail sheet ---- *@
 @if (_detail is { } d)
 {
-    <div class="sheet-backdrop" @onclick="CloseDetail"></div>
-    <div class="sheet venue-detail" role="dialog" aria-modal="true" @ref="_detailSheet">
-        <button type="button" class="sheet__close" @onclick="CloseDetail" aria-label="Close">✕</button>
+    <Sheet Class="venue-detail" AriaLabel="Venue details" OnClose="CloseDetail">
 
         <div class="venue-detail__hero">
             <span class="venue-detail__glyph">@d.Glyph</span>
@@ -164,7 +162,7 @@
 
         <button type="button" class="btn btn-secondary venue-detail__edit" @onclick="() => OpenEdit(d)">Edit</button>
         <button type="button" class="btn btn-danger venue-detail__delete" @onclick="() => AskDelete(d)">Delete venue</button>
-    </div>
+    </Sheet>
 }
 
 @* ---- Undo toast after a swipe-remove ---- *@
@@ -203,9 +201,7 @@
     private string _search = string.Empty;
     private BackButtonOverlayGuard? _backGuard;
 
-    private ElementReference _detailSheet;
     private DotNetObjectReference<Venues>? _selfRef;
-    private bool _detailBound;
 
     private ElementReference _swipeRoot;   // the .venue-list container swipe.js is delegated on
     private bool _swipeBound;
@@ -398,24 +394,6 @@
             _swipeBound = false;
         }
 
-        if (_detail is not null && !_detailBound)
-        {
-            _selfRef ??= DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("khSheet.register", _detailSheet, _selfRef, new { closeMethod = "CloseDetailFromSwipe" });
-            _detailBound = true;
-        }
-        else if (_detail is null)
-        {
-            _detailBound = false;
-        }
-    }
-
-    // Pull-down-to-dismiss from khSheet (the sheet already animated off-screen): just clear the detail.
-    [JSInvokable]
-    public void CloseDetailFromSwipe()
-    {
-        _detail = null;
-        StateHasChanged();
     }
 
     // A manual pick pins the venue so the periodic geo re-check won't override it.

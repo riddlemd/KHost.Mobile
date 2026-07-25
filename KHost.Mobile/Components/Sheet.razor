@@ -22,8 +22,10 @@
 }
 
 @code {
-    /// <summary>Whether the sheet is showing. The host owns this.</summary>
-    [Parameter] public bool Open { get; set; }
+    /// <summary>Whether the sheet is showing. Defaults to true so a sheet already guarded by the host's own
+    /// <c>@if</c> can just be wrapped, which also keeps that block's markup context intact (Razor rejects
+    /// <c>@{ }</c> inside a component's child content).</summary>
+    [Parameter] public bool Open { get; set; } = true;
 
     /// <summary>Extra classes on the panel, for a variant (e.g. <c>sheet--history</c>, <c>filter-sheet</c>).</summary>
     [Parameter] public string? Class { get; set; }

@@ -8,6 +8,7 @@
 @inject IBackButtonService BackButton
 @inject ILinkLauncher Links
 @inject IVenueStore Venues
+@inject IAlbumArtLoader AlbumArt
 @implements IDisposable
 
 @* The "Tonight" on-deck set — its own tab. Drag the ⠿ handle to reorder, tap ✓ to check a song off (which logs
@@ -43,7 +44,8 @@ else
             @foreach (var (entry, song) in Rows())
             {
                 @* data-tut anchors are on every row; the tour's querySelector spotlights the first one. *@
-                <div class="setrow @(entry.Completed ? "done" : "")" @key="entry.SongId" data-song-id="@entry.SongId">
+                <div class="setrow @(entry.Completed ? "done" : "") @(ArtStyle(song) is null ? "" : "setrow--art")"
+                     style="@ArtStyle(song)" @key="entry.SongId" data-song-id="@entry.SongId">
                     <span class="setrow__handle" title="Drag to reorder" data-tut="tonight-reorder">⠿</span>
                     <span class="setrow__pos">@(entry.Order + 1)</span>
                     <div class="setrow__main setrow__main--tappable" role="button" tabindex="0"
@@ -75,6 +77,7 @@ else
    already own the set mechanics — so no Edit, and no "Mark sung" competing with the check-off. Lyrics and history
    stay unwired because their sheets live in My Songs; the card just omits those buttons. *@
 <SongDetailSheet Item="_detailItem" AllowEdit="false"
+                 ArtStyle="@(_detailItem is null ? null : ArtStyle(_detailItem))"
                  InTonight="true"
                  KaraFunAvailable="@(Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
                  BayesScore="DetailStar"
@@ -128,8 +131,6 @@ else
     private Guid? _completingSongId;
     private Guid? _toggling;             // in-flight guard so a double-tap can't double-log a check-off
 
-    private bool _locked;                // mirrors body scroll-lock while a sheet is open
-
     // The song whose detail card is open (tapped from a row). The card is Components/SongDetailSheet — the same one
     // My Songs opens; this page only supplies what it can answer and handles the actions it offers.
     private SongListItem? _detailItem;
@@ -156,6 +157,7 @@ else
             notifyStateChanged: StateHasChanged);
         Store.Changed += OnStoreChanged;
         TonightStore.Changed += OnTonightChanged;
+        AlbumArt.Changed += OnArtChanged;   // covers arrive one at a time; paint each as it lands
         await RefreshAsync();
         _loading = false;
         await InvokeAsync(StateHasChanged);
@@ -185,14 +187,6 @@ else
         else if (_tonight.Count == 0)
         {
             _dragBound = false;
-        }
-
-        // Lock the page behind the rating prompt; reconcile straight from state so a swipe-dismiss can't strand it.
-        var open = _ratingPromptItem is not null || _detailItem is not null;
-        if (open != _locked)
-        {
-            _locked = open;
-            await JS.InvokeVoidAsync("khSheet.setLock", open);
         }
     }
 
@@ -366,6 +360,8 @@ else
         await TonightStore.PruneAsync(_items.Select(i => i.Id).ToList());
         _tonight = await TonightStore.GetAllAsync();
         await InvokeAsync(StateHasChanged);
+        // Only the songs actually on the set — the shared loader skips whatever My Songs already fetched.
+        _ = AlbumArt.LoadAsync(Rows().Select(r => r.song));
     }
 
     public void Dispose()
@@ -373,10 +369,9 @@ else
         _ = JS.InvokeVoidAsync("khScroll.untrack", ScrollKey);
         Store.Changed -= OnStoreChanged;
         TonightStore.Changed -= OnTonightChanged;
+        AlbumArt.Changed -= OnArtChanged;
         _backGuard?.Dispose();
-        // Never leave the page-scroll lock on if this page is torn down with the prompt open.
-        if (_locked)
-            _ = JS.InvokeVoidAsync("khSheet.setLock", false);
+        // The lock is the Sheet component's job now — it re-reads it from the DOM as each sheet unmounts.
         _selfRef?.Dispose();
     }
 
@@ -387,6 +382,12 @@ else
     }
 
     private void CloseDetail() => _detailItem = null;
+
+    // The row's cover, as the same CSS variable the song cards use; null when art is off or not loaded yet.
+    private string? ArtStyle(SongListItem song) =>
+        AlbumArt.UriFor(song.Id) is { } uri ? $"--kh-card-art: url('{uri}');" : null;
+
+    private void OnArtChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
 
     // Same confidence-weighted star My Songs shows, so a song reads identically in both places.
     private double? DetailStar => _detailItem is null ? null : RatingScore.StarFor(_detailItem, _ratingContext);

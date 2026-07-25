@@ -73,6 +73,11 @@ public static class MauiProgram
         // On-device album-art cache (image blobs). Singleton so its in-memory memo + Changed event are shared
         // app-wide; it pulls a pooled HttpClient from the factory per download (see the named client below).
         builder.Services.AddSingleton<IAlbumArtCache, AlbumArtCache>();
+        // Shared across pages: My Songs and Tonight list the same songs, so a per-page map would fetch, decode and
+        // hold every cover twice. SCOPED, not singleton — it talks to the WebView through IJSRuntime, which is
+        // itself scoped; a singleton would capture a JS runtime that isn't attached to this WebView and every
+        // transfer would fail. Blazor Hybrid has one scope per WebView, so scoped is still app-wide here.
+        builder.Services.AddScoped<IAlbumArtLoader, AlbumArtLoader>();
 
         builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
 
