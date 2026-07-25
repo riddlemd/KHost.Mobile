@@ -126,9 +126,12 @@
             {
                 <div class="suggest-match">@AutoFilledNote</div>
             }
-            <button class="btn btn-secondary sheet__sang-btn" @onclick="OnMarkSung">
-                @(Item.Performances.Count > 0 ? "Sang it again" : "Mark sung")
-            </button>
+            @if (OnMarkSung.HasDelegate)
+            {
+                <button class="btn btn-secondary sheet__sang-btn" @onclick="OnMarkSung">
+                    @(Item.Performances.Count > 0 ? "Sang it again" : "Mark sung")
+                </button>
+            }
             @if (Settings.TonightEnabled && OnToggleTonight.HasDelegate)
             {
                 <button class="btn sheet__tonight @(InTonight ? "is-on" : "")" @onclick="OnToggleTonight">

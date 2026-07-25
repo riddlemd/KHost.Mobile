@@ -445,7 +445,7 @@ else
 
 @* The card itself is Components/SongDetailSheet.razor — the Tonight tab opens the same one (read-only). *@
 <SongDetailSheet Item="_detailItem" ArtStyle="@(_detailItem is not null && HasArt(_detailItem) ? ArtStyle(_detailItem) : null)"
-                 SuggestionLoading="_suggestionLoading" AutoFilledNote="_autoFilledNote"
+                 SuggestionLoading="_suggestionLoading" AutoFilledNote="@_autoFilledNote"
                  InTonight="IsInTonight(_detailItem)"
                  KaraFunAvailable="@(Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
                  BayesScore="@(_detailItem is null ? null : BayesStar(_detailItem))"

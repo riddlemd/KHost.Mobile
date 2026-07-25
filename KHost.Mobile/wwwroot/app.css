@@ -11,6 +11,17 @@
     --kh-primary: #7c3aed;          /* violet — karaoke accent */
     --kh-primary-strong: #6d28d9;
     --kh-primary-contrast: #ffffff;
+    /* Tonight's rows show the cover behind them. On a light surface a dark scrim + white text turns each row into
+       a slab cutting through the light card, so light mode ghosts the cover instead and leaves the row's own
+       colours alone; dark mode keeps the full-strength treatment. */
+    --kh-rowart-opacity: 0.15;
+    --kh-rowart-scrim: none;
+    --kh-rowart-fg: var(--kh-text);
+    --kh-rowart-fg-muted: var(--kh-text-muted);
+    --kh-rowart-ctl-border: var(--kh-text-muted);
+    --kh-rowart-ctl-bg: var(--kh-surface);
+    --kh-rowart-ctl-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --kh-rowart-pos-bg: var(--kh-surface-2);
     --kh-bg: #f5f5f7;
     --kh-surface: #ffffff;
     --kh-surface-2: #f0f0f4;
@@ -46,6 +57,18 @@
         --kh-danger: #f87171;
         --kh-tag-bg: color-mix(in srgb, var(--kh-primary) 22%, var(--kh-surface));
         --kh-tag-fg: #c4b5fd;
+        --kh-rowart-opacity: 1;
+        --kh-rowart-scrim: linear-gradient(to right, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.76) 55%, rgba(0, 0, 0, 0.72) 100%);
+        --kh-rowart-fg: #fff;
+        --kh-rowart-fg-muted: rgba(255, 255, 255, 0.85);
+    --kh-rowart-ctl-border: #ffffff;
+    --kh-rowart-ctl-bg: var(--kh-surface);
+    --kh-rowart-ctl-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    --kh-rowart-pos-bg: rgba(255, 255, 255, 0.18);
+        --kh-rowart-ctl-border: #ffffff;
+        --kh-rowart-ctl-bg: var(--kh-surface);
+        --kh-rowart-ctl-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+        --kh-rowart-pos-bg: rgba(255, 255, 255, 0.18);
         --kh-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
 }
@@ -65,6 +88,10 @@
     --kh-star-cool: #60a5fa;
     --kh-tag-bg: color-mix(in srgb, var(--kh-primary) 22%, var(--kh-surface));
     --kh-tag-fg: #c4b5fd;
+    --kh-rowart-opacity: 1;
+    --kh-rowart-scrim: linear-gradient(to right, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.76) 55%, rgba(0, 0, 0, 0.72) 100%);
+    --kh-rowart-fg: #fff;
+    --kh-rowart-fg-muted: rgba(255, 255, 255, 0.85);
     --kh-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 /* `data-theme="light"` needs no block: the base :root is already light, and the OS-dark
@@ -917,16 +944,19 @@ body.kh-sheet-open { overflow: hidden; }
 .tonight__progressbar { height: 3px; background: var(--kh-surface-2); }
 .tonight__progressbar > span { display: block; height: 100%; background: var(--kh-primary); transition: width 0.25s ease; }
 
-.tonight__body { padding: 0.35rem 0.5rem 0.5rem; }
+/* No padding: rows run edge to edge so a cover fills the row's full width — the card's own overflow:hidden
+   keeps them inside its rounded corners, and the footer below supplies the breathing room. */
+.tonight__body { padding: 0; }
 .setrow {
-    display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.4rem;
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.4rem;
     background: var(--kh-surface); position: relative; touch-action: pan-y;
 }
 .setrow + .setrow { border-top: 1px solid var(--kh-border); }
 .setrow--dragging { z-index: 2; box-shadow: var(--kh-shadow); border-radius: 0.6rem; background: var(--kh-surface-2); }
-/* Cover behind a set row, same idea as .song-card--art but flatter: a set row is a third the height of a card, so
-   the scrim is heavier and even to keep the title legible across the whole strip. */
-.setrow--art { overflow: hidden; color: #fff; }
+/* Cover behind a set row. Everything theme-dependent comes from the --kh-rowart-* tokens (see :root): dark mode
+   runs the cover at full strength under a scrim with white text; light mode ghosts it and keeps the row's own
+   colours, so it stays a light row rather than a dark slab inside a light card. */
+.setrow--art { overflow: hidden; color: var(--kh-rowart-fg); }
 .setrow--art::before {
     content: "";
     position: absolute;
@@ -935,18 +965,30 @@ body.kh-sheet-open { overflow: hidden; }
     background-image: var(--kh-card-art);
     background-size: cover;
     background-position: center;
+    opacity: var(--kh-rowart-opacity);
 }
 .setrow--art::after {
     content: "";
     position: absolute;
     inset: 0;
     z-index: 0;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.76) 55%, rgba(0, 0, 0, 0.72) 100%);
+    background: var(--kh-rowart-scrim);
 }
 .setrow--art > * { position: relative; z-index: 1; }
-.setrow--art .setrow__title { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75); }
-.setrow--art .setrow__artist { color: rgba(255, 255, 255, 0.85); }
-.setrow--art .setrow__pos { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.setrow--art .setrow__title { color: var(--kh-rowart-fg); }
+.setrow--art .setrow__artist { color: var(--kh-rowart-fg-muted); }
+.setrow--art .setrow__pos { background: var(--kh-rowart-pos-bg); color: var(--kh-rowart-fg); }
+/* Over a cover a transparent ring takes its contrast from whatever is behind it, which is a photograph — so on
+   art rows the ✓ becomes an OPAQUE disc in the row's own surface colour with a strong ring. The art never shows
+   through it, so it reads the same on a black cover and a bright one. */
+.setrow--art .setrow__check {
+    border-color: var(--kh-rowart-ctl-border);
+    background: var(--kh-rowart-ctl-bg);
+    box-shadow: var(--kh-rowart-ctl-shadow);
+}
+.setrow--art .setrow__remove { color: var(--kh-rowart-fg); opacity: 0.9; }
+/* Checked off: the accent fill is its own backplate, so drop the scrim disc rather than muddying the colour. */
+.setrow--art.done .setrow__check { background: var(--kh-primary); box-shadow: none; }
 .setrow__handle {
     cursor: grab; color: var(--kh-text-muted); font-size: 1.05rem; padding: 0.1rem 0.2rem;
     touch-action: none; user-select: none; line-height: 1; flex: 0 0 auto;

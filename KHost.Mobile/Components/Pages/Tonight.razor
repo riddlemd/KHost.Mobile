@@ -73,16 +73,17 @@ else
 <RatingPromptSheet Item="_ratingPromptItem" RatePerformances="Settings.RatePerformances"
                    OnCommit="OnRatingCommitAsync" OnCancel="OnRatingCancel" />
 
-@* The same card My Songs opens, read-only here: a set list is for singing, not curating, and the row's own ✓ / ✕
-   already own the set mechanics — so no Edit, and no "Mark sung" competing with the check-off. Lyrics and history
-   stay unwired because their sheets live in My Songs; the card just omits those buttons. *@
+@* The same card My Songs opens, but informational here: the row's own ✓ / ✕ own the set mechanics, so leaving
+   Mark sung and the tonight toggle unwired keeps the card from offering a second, subtly different way to do
+   either (a check-off also completes the row; the card's wouldn't). Lyrics and history stay unwired because their
+   sheets live in My Songs. The card renders a button only for the callbacks it's given, so each just disappears. *@
 <SongDetailSheet Item="_detailItem" AllowEdit="false"
                  ArtStyle="@(_detailItem is null ? null : ArtStyle(_detailItem))"
                  InTonight="true"
                  KaraFunAvailable="@(Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
                  BayesScore="DetailStar"
                  RoundedAverage="@(DetailStar is { } s ? (int)Math.Round(s, MidpointRounding.AwayFromZero) : 0)"
-                 OnClose="CloseDetail" OnToggleTonight="RemoveFromTonightAsync"
+                 OnClose="CloseDetail"
                  OnOpenYouTube="OpenYouTubeAsync" OnOpenSpotify="OpenSpotifyAsync"
                  OnOpenKaraFun="OpenKaraFunAsync"
                  OnEnjoymentChanged="UpdateEnjoymentAsync" />
@@ -399,15 +400,6 @@ else
             OpenDetail(song);
     }
 
-    // The card's Tonight button, which here can only mean "take it back off the set".
-    private async Task RemoveFromTonightAsync()
-    {
-        if (_detailItem is null)
-            return;
-        var song = _detailItem;
-        _detailItem = null;
-        await TonightStore.RemoveAsync(song.Id);
-    }
 
     private async Task UpdateEnjoymentAsync(int rating)
     {
