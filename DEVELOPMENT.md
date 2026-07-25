@@ -60,7 +60,7 @@ dotnet run scripts/backup-device-data.cs -- restore <file.tar.gz>  # push a back
 #   restore also takes -y/--yes to skip the confirmation
 ```
 
-The script is a **[.NET 10 file-based app](https://learn.microsoft.com/dotnet/csharp/fundamentals/program-structure/top-level-statements)** (`scripts/*.cs` run with `dotnet run`) — our convention for repo scripts, so they run identically on Windows, Linux, and macOS with no extra dependency beyond the .NET SDK everyone already has. (On Unix you can also `chmod +x scripts/backup-device-data.cs` and run it directly via its shebang.) It uses `adb run-as khost.mobile` (works only on the **Debug**, debuggable build — no root needed) to stream a tar of the app's private data dir off the device, gzipped in-process (no host `tar`/`gzip` needed). Backups land in `device-backups/`, gitignored so real singer data never reaches GitHub. `restore` force-stops the app, then extracts the tarball back in place; relaunch to see the restored data.
+The script is a **.NET 10 file-based app** (`scripts/*.cs` run with `dotnet run` — the repo convention, cross-platform with no dependency beyond the SDK). It pulls the app's private data via `adb run-as khost.mobile` (Debug builds only — no root) into `device-backups/`, which is gitignored so real singer data never reaches GitHub. `restore` force-stops the app and puts the data back; relaunch to see it.
 
 > **Wireless adb tip:** the wireless-debugging **port rotates each session** — read it live from Settings → Developer options → Wireless debugging. If `adb connect` wedges after a failed attempt, `adb kill-server && adb start-server` clears it.
 
@@ -86,6 +86,10 @@ dotnet test KHost.Mobile.IntegrationTests/KHost.Mobile.IntegrationTests.csproj "
 
 Neither test project needs the MAUI workload: they target plain `net10.0`. The MAUI-free source they cover (models, stores) is pulled in via linked `<Compile>` since a `net10.0` project can't reference the MAUI head. The stores' only device dependency — the app-data folder — is abstracted behind `IAppDataDirectory`, which the integration tests point at a throwaway temp directory.
 
+### Driving the running UI
+
+Neither suite touches the UI; gesture- and sheet-shaped changes are verified by driving the app's WebView over CDP with the tools in **[`playwright/`](playwright/README.md)**. Two drivers: `khdrive.mjs` (full Playwright, use on a physical device) and `cdp.mjs` (raw CDP with real-touch `tap`/`swipeDown`, use on the emulator — its older WebView rejects Playwright's connect handshake). The README there has the attach flow, examples, and the on-device gotchas.
+
 ## 📸 Screenshots
 
 **Screenshot / mobile-preview target size:** **786 × 1704 px** — a **393 × 852** (iPhone 15/16) viewport at **2× device-pixel-ratio**. Capture screenshots and size the mobile preview to this so everything lines up with the screenshot grid.
@@ -104,18 +108,9 @@ Instead, the cover bytes are streamed to the WebView via a `DotNetStreamReferenc
 
 **Mac Catalyst head — a layout preview, not a product.** There is no desktop KHost Cue and none is planned. The Catalyst head exists for the same reason as the Windows head: iterating on the Blazor UI without waiting on an emulator. Everything about it is tuned for that and nothing for shipping — it builds `maccatalyst-arm64` only (native on Apple silicon, one slice instead of two), and `App.CreateWindow` opens it at exactly the **393 × 852** mobile-preview viewport documented under Screenshots, so what you see matches the screenshot grid. It stays resizable so you can drag it wider to find where a layout breaks.
 
-**Getting Catalyst to actually honor that viewport** took more than setting `Window.Width`/`Height`, and the reasons are all Catalyst-isms worth knowing before touching `App.PinToMobilePreviewViewport`:
-
-- **Size without position is a silent no-op.** MAUI's `WindowExtensions.UpdateCoordinates` issues the macOS geometry request only when `X`, `Y`, `Width` *and* `Height` are all non-`NaN`. Set just the size and nothing happens at all — the window opens at Catalyst's 1024 × 768 default, i.e. a desktop-wide layout, which is the one thing this head is not for.
-- **Even with a position, the geometry request is clamped to the screen's visible frame.** The Dock alone is enough to hand back a window shorter than requested, so the viewport silently stops matching the grid. The scene's **size restrictions** (`Window.MinimumHeight`/`MaximumHeight`) are *not* clamped, so pinning min = max is the only way to land an exact size. The pin is released half a second later so the window is still draggable — releasing it in the same pass just leaves the window at its old size, because the pin is what drives the resize.
-- **The size applies to the window frame, and macOS claims part of it back** as a safe-area inset for the title bar, leaving the web view a title bar short of the viewport. The inset reads `0` until the first layout pass settles, so it's measured rather than hard-coded (a hard-coded title-bar height would rot across macOS versions): the page *is* the web view area, so whatever its height comes up short is exactly what the window has to grow by. Net result on macOS 15: an 884 pt window for an 852 pt viewport.
-- **`UIDeviceFamily` includes `6` (Mac idiom, "Optimize Interface for Mac").** Without it Catalyst runs scaled-iPad mode and draws everything at **77%**, so the 393 × 852 viewport occupies 303 × 657 macOS points and a 2× screen capture comes out 606 × 1314 — off the 786 × 1704 screenshot grid, with every layout measurement off by the same 1.3×. Nothing in the app branches on `DeviceInfo.Idiom`, so the Mac idiom only changes scaling.
-
-To capture a screenshot from this head, grab the window (`screencapture -l <windowid>`) and crop the title bar off the top — the remainder is exactly 786 × 1704.
+Landing that exact viewport takes several Catalyst workarounds (a min = max size-restriction pin, a measured title-bar correction, and the Mac idiom in `UIDeviceFamily` for 1 : 1 point scaling) — the mechanics and their reasons are commented where they live, in `App.PinToMobilePreviewViewport` and the Catalyst `Info.plist`. To capture a screenshot from this head, grab the window (`screencapture -l <windowid>`) and crop the title bar off the top — the remainder is exactly 786 × 1704.
 
 Treat a wide Catalyst window as a diagnostic, not a bug: the shell is deliberately mobile-first (fixed bottom tab bar, full-bleed cards, swipe and press-and-hold gestures), so stretching it *should* look wrong. Don't add desktop breakpoints to `wwwroot/app.css` to "fix" it.
-
-It cost almost nothing to add because the platform-specific code was already conditioned on `ANDROID || IOS`, and Catalyst defines `MACCATALYST` rather than `IOS`: the ML Kit / Apple Vision QR scanner is scoped out of the package reference and falls through to `UnsupportedQrScanner`, and `MauiHaptics` already swallows `FeatureNotSupportedException`. Two things did need adding — `NSLocationWhenInUseUsageDescription` in the Catalyst `Info.plist` (Apple *aborts the process* rather than throwing when location is requested without it, so its absence would crash rather than degrade) and `com.apple.security.personal-information.location` in `Entitlements.plist`, since App Sandbox otherwise denies Core Location outright. Both are needed to exercise the venue auto-select while testing, not for distribution.
 
 Mouse input covers the gestures: `swipe.js` runs off pointer events, so click-and-drag is a swipe and click-and-hold is a press-and-hold. Where a gesture is awkward to trigger, the reachable equivalents added for assistive tech work too — Venues' *Active* toggle and the singer sheet's *Switch to this singer*.
 

@@ -43,6 +43,28 @@ npm run walk-tutorial      # drives Settings → Help → Replay, then steps eve
                            # logging chapter/title/route/spotlight and saving shots/ screenshots.
 ```
 
+## On the emulator, use `cdp.mjs` instead
+
+Playwright can't attach to the emulator's WebView — `connectOverCDP` calls `Browser.setDownloadBehavior`, which
+that older WebView doesn't implement ("Browser context management is not supported"). A physical device's WebView
+is current and fine. `cdp.mjs` is a small raw-CDP client (Node's built-in `WebSocket`, no dependency) for exactly
+that case. Same `adb forward` prerequisite; no `npm install` needed.
+
+```js
+import { evaluate, tap, swipeDown, close } from './cdp.mjs';
+await tap('.song-card');                     // opens the detail card
+await swipeDown('.sheet');                   // pull-to-dismiss it
+console.log(await evaluate(`return document.body.classList.contains('kh-sheet-open')`));
+close();
+```
+
+- **Prefer `tap`/`swipeDown` over a DOM `.click()`** — they dispatch real `Input.dispatchTouchEvent` touch
+  points, so gestures wired through `swipe.js` (tap vs. hold vs. swipe) and `khSheet` (pull-down-to-dismiss)
+  actually fire; a `.click()` reaches Blazor's `@onclick` and nothing else.
+- **Seeding an emulator:** write the store files directly (`adb shell run-as khost.mobile sh -c 'cat >
+  files/…'`) rather than driving the add form. The per-singer filenames use the **dash-less** GUID
+  (`song-list-<32 hex>.json`) — a dashed name is silently ignored, since nothing reads it.
+
 ## Write your own
 
 ```js
