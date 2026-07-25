@@ -276,7 +276,7 @@ public sealed class AlbumArtService(
         string? art;
         try
         {
-            var meta = await metadata.LookupAsync(song.Title, song.Artist);
+            var meta = (await metadata.LookupAsync(song.Title, song.Artist)).Match;
             if (meta?.ArtworkUrl is string itunesArt)
             {
                 art = itunesArt;

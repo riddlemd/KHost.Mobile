@@ -127,4 +127,18 @@ public sealed class SongListItem
     /// rate-limited iTunes call chasing a cover that isn't there. Separate from <see cref="MetadataLookedUp"/>
     /// because a song enriched before album art existed has year/genre but no <see cref="ArtworkUrl"/>.</summary>
     public bool ArtworkLookedUp { get; set; }
+
+    /// <summary>The catalogue's spelling of this song when the lookup found no exact match but one near-miss
+    /// that reads like a typo — "Bohemian Rhapsody" for a song entered as "Bohemian Rapsody". Null when the
+    /// lookup matched, found nothing close, or the user waved the suggestion off.
+    /// <para>Persisted because the lookup behind it is rate-limited and runs once per song: losing this on
+    /// restart would mean never showing the hint again.</para></summary>
+    public string? SuggestedTitle { get; set; }
+
+    /// <inheritdoc cref="SuggestedTitle" />
+    public string? SuggestedArtist { get; set; }
+
+    /// <summary>Whether a spelling correction is on offer for this song.</summary>
+    [JsonIgnore]
+    public bool HasSuggestion => SuggestedTitle is not null && SuggestedArtist is not null;
 }

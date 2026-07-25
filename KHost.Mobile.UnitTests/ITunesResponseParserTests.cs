@@ -23,7 +23,7 @@ public class ITunesResponseParserTests
         }
         """;
 
-        var meta = ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance");
+        var meta = ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance").Match;
 
         Assert.NotNull(meta);
         Assert.Equal("Helena", meta!.MatchedTitle);
@@ -50,7 +50,7 @@ public class ITunesResponseParserTests
         }
         """;
 
-        var meta = ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance");
+        var meta = ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance").Match;
 
         Assert.NotNull(meta);
         Assert.Equal("https://is1-ssl.mzstatic.com/image/thumb/abc/source/300x300bb.jpg", meta!.ArtworkUrl);
@@ -68,7 +68,7 @@ public class ITunesResponseParserTests
         }
         """;
 
-        var meta = ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance");
+        var meta = ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance").Match;
 
         Assert.NotNull(meta);
         Assert.Null(meta!.ArtworkUrl);
@@ -90,7 +90,7 @@ public class ITunesResponseParserTests
         }
         """;
 
-        Assert.Null(ITunesResponseParser.ParseBestMatch(json, "Wow, I Can Get Sexual Too", "Say Anything"));
+        Assert.Null(ITunesResponseParser.ParseBestMatch(json, "Wow, I Can Get Sexual Too", "Say Anything").Match);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class ITunesResponseParserTests
         }
         """;
 
-        var meta = ITunesResponseParser.ParseBestMatch(json, "Africa", "Toto");
+        var meta = ITunesResponseParser.ParseBestMatch(json, "Africa", "Toto").Match;
 
         Assert.NotNull(meta);
         Assert.Equal("TOTO", meta!.MatchedArtist);
@@ -128,7 +128,7 @@ public class ITunesResponseParserTests
         { "results": [ { "trackName": {{System.Text.Json.JsonSerializer.Serialize(candidateTitle)}}, "artistName": "The Band", "releaseDate": "1990-01-01T00:00:00Z", "primaryGenreName": "Rock" } ] }
         """;
 
-        var meta = ITunesResponseParser.ParseBestMatch(json, requested, "The Band");
+        var meta = ITunesResponseParser.ParseBestMatch(json, requested, "The Band").Match;
 
         Assert.NotNull(meta);
         Assert.Equal(1990, meta!.Year);
@@ -139,7 +139,7 @@ public class ITunesResponseParserTests
     {
         const string json = """{ "results": [ { "trackName": "Mystery Song", "artistName": "The Band" } ] }""";
 
-        var meta = ITunesResponseParser.ParseBestMatch(json, "Mystery Song", "The Band");
+        var meta = ITunesResponseParser.ParseBestMatch(json, "Mystery Song", "The Band").Match;
 
         Assert.NotNull(meta);
         Assert.Equal("Mystery Song", meta!.MatchedTitle);
@@ -153,13 +153,13 @@ public class ITunesResponseParserTests
         // No artist to verify against → we won't guess.
         const string json = """{ "results": [ { "trackName": "Helena", "artistName": "My Chemical Romance", "primaryGenreName": "Alternative" } ] }""";
 
-        Assert.Null(ITunesResponseParser.ParseBestMatch(json, "Helena", ""));
+        Assert.Null(ITunesResponseParser.ParseBestMatch(json, "Helena", "").Match);
     }
 
     [Fact]
     public void Returns_null_on_zero_results()
     {
-        Assert.Null(ITunesResponseParser.ParseBestMatch("""{ "resultCount": 0, "results": [] }""", "Helena", "My Chemical Romance"));
+        Assert.Null(ITunesResponseParser.ParseBestMatch("""{ "resultCount": 0, "results": [] }""", "Helena", "My Chemical Romance").Match);
     }
 
     [Theory]
@@ -169,6 +169,6 @@ public class ITunesResponseParserTests
     [InlineData("{ }")]
     public void Returns_null_on_unusable_payload(string json)
     {
-        Assert.Null(ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance"));
+        Assert.Null(ITunesResponseParser.ParseBestMatch(json, "Helena", "My Chemical Romance").Match);
     }
 }

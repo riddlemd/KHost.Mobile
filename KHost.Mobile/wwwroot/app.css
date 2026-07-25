@@ -29,6 +29,7 @@
     --kh-text-muted: #6b6b76;
     --kh-border: #e3e3ea;
     --kh-danger: #dc2626;
+    --kh-warn: #d97706;        /* "check this" amber — never destructive, that's --kh-danger */
     --kh-star-hot: #e5484d;    /* "how it went" rating — warm red */
     --kh-star-cool: #3b82f6;   /* "enjoyment" rating — blue (distinct from the gold favorite star) */
     --kh-tag-bg: color-mix(in srgb, var(--kh-primary) 13%, var(--kh-surface));   /* custom-tag chip — soft violet */
@@ -58,6 +59,7 @@
         --kh-text-muted: #9a9aa6;
         --kh-border: #2e2e3a;
         --kh-danger: #f87171;
+        --kh-warn: #fbbf24;
         --kh-tag-bg: color-mix(in srgb, var(--kh-primary) 22%, var(--kh-surface));
         --kh-tag-fg: #c4b5fd;
         --kh-rowart-opacity: 1;
@@ -87,6 +89,7 @@
     --kh-text-muted: #9a9aa6;
     --kh-border: #2e2e3a;
     --kh-danger: #f87171;
+    --kh-warn: #fbbf24;
     --kh-star-hot: #ff6369;
     --kh-star-cool: #60a5fa;
     --kh-tag-bg: color-mix(in srgb, var(--kh-primary) 22%, var(--kh-surface));
@@ -1281,6 +1284,43 @@ body.kh-sheet-open { overflow: hidden; }
     color: var(--kh-text-muted);
 }
 
+/* "Did you mean …?" block in the detail sheet, when the lookup found only a near-miss. Tinted rather than
+   plain muted text like .suggest-match: this one asks a question and needs to be found, not just read. */
+.typo-hint {
+    margin-top: 0.65rem;
+    margin-bottom: 0.9rem;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid color-mix(in srgb, var(--kh-warn) 40%, transparent);
+    border-radius: var(--kh-radius);
+    background: color-mix(in srgb, var(--kh-warn) 10%, var(--kh-surface));
+}
+.typo-hint__text {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--kh-text);
+}
+.typo-hint__mark {
+    color: var(--kh-warn);
+    margin-right: 0.15rem;
+}
+.typo-hint__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.6rem;
+}
+/* Both need the extra class to outrank .btn-primary's full-width and .btn-link's accent color, which are
+   defined further down the sheet. */
+.typo-hint__actions .typo-hint__apply {
+    width: auto;
+    padding: 0.35rem 1rem;
+    font-size: 0.82rem;
+}
+.typo-hint__actions .typo-hint__dismiss {
+    font-size: 0.8rem;
+    color: var(--kh-text-muted);
+}
+
 /* Post-import review list (found year/genre for the freshly-imported songs). */
 .review-list { margin-top: 0.6rem; }
 .review-spacer { width: 1.15rem; flex-shrink: 0; }
@@ -1482,6 +1522,8 @@ body.kh-sheet-open { overflow: hidden; }
 
 .song-card--art .song-card__title,
 .song-card--art .song-card__artist { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75); }
+/* The mark sits inside the title, so it would otherwise inherit the title's flat #fff over a cover. */
+.song-card--art .song-card__typo { color: #fbbf24; }
 .song-card--art .song-card__genre { background: rgba(255, 255, 255, 0.18); color: #fff; }
 .song-card--art .song-card__year { color: rgba(255, 255, 255, 0.9); }
 .song-card--art .tag-chip { background: color-mix(in srgb, var(--kh-primary) 55%, transparent); color: #fff; }
@@ -1558,6 +1600,15 @@ body.kh-sheet-open { overflow: hidden; }
     opacity: 0.65;           /* singer: dimmer than the title */
     margin-top: 0.1rem;
     overflow-wrap: anywhere;
+}
+/* "This looks misspelled" mark, trailing the title. Inline-block so a wrap carries it whole onto the next
+   line instead of orphaning it from the last word. */
+.song-card__typo {
+    display: inline-block;
+    margin-left: 0.3rem;
+    font-size: 0.85rem;
+    color: var(--kh-warn);
+    cursor: help;
 }
 
 /* Lower area: genre + year on the left, rating stars pinned to the right. */

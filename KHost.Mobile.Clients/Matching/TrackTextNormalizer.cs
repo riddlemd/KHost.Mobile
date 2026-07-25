@@ -53,6 +53,22 @@ internal static class TrackTextNormalizer
         return string.Join(' ', sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
+    /// <summary>
+    /// Drops "(Acoustic)" / "[Live]" / "(2011 Remaster)" style asides while leaving the case and punctuation
+    /// of the rest alone — for text that will be shown or written back, not compared.
+    /// </summary>
+    /// <remarks>
+    /// A title that genuinely contains brackets ("Exit Music (For a Film)") loses that part. That's the same
+    /// call <see cref="Normalize"/> already makes for matching, so the two agree on what counts as one song,
+    /// and catalogue version-suffixes are far more common than bracketed real titles.
+    /// </remarks>
+    public static string StripAsides(string value)
+    {
+        var text = StripBetween(value, '(', ')');
+        text = StripBetween(text, '[', ']').Trim();
+        return text.Length == 0 ? value.Trim() : text;
+    }
+
     private static string StripBetween(string text, char open, char close)
     {
         while (true)

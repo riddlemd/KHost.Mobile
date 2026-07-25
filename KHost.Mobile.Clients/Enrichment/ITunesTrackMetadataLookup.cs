@@ -10,10 +10,10 @@ namespace KHost.Mobile.Clients.Enrichment;
 /// </remarks>
 public sealed class ITunesTrackMetadataLookup(HttpClient httpClient) : ITrackMetadataLookup
 {
-    public async Task<TrackMetadata?> LookupAsync(string title, string artist, CancellationToken cancellationToken = default)
+    public async Task<TrackLookupResult> LookupAsync(string title, string artist, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(title))
-            return null;
+            return TrackLookupResult.None;
 
         var term = string.IsNullOrWhiteSpace(artist) ? title.Trim() : $"{artist.Trim()} {title.Trim()}";
         // Pull a handful of candidates (not just the top hit) so the real recording can still be found when

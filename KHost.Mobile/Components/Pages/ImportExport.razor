@@ -807,7 +807,7 @@
                 // yet), so always space them out to stay under the rate limit.
                 try
                 {
-                    row.Suggestion = await Metadata.LookupAsync(row.Item.Title, row.Item.Artist, token);
+                    row.Suggestion = (await Metadata.LookupAsync(row.Item.Title, row.Item.Artist, token)).Match;
                 }
                 catch (MetadataLookupException)
                 {

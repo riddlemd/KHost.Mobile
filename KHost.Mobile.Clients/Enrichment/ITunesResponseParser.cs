@@ -5,38 +5,42 @@ using KHost.Mobile.Clients.Matching;
 namespace KHost.Mobile.Clients.Enrichment;
 
 /// <summary>
-/// Parses an iTunes Search API response into <see cref="TrackMetadata"/>. Pure — no network. The API
+/// Parses an iTunes Search API response into a <see cref="TrackLookupResult"/>. Pure — no network. The API
 /// returns <c>{ "resultCount": n, "results": [ { trackName, artistName, releaseDate, primaryGenreName, … } ] }</c>.
 /// We do NOT trust the top-ranked result: iTunes free-text matching happily returns covers and unrelated
-/// songs. Instead we return the first result whose track name AND artist both match the requested song
-/// (after light normalization), or null when none match — better no data than wrong data.
+/// songs. Instead we keep only a result whose track name AND artist both match the requested song (after
+/// light normalization) — better no data than wrong data.
 /// </summary>
 public static class ITunesResponseParser
 {
     /// <summary>
     /// Returns metadata from the first result whose <c>trackName</c> and <c>artistName</c> both match
     /// <paramref name="requestedTitle"/> / <paramref name="requestedArtist"/> (case/punctuation/accent- and
-    /// feature-suffix-insensitive), or null when nothing matches or the artist is unknown (nothing to verify against).
+    /// feature-suffix-insensitive).
+    /// <para>Failing that, returns the closest near-miss as a <see cref="TrackLookupResult.Suggestion"/> so
+    /// the caller can offer a spelling correction — see <see cref="FindSuggestion"/> for how narrow that is.
+    /// Returns <see cref="TrackLookupResult.None"/> when nothing matches or the artist is unknown (nothing
+    /// to verify against).</para>
     /// </summary>
-    public static TrackMetadata? ParseBestMatch(string json, string requestedTitle, string requestedArtist)
+    public static TrackLookupResult ParseBestMatch(string json, string requestedTitle, string requestedArtist)
     {
         if (string.IsNullOrWhiteSpace(json)
             || string.IsNullOrWhiteSpace(requestedTitle)
             || string.IsNullOrWhiteSpace(requestedArtist))
         {
-            return null;
+            return TrackLookupResult.None;
         }
 
         JsonDocument doc;
         try { doc = JsonDocument.Parse(json); }
-        catch (JsonException) { return null; }
+        catch (JsonException) { return TrackLookupResult.None; }
 
         using (doc)
         {
             if (!doc.RootElement.TryGetProperty("results", out var results)
                 || results.ValueKind != JsonValueKind.Array)
             {
-                return null;
+                return TrackLookupResult.None;
             }
 
             var wantTitle = TrackTextNormalizer.Normalize(requestedTitle);
@@ -54,12 +58,20 @@ public static class ITunesResponseParser
                 var genre = result.Str("primaryGenreName");
                 var year = YearFromIsoDate(result.Str("releaseDate"));
                 var artwork = UpscaleArtwork(result.Str("artworkUrl100"));
-                return new TrackMetadata(title, artist, year, genre, artwork);
+                return new TrackLookupResult(new TrackMetadata(title, artist, year, genre, artwork), null);
             }
 
-            return null;
+            return new TrackLookupResult(null, FindSuggestion(results, wantTitle, wantArtist));
         }
     }
+
+    // iTunes has no notion of an artist variant, so the anchor is plain normalized equality.
+    private static TrackSuggestion? FindSuggestion(JsonElement results, string wantTitle, string wantArtist)
+        => TrackSuggestionFinder.Best(
+            results.EnumerateArray().Select(r => (r.Str("trackName"), r.Str("artistName"))),
+            wantTitle,
+            wantArtist,
+            artist => TrackTextNormalizer.Normalize(artist) == wantArtist);
 
     // iTunes returns a 100×100 thumbnail URL like ".../source/100x100bb.jpg". Swap the dimensions for a
     // crisper 300×300 that still covers a card background without bloating the cached/base64-encoded image.

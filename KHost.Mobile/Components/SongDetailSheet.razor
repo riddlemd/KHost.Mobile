@@ -131,6 +131,21 @@
             {
                 <div class="suggest-match">@AutoFilledNote</div>
             }
+            @* Shown only when the host wired both answers — the read-only Tonight host can't service either. *@
+            @if (Item.HasSuggestion && OnApplySuggestion.HasDelegate && OnDismissSuggestion.HasDelegate)
+            {
+                <div class="typo-hint">
+                    <div class="typo-hint__text">
+                        <span class="typo-hint__mark" aria-hidden="true">⚠</span>
+                        No exact match. Did you mean
+                        <strong>@Item.SuggestedTitle</strong> — <strong>@Item.SuggestedArtist</strong>?
+                    </div>
+                    <div class="typo-hint__actions">
+                        <button class="btn btn-primary typo-hint__apply" @onclick="OnApplySuggestion">Use this</button>
+                        <button class="btn-link typo-hint__dismiss" @onclick="OnDismissSuggestion">Not a typo</button>
+                    </div>
+                </div>
+            }
             @if (OnMarkSung.HasDelegate)
             {
                 <button class="btn btn-secondary sheet__sang-btn" @onclick="OnMarkSung">
@@ -246,6 +261,13 @@
 
     /// <summary>"We filled in X" note from the last auto-fill, shown under the fields. Null hides it.</summary>
     [Parameter] public string? AutoFilledNote { get; set; }
+
+    /// <summary>Takes the song's <see cref="SongListItem.SuggestedTitle"/>/<see cref="SongListItem.SuggestedArtist"/>
+    /// as the real spelling. Leave unwired to hide the hint entirely.</summary>
+    [Parameter] public EventCallback OnApplySuggestion { get; set; }
+
+    /// <summary>Rejects the suggested spelling for good.</summary>
+    [Parameter] public EventCallback OnDismissSuggestion { get; set; }
 
     /// <summary>Whether the song is already on tonight's set — drives the Tonight button's label and the KaraFun split.</summary>
     [Parameter] public bool InTonight { get; set; }

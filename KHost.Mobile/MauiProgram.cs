@@ -127,6 +127,12 @@ public static class MauiProgram
         builder.Services.AddHttpClient<ICoverArtLookup, DeezerCoverArtLookup>()
             .AddHttpMessageHandler<LoggingHttpMessageHandler>();
 
+        // Keyless spelling-correction FALLBACK (Deezer again, but the plain free-text search — the field-scoped
+        // one above is exact-only and returns nothing for a typo). Consulted only when iTunes offered neither a
+        // match nor a correction.
+        builder.Services.AddHttpClient<ISpellingSuggestionLookup, DeezerSpellingSuggestionLookup>()
+            .AddHttpMessageHandler<LoggingHttpMessageHandler>();
+
         // Cover-image downloads for IAlbumArtCache. Hits the artwork CDN (not the rate-limited Search API), so a
         // plain named client is enough; a short timeout keeps a slow image from hanging the best-effort load.
         builder.Services.AddHttpClient("album-art", http => http.Timeout = TimeSpan.FromSeconds(20))

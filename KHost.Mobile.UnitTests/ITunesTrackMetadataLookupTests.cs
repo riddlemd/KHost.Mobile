@@ -10,11 +10,11 @@ public class ITunesTrackMetadataLookupTests
     private static ITunesTrackMetadataLookup Lookup(HttpMessageHandler handler) => new(new HttpClient(handler));
 
     [Fact]
-    public async Task A_blank_title_returns_null_without_calling_the_network()
+    public async Task A_blank_title_returns_nothing_without_calling_the_network()
     {
         var handler = new StubHandler(HttpStatusCode.OK);
 
-        Assert.Null(await Lookup(handler).LookupAsync("   ", "Toto"));
+        Assert.Null((await Lookup(handler).LookupAsync("   ", "Toto")).Match);
 
         Assert.Null(handler.LastRequest);
     }
@@ -30,11 +30,14 @@ public class ITunesTrackMetadataLookupTests
     }
 
     [Fact]
-    public async Task No_match_returns_null_rather_than_throwing()
+    public async Task No_match_returns_nothing_rather_than_throwing()
     {
         var handler = new StubHandler(HttpStatusCode.OK, """{"resultCount":0,"results":[]}""");
 
-        Assert.Null(await Lookup(handler).LookupAsync("Africa", "Toto"));
+        var result = await Lookup(handler).LookupAsync("Africa", "Toto");
+
+        Assert.Null(result.Match);
+        Assert.Null(result.Suggestion);
     }
 
     [Theory]

@@ -9,6 +9,7 @@
 @inject ILinkLauncher Links
 @inject ITrackMetadataLookup Metadata
 @inject ICoverArtLookup ArtFallback
+@inject ISpellingSuggestionLookup Spelling
 @inject ILyricsClient Lyrics
 @inject ILyricsCache LyricsCache
 @inject IAlbumArtService AlbumArt
@@ -398,7 +399,15 @@ else
                         title="@(item.IsFavorite ? "Remove from favorites" : "Add to favorites")"
                         aria-pressed="@item.IsFavorite"
                         @onclick="() => ToggleFavoriteAsync(item)">★</button>
-                <div class="song-card__title">@item.Title</div>
+                <div class="song-card__title">
+                    @item.Title
+                    @if (item.HasSuggestion)
+                    {
+                        @* Not a button: the whole card already opens the sheet that explains and fixes it. *@
+                        <span class="song-card__typo" title="Possible misspelling — tap to see the suggestion"
+                              aria-label="Possible misspelling">⚠</span>
+                    }
+                </div>
                 @if (!string.IsNullOrWhiteSpace(item.Artist))
                 {
                     <div class="song-card__artist">@item.Artist</div>
@@ -486,6 +495,7 @@ else
                  OnOpenYouTube="OpenYouTubeAsync" OnOpenSpotify="OpenSpotifyAsync"
                  OnOpenKaraFun="OpenKaraFunAsync" OnAddToTonightAndOpenKaraFun="AddToTonightAndOpenKaraFunAsync"
                  OnOpenLyrics="OpenLyricsAsync" OnEnjoymentChanged="v => UpdateEnjoymentAsync(_detailItem!, v)"
+                 OnApplySuggestion="ApplySuggestionAsync" OnDismissSuggestion="DismissSuggestionAsync"
                  OnSave="SaveDetailEditAsync" />
 
 <RatingPromptSheet Item="_ratingPromptItem" RatePerformances="Settings.RatePerformances"
@@ -1372,10 +1382,10 @@ else
             return null;
 
         Log.LogDebug("Auto-fill lookup start: “{Title}” — “{Artist}”", item.Title, item.Artist);
-        TrackMetadata? meta;
+        TrackLookupResult lookup;
         try
         {
-            meta = await Metadata.LookupAsync(item.Title, item.Artist, token);
+            lookup = await Metadata.LookupAsync(item.Title, item.Artist, token);
         }
         catch (MetadataLookupException ex)
         {
@@ -1387,6 +1397,7 @@ else
         if (token.IsCancellationRequested)
             return null;
 
+        var meta = lookup.Match;
         Log.LogDebug("Auto-fill lookup done: “{Title}” — “{Artist}” → matched {Matched}, year={Year}, genre={Genre}, cover={HasCover}",
             item.Title, item.Artist,
             meta is null ? "(no match)" : $"“{meta.MatchedTitle} — {meta.MatchedArtist}”",
@@ -1422,6 +1433,24 @@ else
                 Log.LogWarning(ex, "Deezer cover fallback failed for “{Title}” — “{Artist}”; will retry later", item.Title, item.Artist);
             }
         }
+        // Nothing matched, but something may have been one slip away. iTunes offers its own near-miss from the
+        // call already made; Deezer costs an extra one, so it's asked only when iTunes had nothing at all AND
+        // the exact-title cover search above also came up empty — a cover found by exact title+artist proves
+        // the spelling is already right, so there'd be nothing to correct.
+        var suggestion = lookup.Suggestion;
+        if (suggestion is null && meta is null && artUrl is null)
+        {
+            suggestion = await Spelling.SuggestAsync(item.Title, item.Artist, token);
+            if (token.IsCancellationRequested)
+                return null;
+        }
+
+        item.SuggestedTitle = suggestion?.Title;
+        item.SuggestedArtist = suggestion?.Artist;
+        if (suggestion is { } s)
+            Log.LogInformation("No match for “{Title}” — “{Artist}”; {Source} suggests “{SuggestedTitle}” — “{SuggestedArtist}”",
+                item.Title, item.Artist, lookup.Suggestion is null ? "Deezer" : "iTunes", s.Title, s.Artist);
+
         if (item.ArtworkUrl is null && artUrl is not null)
             item.ArtworkUrl = artUrl;
         item.ArtworkLookedUp = artLookedUp;   // hit or miss across both sources (unless Deezer failed transiently)
@@ -1537,12 +1566,53 @@ else
             _detailItem.ArtworkUrl = null;
             _detailItem.ArtworkLookedUp = false;   // re-open the one-shot art lookup for the new title/artist
             _ = AlbumArt.DropAsync(_detailItem.Id);   // drop the stale cover so the card doesn't keep showing it
+            ReopenLookup(_detailItem);
         }
 
         await Store.UpdateAsync(_detailItem);
 
         if (identityChanged)
             await LoadDetailSuggestionAsync(_detailItem);   // fetch + cache a fresh cover for the new song
+    }
+
+    // ---- ⚠ Spelling suggestion ---------------------------------------------------------------
+    // When nothing matched but one result was a near-miss, the lookup parks it on the song and the card
+    // flags it. Both answers are terminal: applying re-runs the lookup on the corrected text, and waving it
+    // off clears it for good — MetadataLookedUp is already set, so no later lookup can raise it again.
+
+    // A different title/artist invalidates the one-shot lookup and anything it concluded.
+    private static void ReopenLookup(SongListItem item)
+    {
+        item.MetadataLookedUp = false;
+        item.SuggestedTitle = null;
+        item.SuggestedArtist = null;
+    }
+
+    private async Task ApplySuggestionAsync()
+    {
+        if (_detailItem is not { HasSuggestion: true } item)
+            return;
+
+        item.Title = item.SuggestedTitle!;
+        item.Artist = item.SuggestedArtist!;
+        // The old spelling's cover (Deezer may have found one for the typo) belongs to a different song now.
+        item.ArtworkUrl = null;
+        item.ArtworkLookedUp = false;
+        _ = AlbumArt.DropAsync(item.Id);
+        ReopenLookup(item);
+
+        await Store.UpdateAsync(item);
+        await LoadDetailSuggestionAsync(item);   // the corrected text should match outright — fill from it
+    }
+
+    private async Task DismissSuggestionAsync()
+    {
+        if (_detailItem is not { HasSuggestion: true } item)
+            return;
+
+        item.SuggestedTitle = null;
+        item.SuggestedArtist = null;
+        await Store.UpdateAsync(item);
     }
 
     // ---- "Sang it" rating prompt -------------------------------------------------------------

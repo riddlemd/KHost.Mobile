@@ -41,13 +41,13 @@ public static class DeezerCoverArtParser
                 return null;
 
             var wantTitle = TrackTextNormalizer.Normalize(requestedTitle);
-            var wantArtist = Tokens(requestedArtist);
+            var wantArtist = DeezerArtistMatcher.Tokens(requestedArtist);
 
             foreach (var item in data.EnumerateArray())
             {
                 if (TrackTextNormalizer.Normalize(item.Str("title")) != wantTitle)
                     continue;
-                if (!ArtistMatches(item.Prop("artist").Str("name"), wantArtist))
+                if (!DeezerArtistMatcher.Matches(item.Prop("artist").Str("name"), wantArtist))
                     continue;
                 if (CoverUrl(item.Prop("album")) is string cover)
                     return cover;
@@ -67,27 +67,4 @@ public static class DeezerCoverArtParser
         return null;
     }
 
-    // Deezer's artist string can be a superset/subset of ours ("White Stripes" vs "The White Stripes",
-    // "Hall & Oates" vs "Daryl Hall & John Oates", "Ben Folds" vs "Ben Folds Five"). Accept an exact token
-    // match, or a subset either way as long as the shorter side has ≥2 meaningful tokens — that keeps the
-    // real variants while rejecting a single-token coincidence ("Prince" ⊄ "Prince Royce") or a wrong artist
-    // that only shares a first name ("Bo Burnham" vs "Bo Hazard").
-    private static bool ArtistMatches(string? resultArtist, HashSet<string> wantArtist)
-    {
-        var got = Tokens(resultArtist);
-        if (got.Count == 0 || wantArtist.Count == 0)
-            return false;
-        if (got.SetEquals(wantArtist))
-            return true;
-        var (smaller, larger) = got.Count <= wantArtist.Count ? (got, wantArtist) : (wantArtist, got);
-        return smaller.Count >= 2 && smaller.IsSubsetOf(larger);
-    }
-
-    private static readonly HashSet<string> StopWords = new(StringComparer.Ordinal) { "the", "and", "a" };
-
-    private static HashSet<string> Tokens(string? value)
-        => TrackTextNormalizer.Normalize(value)
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Where(t => !StopWords.Contains(t))
-            .ToHashSet(StringComparer.Ordinal);
 }
