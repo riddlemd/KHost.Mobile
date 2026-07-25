@@ -44,7 +44,7 @@ else
             @foreach (var (entry, song) in Rows())
             {
                 @* data-tut anchors are on every row; the tour's querySelector spotlights the first one. *@
-                <div class="setrow @(entry.Completed ? "done" : "") @(ArtStyle(song) is null ? "" : "setrow--art")"
+                <div class="setrow @(entry.Completed ? "done" : "") @(ArtStyle(song) is null ? "" : "setrow--art") @(AlbumArt.IsFetching(song) ? "kh-art-loading" : "")"
                      style="@ArtStyle(song)" @key="entry.SongId" data-song-id="@entry.SongId">
                     <span class="setrow__handle" title="Drag to reorder" data-tut="tonight-reorder">⠿</span>
                     <span class="setrow__pos">@(entry.Order + 1)</span>

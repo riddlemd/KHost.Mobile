@@ -42,7 +42,6 @@
 @* The roll's result, as a sheet showing the pick's own card. Rerolling leaves it open, so trying a few costs
    one tap each rather than a close-then-roll. *@
 <RollResultSheet Item="_rollPick"
-                 ArtStyle="@(_rollPick is not null && HasArt(_rollPick) ? ArtStyle(_rollPick) : null)"
                  InTonight="IsInTonight(_rollPick)"
                  ShowTonight="Settings.TonightEnabled"
                  BayesScore="@(_rollPick is null ? null : BayesStar(_rollPick))"
@@ -371,8 +370,8 @@ else
     <div class="song-cards" @ref="_swipeRoot">
         @foreach (var item in page)
         {
-            <div class="song-card @(HasArt(item) ? "song-card--art" : "")" @key="item.Id" data-song-id="@item.Id"
-                 style="@ArtStyle(item)">
+            <div class="song-card @(HasArt(item) ? "song-card--art" : "") @(AlbumArt.IsFetching(item) ? "kh-art-loading" : "")"
+                 @key="item.Id" data-song-id="@item.Id" style="@ArtStyle(item)">
                 @if (Settings.TonightEnabled)
                 {
                     @* data-tut is on every card's button; the tour's querySelector spotlights the first one. *@

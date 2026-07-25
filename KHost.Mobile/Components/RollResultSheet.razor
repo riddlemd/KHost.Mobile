@@ -1,3 +1,5 @@
+@inject IAlbumArtService AlbumArt
+
 @* What the 🎲 picked. The result is rendered as the app's own song card — same classes, same album-art
    treatment — just taller, so the suggestion looks like it was lifted straight out of the list rather than
    announced by a system toast. (It replaced a snackbar that borrowed the undo toast's dark pill and, worse,
@@ -12,7 +14,11 @@
     {
         <div class="roll-result__label">Your pick</div>
 
-        <div class="song-card song-card--roll @(ArtStyle is not null ? "song-card--art" : "")" style="@ArtStyle">
+        @* Asks the art service straight out rather than being handed a style: the request is what fetches the
+           cover, so a pick whose art nobody has needed yet gets one. The host re-renders us on Changed. *@
+        var art = AlbumArt.UriFor(item);
+        <div class="song-card song-card--roll @(art is not null ? "song-card--art" : "") @(AlbumArt.IsFetching(item) ? "kh-art-loading" : "")"
+             style="@(art is not null ? $"--kh-card-art: url('{art}');" : null)">
             <div class="song-card__title">@item.Title</div>
             @if (!string.IsNullOrWhiteSpace(item.Artist))
             {
@@ -77,9 +83,6 @@
 @code {
     /// <summary>The picked song; null closes the sheet.</summary>
     [Parameter] public SongListItem? Item { get; set; }
-
-    /// <summary>Inline <c>--kh-card-art</c> style when a cover is cached, or null for a plain surface card.</summary>
-    [Parameter] public string? ArtStyle { get; set; }
 
     /// <summary>Whether the pick is already in tonight's set — the primary action then reads as done.</summary>
     [Parameter] public bool InTonight { get; set; }

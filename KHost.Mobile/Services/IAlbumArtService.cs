@@ -27,6 +27,15 @@ public interface IAlbumArtService
     string? UriFor(SongListItem song);
 
     /// <summary>
+    /// True while a cover the song is known to have is on its way in — i.e. the image is being downloaded and
+    /// will appear. Surfaces use it to show a placeholder instead of a bare card.
+    /// <para>Deliberately false during the *discovery* step, when it isn't yet known whether the song has a cover
+    /// at all: most songs in a real library don't, so promising one there would flash a placeholder on the
+    /// majority of cards and then take it away again.</para>
+    /// </summary>
+    bool IsFetching(SongListItem song);
+
+    /// <summary>
     /// Drops one song's cover — for an edit that changed the title/artist, so the old image can't linger. The
     /// next request re-fetches it.
     /// </summary>

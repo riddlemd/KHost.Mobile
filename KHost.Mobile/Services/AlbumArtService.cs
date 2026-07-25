@@ -43,7 +43,8 @@ public sealed class AlbumArtService(
     private static readonly TimeSpan DiscoveryPause = TimeSpan.FromMilliseconds(300);
 
     private readonly Dictionary<Guid, string> _uris = [];
-    private readonly HashSet<Guid> _queued = [];   // queued or already attempted this session
+    private readonly HashSet<Guid> _queued = [];     // queued or already attempted this session
+    private readonly HashSet<Guid> _fetching = [];   // still to finish — drives the loading placeholder
     private readonly Queue<SongListItem> _pending = new();
     private bool _draining;
 
@@ -64,10 +65,23 @@ public sealed class AlbumArtService(
         var findable = song.ArtworkUrl is not null || !song.ArtworkLookedUp;
         if (findable && _queued.Add(song.Id))
         {
+            _fetching.Add(song.Id);
             _pending.Enqueue(song);
             StartDraining();
         }
         return null;
+    }
+
+    /// <inheritdoc />
+    public bool IsFetching(SongListItem song)
+    {
+        ArgumentNullException.ThrowIfNull(song);
+        // ArtworkUrl is the "we know there's an image coming" part: before discovery runs it's null, and
+        // promising a cover we might not find would flash a placeholder across most of the list.
+        return settings.AlbumArtEnabled
+            && song.ArtworkUrl is not null
+            && _fetching.Contains(song.Id)
+            && !_uris.ContainsKey(song.Id);
     }
 
     /// <inheritdoc />
@@ -76,6 +90,7 @@ public sealed class AlbumArtService(
         if (_uris.Remove(songId))
             await RevokeAsync(songId);
         _queued.Remove(songId);        // let the next request re-fetch it
+        _fetching.Remove(songId);
     }
 
     /// <inheritdoc />
@@ -83,6 +98,7 @@ public sealed class AlbumArtService(
     {
         _uris.Clear();
         _queued.Clear();
+        _fetching.Clear();
         _pending.Clear();
         try { await js.InvokeVoidAsync("khAlbumArt.revokeAll"); }
         catch (JSException ex) { _log.LogWarning(ex, "Revoking album-art blob URLs failed"); }
@@ -115,6 +131,13 @@ public sealed class AlbumArtService(
                     // One song's cover failing must never stop the rest of the queue.
                     _log.LogWarning(ex, "Album art failed for “{Title}” — “{Artist}”", song.Title, song.Artist);
                 }
+                finally
+                {
+                    // However it ended — cover, no cover, or a failure — this song is no longer on its way in, so
+                    // the placeholder must come down.
+                    if (_fetching.Remove(song.Id))
+                        Changed?.Invoke(this, EventArgs.Empty);
+                }
             }
         }
         finally
@@ -138,6 +161,9 @@ public sealed class AlbumArtService(
             await Task.Delay(DiscoveryPause);
             if (song.ArtworkUrl is null)
                 return;
+            // Discovery just proved there IS a cover coming, which is what IsFetching keys off — repaint so the
+            // placeholder appears for the download that follows.
+            Changed?.Invoke(this, EventArgs.Empty);
         }
 
         var stream = await cache.OpenArtStreamAsync(song.ArtworkUrl);

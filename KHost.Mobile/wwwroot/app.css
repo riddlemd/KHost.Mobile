@@ -1394,6 +1394,58 @@ body.kh-sheet-open { overflow: hidden; }
 }
 .song-row--swiping { cursor: grabbing; }
 
+/* ---- "A cover is on its way" placeholder --------------------------------
+   Shown only once the artwork URL is known, so it means "the image is downloading", never "we're checking
+   whether one exists" — most songs have no cover, and promising one there would flash across the whole list.
+   A slow sweep rather than a spinner: it sits behind the song's own text, which stays readable throughout, and
+   it occupies the same layer the finished cover will (::before, under the content), so nothing shifts when the
+   real image lands. */
+.kh-art-loading { position: relative; overflow: hidden; }
+.kh-art-loading::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(100deg,
+        var(--kh-surface-2) 28%,
+        color-mix(in srgb, var(--kh-primary) 12%, var(--kh-surface-2)) 50%,
+        var(--kh-surface-2) 72%);
+    background-size: 220% 100%;
+    animation: kh-art-shimmer 1.5s ease-in-out infinite;
+}
+.kh-art-loading > * { position: relative; z-index: 1; }
+/* Says what the sweep means, for anyone who doesn't read a shimmer as "loading". Set at an angle across the
+   right of the card and faded well back, so it reads as a watermark over the empty area rather than as content
+   competing with the song's own title. pointer-events:none so it can never eat a tap on the card. */
+.kh-art-loading::after {
+    content: "Loading cover";
+    position: absolute;
+    /* Centred low and well inboard of the right edge: rotating about the centre throws the ends outwards, so a
+       tighter offset ran the tail past the card's corner and through the ★ / tonight buttons. */
+    top: 50%;
+    right: 3.4rem;
+    z-index: 1;
+    transform: translateY(-50%) rotate(-45deg);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--kh-text-muted);
+    opacity: 0.32;
+    pointer-events: none;
+}
+/* Tonight's rows are a single compact line — there's no free corner to put it in, so they keep the sweep alone. */
+.setrow.kh-art-loading::after { content: none; }
+@keyframes kh-art-shimmer {
+    from { background-position: 140% 0; }
+    to   { background-position: -60% 0; }
+}
+/* The sweep is decoration, not information — the card is perfectly legible without it. */
+@media (prefers-reduced-motion: reduce) {
+    .kh-art-loading::before { animation: none; }
+}
+
 /* ---- Album-art card background (opt-in: Settings → "Show album art on cards") --------------------
    Treatment "bottom scrim": the cover fills the card (::before), a dark gradient fades up from the base
    (::after) so the text sits in the darkest zone, and every text run flips to white. overflow:hidden clips
