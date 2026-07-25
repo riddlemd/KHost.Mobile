@@ -258,7 +258,8 @@ public sealed class JsonFileTonightStore : ITonightStore
         {
             // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app.
             _log.LogWarning(ex, "Tonight file at {Path} is corrupt; quarantining it and starting with an empty set", path);
-            AtomicFile.Quarantine(path);
+            if (!AtomicFile.Quarantine(path))
+                _log.LogWarning("Corrupt {Path} could not be quarantined; the next save will overwrite it", path);
             _entries = [];
         }
 

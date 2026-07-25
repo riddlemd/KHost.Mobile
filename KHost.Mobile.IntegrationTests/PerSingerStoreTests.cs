@@ -55,6 +55,22 @@ public sealed class PerSingerStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Switching_the_active_singer_raises_Changed_for_the_tonight_store_too()
+    {
+        var store = new JsonFileTonightStore(_dir, _session);
+        _session.SetActiveSinger(Guid.NewGuid());
+        var fired = 0;
+        store.Changed += (_, _) => fired++;
+
+        _session.SetActiveSinger(Guid.NewGuid());   // a real switch → fires
+        Assert.Equal(1, fired);
+
+        var same = _session.ActiveSingerId!.Value;
+        _session.SetActiveSinger(same);             // no change → no fire
+        Assert.Equal(1, fired);
+    }
+
+    [Fact]
     public async Task Tonight_set_is_also_per_singer()
     {
         var mike = Guid.NewGuid();

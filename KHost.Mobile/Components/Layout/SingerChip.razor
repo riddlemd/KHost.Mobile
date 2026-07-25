@@ -1,9 +1,11 @@
+@using Microsoft.Extensions.Logging
 @inject ISingerStore Store
 @inject IAppSession Session
 @inject IAppSettings Settings
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject IBackButtonService BackButton
+@inject ILogger<SingerChip> Log
 @implements IDisposable
 
 @* The active-singer avatar + "Who's singing?" quick switcher, mounted top-right in the header by MainLayout. The
@@ -68,7 +70,11 @@
     private async Task ReloadOnUiAsync()
     {
         try { await InvokeAsync(ReloadAsync); }
-        catch { /* best-effort: a stale avatar is harmless */ }
+        catch (Exception ex)
+        {
+            // best-effort: a stale avatar is harmless
+            Log.LogWarning(ex, "Singer chip refresh failed");
+        }
     }
 
     private async Task ReloadAsync()
@@ -86,7 +92,11 @@
         {
             _appliedColor = color;
             try { await JS.InvokeVoidAsync("khSinger.apply", color); }
-            catch { /* best-effort: the un-tinted brand color is a fine fallback */ }
+            catch (Exception ex)
+            {
+                // best-effort: the un-tinted brand color is a fine fallback
+                Log.LogWarning(ex, "Applying the singer tint failed; keeping the brand color");
+            }
         }
     }
 

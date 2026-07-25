@@ -1,9 +1,11 @@
+@using Microsoft.Extensions.Logging
 @inject IVenueStore Store
 @inject IAppSession Session
 @inject IAppSettings Settings
 @inject IVenueLocator Locator
 @inject NavigationManager Nav
 @inject IBackButtonService BackButton
+@inject ILogger<VenueChip> Log
 @implements IDisposable
 
 @* Always-visible active-venue chip + quick switcher, mounted in the header by MainLayout (only when the Venues
@@ -114,7 +116,11 @@
                 await Locator.ResolveActiveAsync(ct);
         }
         catch (OperationCanceledException) { /* stopped on dispose */ }
-        catch { /* best-effort background tracking — a missed re-check is harmless */ }
+        catch (Exception ex)
+        {
+            // best-effort background tracking — a missed re-check is harmless
+            Log.LogWarning(ex, "Venue re-check failed");
+        }
     }
 
     private bool IsActive(Venue v) => Session.ActiveVenueId == v.Id;
@@ -147,7 +153,11 @@
     private async Task ReloadOnUiAsync()
     {
         try { await InvokeAsync(ReloadAsync); }
-        catch { /* best-effort: a stale chip is harmless */ }
+        catch (Exception ex)
+        {
+            // best-effort: a stale chip is harmless
+            Log.LogWarning(ex, "Venue chip refresh failed");
+        }
     }
 
     private async Task ReloadAsync()
@@ -184,7 +194,12 @@
     private async Task SetAutoAsync()
     {
         Session.SetActiveVenue(Session.ActiveVenueId, pinned: false);
-        try { await Locator.ResolveActiveAsync(); } catch { /* best-effort */ }
+        try { await Locator.ResolveActiveAsync(); }
+        catch (Exception ex)
+        {
+            // best-effort
+            Log.LogWarning(ex, "Active-venue resolve failed");
+        }
     }
 
     // 📌 Pinned so the periodic geo re-check leaves it alone.

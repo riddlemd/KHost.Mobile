@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 
 namespace KHost.Mobile.Services;
@@ -6,7 +7,7 @@ namespace KHost.Mobile.Services;
 /// <see cref="ILinkLauncher"/> backed by MAUI's <see cref="Launcher"/>: hands the URL to the OS so it opens
 /// in the native browser (or a matching app, e.g. YouTube) rather than the in-app WebView.
 /// </summary>
-public sealed class MauiLinkLauncher : ILinkLauncher
+public sealed class MauiLinkLauncher(ILogger<MauiLinkLauncher> logger) : ILinkLauncher
 {
     public async Task OpenAsync(string url)
     {
@@ -17,9 +18,10 @@ public sealed class MauiLinkLauncher : ILinkLauncher
         {
             await Launcher.Default.OpenAsync(uri);
         }
-        catch
+        catch (Exception ex)
         {
             // Nothing on the device could handle it — don't crash the UI over a link.
+            logger.LogWarning(ex, "Couldn't open link {Url}", url);
         }
     }
 }

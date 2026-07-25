@@ -1,5 +1,7 @@
 @page "/venues"
 @layout MainLayout
+@using Microsoft.Extensions.Logging
+@inject ILogger<Venues> Log
 @inject IVenueStore Store
 @inject ISongListStore Songs
 @inject IAppSession Session
@@ -272,7 +274,11 @@
     private async Task ReloadOnUiAsync()
     {
         try { await InvokeAsync(ReloadAsync); }
-        catch { /* best-effort refresh */ }
+        catch (Exception ex)
+        {
+            // best-effort refresh
+            Log.LogWarning(ex, "Venues reload after a store change failed");
+        }
     }
 
     private async Task ReloadAsync()

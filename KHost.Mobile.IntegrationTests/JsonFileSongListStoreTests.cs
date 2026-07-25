@@ -205,4 +205,91 @@ public sealed class JsonFileSongListStoreTests : IDisposable
         Assert.NotNull(song.Tags);
         Assert.Empty(song.Tags);
     }
+
+    [Fact]
+    public async Task SuggestedTitle_and_SuggestedArtist_survive_save_and_reload()
+    {
+        var writer = NewStore();
+        var item = await writer.AddAsync("Bohemian Rapsody", "Queen");
+        item.SuggestedTitle = "Bohemian Rhapsody";
+        item.SuggestedArtist = "Queen";
+        await writer.UpdateAsync(item);
+
+        // A fresh instance shares only the folder, not the in-memory cache — proves the JSON round-trip.
+        var song = Assert.Single(await NewStore().GetAllAsync());
+        Assert.Equal("Bohemian Rhapsody", song.SuggestedTitle);
+        Assert.Equal("Queen", song.SuggestedArtist);
+        Assert.True(song.HasSuggestion);
+    }
+
+    [Fact]
+    public async Task ArtworkUrl_ArtworkLookedUp_and_MetadataLookedUp_survive_save_and_reload()
+    {
+        var writer = NewStore();
+        var item = await writer.AddAsync("Africa", "Toto");
+        item.ArtworkUrl = "https://example.com/cover.jpg";
+        item.ArtworkLookedUp = true;
+        item.MetadataLookedUp = true;
+        await writer.UpdateAsync(item);
+
+        var song = Assert.Single(await NewStore().GetAllAsync());
+        Assert.Equal("https://example.com/cover.jpg", song.ArtworkUrl);
+        Assert.True(song.ArtworkLookedUp);
+        Assert.True(song.MetadataLookedUp);
+    }
+
+    [Fact]
+    public async Task IsFavorite_and_Enjoyment_survive_save_and_reload()
+    {
+        var writer = NewStore();
+        var item = await writer.AddAsync("Africa", "Toto");
+        item.IsFavorite = true;
+        item.Enjoyment = 4;
+        await writer.UpdateAsync(item);
+
+        var song = Assert.Single(await NewStore().GetAllAsync());
+        Assert.True(song.IsFavorite);
+        Assert.Equal(4, song.Enjoyment);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_migrates_a_rated_but_dateless_legacy_entry_anchored_at_AddedAt()
+    {
+        // Confidence set with no SungDates — MigrateToPerformances' "shouldn't normally happen" branch that
+        // anchors a single performance at AddedAt instead of a sung timestamp.
+        var addedAt = new DateTimeOffset(2022, 6, 15, 0, 0, 0, TimeSpan.Zero);
+        var legacy = new SongListItem { Title = "Legacy", Artist = "A", AddedAt = addedAt, SungDates = [], Confidence = 3 };
+        await File.WriteAllTextAsync(
+            _dir.FilePath("song-list.json"),
+            JsonSerializer.Serialize(new List<SongListItem> { legacy }, SongListJsonContext.Default.ListSongListItem));
+
+        var song = Assert.Single(await NewStore().GetAllAsync());
+
+        var performance = Assert.Single(song.Performances);
+        Assert.Equal(addedAt, performance.Date);
+        Assert.Equal(3, performance.HowItWent);
+        Assert.Empty(song.SungDates);
+        Assert.Equal(0, song.Confidence);
+        Assert.Equal(SongListItemStatus.Sang, song.Status);
+    }
+
+    [Fact]
+    public async Task A_legacy_files_migration_is_persisted_not_just_cached_in_memory()
+    {
+        var sungAt = new DateTimeOffset(2024, 3, 1, 0, 0, 0, TimeSpan.Zero);
+        var legacy = new SongListItem { Title = "Legacy", Artist = "A", SungDates = [sungAt], Confidence = 5 };
+        await File.WriteAllTextAsync(
+            _dir.FilePath("song-list.json"),
+            JsonSerializer.Serialize(new List<SongListItem> { legacy }, SongListJsonContext.Default.ListSongListItem));
+
+        await NewStore().GetAllAsync();   // first instance loads, migrates, and writes the migrated shape back to disk
+
+        // A brand-new THIRD instance, sharing only the folder — proves the migration was persisted, not just cached.
+        var song = Assert.Single(await NewStore().GetAllAsync());
+        var performance = Assert.Single(song.Performances);
+        Assert.Equal(5, performance.HowItWent);
+        Assert.Equal(sungAt, performance.Date);
+        Assert.Empty(song.SungDates);
+        Assert.Equal(0, song.Confidence);
+    }
 }

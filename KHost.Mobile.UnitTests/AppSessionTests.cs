@@ -118,6 +118,29 @@ public class AppSessionTests
     }
 
     [Fact]
+    public void MySongsViewFor_returns_the_same_instance_for_the_same_singer_across_calls()
+    {
+        var session = new AppSession();
+        var singer = Guid.NewGuid();
+
+        var first = session.MySongsViewFor(singer);
+        var second = session.MySongsViewFor(singer);
+
+        Assert.Same(first, second);
+    }
+
+    [Fact]
+    public void MySongsViewFor_null_singer_fallback_is_the_same_instance_across_calls()
+    {
+        var session = new AppSession();
+
+        var first = session.MySongsViewFor(null);
+        var second = session.MySongsViewFor(null);
+
+        Assert.Same(first, second);
+    }
+
+    [Fact]
     public void ClearMySongsView_forgets_that_singers_view_state()
     {
         var session = new AppSession();

@@ -1821,7 +1821,11 @@ else
         }
         catch (OperationCanceledException) { return; }   // superseded / closed — leave state to the newer open
         catch (LyricsLookupException ex) { _lyricsError = ex.Message; }
-        catch { _lyricsError = "Couldn't load lyrics. Try again."; }
+        catch (Exception ex)
+        {
+            _lyricsError = "Couldn't load lyrics. Try again.";
+            Log.LogWarning(ex, "Lyrics load failed");
+        }
         finally
         {
             if (!token.IsCancellationRequested)
@@ -1894,7 +1898,11 @@ else
             // No cover fetch here: the new card rendering asks the service for one, which discovers it if needed.
         }
         catch (OperationCanceledException) { }
-        catch { /* best-effort background enrichment */ }
+        catch (Exception ex)
+        {
+            // best-effort background enrichment
+            Log.LogWarning(ex, "Background auto-fill for a newly added song failed");
+        }
     }
 
     private async Task ToggleFavoriteAsync(SongListItem item)
@@ -1947,9 +1955,10 @@ else
         {
             await InvokeAsync(RefreshAsync);
         }
-        catch
+        catch (Exception ex)
         {
             // Best-effort refresh: keep the current list on screen if a reload fails.
+            Log.LogWarning(ex, "My Songs reload after a store change failed; keeping last-known list");
         }
     }
 
@@ -1994,7 +2003,11 @@ else
                 StateHasChanged();
             });
         }
-        catch { /* best-effort: keep the last-known set on screen if a reload fails */ }
+        catch (Exception ex)
+        {
+            // best-effort: keep the last-known set on screen if a reload fails
+            Log.LogWarning(ex, "Tonight refresh on My Songs failed; keeping last-known set");
+        }
     }
 
     // ---- Tonight quick-add (from the wishlist) -----------------------------------------------

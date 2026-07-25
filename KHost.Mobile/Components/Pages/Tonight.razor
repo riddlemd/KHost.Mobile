@@ -1,4 +1,5 @@
 @page "/tonight"
+@using Microsoft.Extensions.Logging
 @inject ISongListStore Store
 @inject ITonightStore TonightStore
 @inject IAppSettings Settings
@@ -9,6 +10,7 @@
 @inject ILinkLauncher Links
 @inject IVenueStore Venues
 @inject IAlbumArtService AlbumArt
+@inject ILogger<Tonight> Log
 @implements IDisposable
 
 @* The "Tonight" on-deck set — its own tab. Drag the ⠿ handle to reorder, tap ✓ to check a song off (which logs
@@ -349,7 +351,11 @@ else
     private async Task RefreshOnUiAsync()
     {
         try { await InvokeAsync(RefreshAsync); }
-        catch { /* best-effort: keep the last-known set on screen if a reload fails */ }
+        catch (Exception ex)
+        {
+            // best-effort: keep the last-known set on screen if a reload fails
+            Log.LogWarning(ex, "Tonight reload after a store change failed; keeping last-known set");
+        }
     }
 
     private async Task RefreshAsync()

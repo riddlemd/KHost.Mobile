@@ -1,5 +1,6 @@
 #if ANDROID || IOS
 using BarcodeScanning;
+using Microsoft.Extensions.Logging;
 
 namespace KHost.Mobile.Services;
 
@@ -11,17 +12,23 @@ namespace KHost.Mobile.Services;
 /// <see cref="IBackButtonService"/> so the hardware back button cancels the scan instead of closing the KaraFun
 /// sheet sitting behind it.
 /// </remarks>
-public sealed class MauiQrScanner(IBackButtonService backButton) : IQrScanner
+public sealed class MauiQrScanner(IBackButtonService backButton, ILogger<MauiQrScanner> logger) : IQrScanner
 {
     public async Task<string?> ScanQrCodeAsync(CancellationToken cancellationToken = default)
     {
         // ML Kit / AVFoundation both need camera permission (and VIBRATE on Android); the library's helper requests it.
         if (!await Methods.AskForRequiredPermissionAsync())
+        {
+            logger.LogDebug("QR scan camera permission not granted");
             return null;
+        }
 
         var hostPage = Application.Current?.Windows.FirstOrDefault()?.Page;
         if (hostPage is null)
+        {
+            logger.LogDebug("QR scan aborted; no host page to push the scanner onto");
             return null;
+        }
 
         var navigation = hostPage.Navigation;
         var scanPage = new QrScanPage();

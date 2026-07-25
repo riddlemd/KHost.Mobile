@@ -5,6 +5,8 @@
 @using KHost.Mobile.Clients.Enrichment
 @using KHost.Mobile.Clients.Spotify
 @using KHost.Mobile.Clients.YouTubeMusic
+@using Microsoft.Extensions.Logging
+@inject ILogger<ImportExport> Log
 @inject ISongListStore Store
 @inject ISingerStore Singers
 @inject IVenueStore Venues
@@ -384,9 +386,10 @@
                 StateHasChanged();
             });
         }
-        catch
+        catch (Exception ex)
         {
             // Best-effort refresh: a failed reload just leaves the last-known list on screen.
+            Log.LogWarning(ex, "Import/Export reload after a store change failed");
         }
     }
 
@@ -408,6 +411,7 @@
         catch (Exception ex)
         {
             await FlashAsync($"Export failed: {ex.Message}");
+            Log.LogWarning(ex, "Singer profile export failed");
         }
         finally
         {
@@ -453,6 +457,7 @@
         catch (Exception ex)
         {
             await FlashAsync($"Import failed: {ex.Message}");
+            Log.LogWarning(ex, "Singer profile import failed");
         }
         finally
         {
@@ -489,6 +494,7 @@
         catch (Exception ex)
         {
             await FlashAsync($"Import failed: {ex.Message}");
+            Log.LogWarning(ex, "Add-profile-as-new-singer import failed");
         }
         finally
         {
@@ -527,6 +533,11 @@
             _pendingProfile = null;
             await FlashAsync($"Merged {added} song{(added == 1 ? "" : "s")} into {ActiveSingerName}");
         }
+        catch (Exception ex)
+        {
+            await FlashAsync($"Import failed: {ex.Message}");
+            Log.LogWarning(ex, "Merge-profile-into-current import failed");
+        }
         finally
         {
             _profileImportBusy = false;
@@ -556,6 +567,7 @@
         catch (Exception ex)
         {
             await FlashAsync($"Export failed: {ex.Message}");
+            Log.LogWarning(ex, "Venues export failed");
         }
         finally
         {
@@ -608,6 +620,7 @@
         catch (Exception ex)
         {
             await FlashAsync($"Import failed: {ex.Message}");
+            Log.LogWarning(ex, "Venues import failed");
         }
         finally
         {
@@ -720,6 +733,7 @@
         {
             _importError = ex.Message;
             _importRows = null;
+            Log.LogWarning(ex, "Playlist fetch failed");
         }
         finally
         {
@@ -809,9 +823,10 @@
                 {
                     row.Suggestion = (await Metadata.LookupAsync(row.Item.Title, row.Item.Artist, token)).Match;
                 }
-                catch (MetadataLookupException)
+                catch (MetadataLookupException ex)
                 {
                     row.Suggestion = null;   // treat a transient failure as "no match" for this pass
+                    Log.LogWarning(ex, "Metadata lookup failed for “{Title}” — “{Artist}” during import review; will retry later", row.Item.Title, row.Item.Artist);
                 }
                 row.Done = true;
                 row.Selected = HasApplyable(row);

@@ -164,4 +164,60 @@ public sealed class JsonFileTonightStoreTests : IDisposable
         var entry = Assert.Single(await NewStore().GetAllAsync());
         Assert.Equal(song, entry.SongId);
     }
+
+    [Fact]
+    public async Task A_corrupt_file_is_quarantined_to_a_dot_corrupt_sibling()
+    {
+        var path = _dir.FilePath("tonight.json");
+        await File.WriteAllTextAsync(path, "}not valid{");   // e.g. a pre-atomic-write interrupted save
+
+        Assert.Empty(await NewStore().GetAllAsync());
+
+        Assert.False(File.Exists(path));                    // the bad file was moved aside...
+        Assert.True(File.Exists(path + ".corrupt"));         // ...to a .corrupt sibling...
+        Assert.Equal("}not valid{", await File.ReadAllTextAsync(path + ".corrupt"));   // ...with its bytes intact
+    }
+
+    [Fact]
+    public async Task CompletedPerformanceId_survives_save_and_reload_by_a_fresh_instance()
+    {
+        var writer = NewStore();
+        var song = Guid.NewGuid();
+        var performance = Guid.NewGuid();
+        await writer.AddAsync(song);
+        await writer.SetCompletedAsync(song, completed: true, performanceId: performance);
+
+        // A fresh instance shares only the folder, not the in-memory cache — proves the JSON round-trip.
+        var entry = Assert.Single(await NewStore().GetAllAsync());
+        Assert.Equal(performance, entry.CompletedPerformanceId);
+    }
+
+    [Fact]
+    public async Task AddAsync_when_already_queued_and_RemoveAsync_of_an_unknown_song_do_not_fire_Changed()
+    {
+        var store = NewStore();
+        var song = Guid.NewGuid();
+        await store.AddAsync(song);
+        var fired = 0;
+        store.Changed += (_, _) => fired++;
+
+        await store.AddAsync(song);                // already queued → no-op
+        Assert.Equal(0, fired);
+
+        await store.RemoveAsync(Guid.NewGuid());    // songId not present → no-op
+        Assert.Equal(0, fired);
+    }
+
+    [Fact]
+    public async Task The_per_singer_file_is_named_tonight_dash_less_guid_json()
+    {
+        var session = new AppSession();
+        var singer = Guid.NewGuid();
+        session.SetActiveSinger(singer);
+        var store = new JsonFileTonightStore(_dir, session);
+
+        await store.AddAsync(Guid.NewGuid());
+
+        Assert.True(File.Exists(_dir.FilePath($"tonight-{singer:N}.json")));
+    }
 }

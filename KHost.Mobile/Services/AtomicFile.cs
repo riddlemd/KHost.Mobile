@@ -25,17 +25,22 @@ internal static class AtomicFile
 
     /// <summary>Move a file that failed to parse aside to a <c>.corrupt</c> sibling instead of leaving it to be
     /// silently overwritten by the next (empty) save — so the bad bytes are preserved for possible recovery and
-    /// a load that quarantines then starts empty never erases the only copy. Best-effort; failures are ignored.</summary>
-    public static void Quarantine(string path)
+    /// a load that quarantines then starts empty never erases the only copy. Best-effort; returns <see langword="true"/>
+    /// only when the corrupt file existed and was moved aside, <see langword="false"/> otherwise (including when
+    /// there was nothing to quarantine) — the caller starts empty in the failure case too, but can log it.</summary>
+    public static bool Quarantine(string path)
     {
         try
         {
-            if (File.Exists(path))
-                File.Move(path, path + ".corrupt", overwrite: true);
+            if (!File.Exists(path))
+                return false;
+            File.Move(path, path + ".corrupt", overwrite: true);
+            return true;
         }
         catch
         {
             // A locked/vanished file just isn't quarantined — the caller still starts empty, as before.
+            return false;
         }
     }
 }

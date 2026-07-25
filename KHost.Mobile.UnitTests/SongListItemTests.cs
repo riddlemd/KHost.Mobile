@@ -60,4 +60,16 @@ public class SongListItemTests
 
         Assert.Equal(latest, song.LastSungAt);
     }
+
+    [Theory]
+    [InlineData(null, null, false)]
+    [InlineData("Creep", null, false)]
+    [InlineData(null, "Radiohead", false)]
+    [InlineData("Creep", "Radiohead", true)]
+    public void HasSuggestion_is_true_only_when_both_title_and_artist_are_set(string? suggestedTitle, string? suggestedArtist, bool expected)
+    {
+        var song = new SongListItem { SuggestedTitle = suggestedTitle, SuggestedArtist = suggestedArtist };
+
+        Assert.Equal(expected, song.HasSuggestion);
+    }
 }

@@ -120,4 +120,106 @@ public class YouTubeMusicPlaylistParserTests
         Assert.Throws<YouTubeMusicImportException>(
             () => YouTubeMusicPlaylistParser.Parse(Page("""{ "contents": [] }""")));
     }
+
+    [Fact]
+    public void Parse_falls_back_to_a_nested_watch_endpoint_when_playlistItemData_has_no_video_id()
+    {
+        const string json = """
+        {
+          "contents": [
+            { "musicResponsiveListItemRenderer": {
+                "flexColumns": [ { "musicResponsiveListItemFlexColumnRenderer": { "text": { "runs": [ { "text": "Fallback Song" } ] } } } ],
+                "someNested": { "watchEndpoint": { "videoId": "AbCdEfGhIjK" } }
+            } }
+          ]
+        }
+        """;
+
+        var result = YouTubeMusicPlaylistParser.Parse(Page(json));
+
+        Assert.Single(result.Tracks);
+        Assert.Equal("Fallback Song", result.Tracks[0].Title);
+        Assert.Equal("AbCdEfGhIjK", result.Tracks[0].VideoId);
+    }
+
+    [Fact]
+    public void Parse_drops_a_row_whose_video_id_is_malformed_and_has_no_fallback()
+    {
+        // Actual behavior, not the guessed one: FromRow returns null for the whole row when VideoId is
+        // null, so a malformed id drops the TRACK entirely — it isn't kept with VideoId == null.
+        const string json = """
+        {
+          "contents": [
+            { "musicResponsiveListItemRenderer": {
+                "flexColumns": [ { "musicResponsiveListItemFlexColumnRenderer": { "text": { "runs": [ { "text": "Good Song" } ] } } } ],
+                "playlistItemData": { "videoId": "pRpeEdMmmQ0" } } },
+            { "musicResponsiveListItemRenderer": {
+                "flexColumns": [ { "musicResponsiveListItemFlexColumnRenderer": { "text": { "runs": [ { "text": "Bad Id Song" } ] } } } ],
+                "playlistItemData": { "videoId": "short" } } }
+          ]
+        }
+        """;
+
+        var result = YouTubeMusicPlaylistParser.Parse(Page(json));
+
+        Assert.Single(result.Tracks);
+        Assert.Equal("Good Song", result.Tracks[0].Title);
+    }
+
+    [Fact]
+    public void Parse_picks_whichever_blob_parses_to_more_tracks()
+    {
+        const string oneTrackJson = """
+        { "contents": [ { "musicResponsiveListItemRenderer": { "flexColumns": [ { "musicResponsiveListItemFlexColumnRenderer": { "text": { "runs": [ { "text": "Solo Song" } ] } } } ], "playlistItemData": { "videoId": "abcdefghijk" } } } ] }
+        """;
+
+        var html = "<html><head><title>Two Blobs Test - YouTube Music</title></head><body>"
+            + "<script>initialData.push({data: '" + oneTrackJson + "'});</script>"
+            + "<script>initialData.push({data: '" + TwoTracksJson + "'});</script>"
+            + "</body></html>";
+
+        var result = YouTubeMusicPlaylistParser.Parse(html);
+
+        Assert.Equal(2, result.Tracks.Count);
+        Assert.Equal("Waka Waka", result.Tracks[0].Title);
+    }
+
+    [Fact]
+    public void Parse_strips_a_bare_YouTube_suffix_and_decodes_html_entities_in_the_title()
+    {
+        var html = "<html><head><title>My Playlist &amp; Friends - YouTube</title></head><body>"
+            + "<script>initialData.push({data: '" + TwoTracksJson + "'});</script></body></html>";
+
+        var result = YouTubeMusicPlaylistParser.Parse(html);
+
+        Assert.Equal("My Playlist & Friends", result.Name);
+    }
+
+    [Fact]
+    public void JsUnescape_drops_the_backslash_before_an_unrecognized_escape_like_ampersand()
+    {
+        // "\&" isn't one of the recognized escapes (x/u/n/t/r/b/f), so the default case keeps just the
+        // character after the backslash — proven here by an escaped ampersand surviving into the title.
+        const string json = """
+        { "contents": [ { "musicResponsiveListItemRenderer": { "flexColumns": [ { "musicResponsiveListItemFlexColumnRenderer": { "text": { "runs": [ { "text": "AT\&T" } ] } } } ], "playlistItemData": { "videoId": "abcdefghijk" } } } ] }
+        """;
+
+        var result = YouTubeMusicPlaylistParser.Parse(Page(json));
+
+        Assert.Single(result.Tracks);
+        Assert.Equal("AT&T", result.Tracks[0].Title);
+    }
+
+    [Fact]
+    public void JsUnescape_turns_a_backslash_n_into_an_actual_newline()
+    {
+        // Insert a literal `\n` (backslash + n) as whitespace right after the opening brace. If JsUnescape
+        // did not convert it to a real newline, the raw "\n" would be invalid JSON and this blob would be
+        // dropped — parsing succeeding at all is the proof.
+        var json = TwoTracksJson.Insert(1, "\\n");
+
+        var result = YouTubeMusicPlaylistParser.Parse(Page(json));
+
+        Assert.Equal(2, result.Tracks.Count);
+    }
 }

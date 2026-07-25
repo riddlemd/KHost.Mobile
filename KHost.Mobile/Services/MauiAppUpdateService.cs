@@ -1,4 +1,5 @@
 using KHost.Mobile.Clients.Updates;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 
 namespace KHost.Mobile.Services;
@@ -9,7 +10,7 @@ namespace KHost.Mobile.Services;
 /// and the session dismissal — are shared app-wide; the check <see cref="Task"/> is cached so the network
 /// call happens once per launch no matter how many components ask.
 /// </summary>
-public sealed class MauiAppUpdateService(IUpdateClient updateClient, IAppSettings settings) : IAppUpdateService
+public sealed class MauiAppUpdateService(IUpdateClient updateClient, IAppSettings settings, ILogger<MauiAppUpdateService> logger) : IAppUpdateService
 {
     private Task<AppUpdateStatus>? _check;
 
@@ -33,8 +34,9 @@ public sealed class MauiAppUpdateService(IUpdateClient updateClient, IAppSetting
         {
             latest = await updateClient.GetNewestReleaseAsync().ConfigureAwait(false);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Update check failed; treating as no update");
             return AppUpdateStatus.None;   // best-effort: a failed check just means "nothing new"
         }
 

@@ -1,4 +1,6 @@
+@using Microsoft.Extensions.Logging
 @inject ITonightStore Tonight
+@inject ILogger<NavMenu> Log
 @implements IDisposable
 
 @* Bottom tab bar. Tonight leads (the set you're about to sing), then My Songs (the wishlist you keep). The whole
@@ -35,7 +37,11 @@
     private async Task RefreshOnUiAsync()
     {
         try { await InvokeAsync(RefreshAsync); }
-        catch { /* best-effort: a stale badge is harmless */ }
+        catch (Exception ex)
+        {
+            // best-effort: a stale badge is harmless
+            Log.LogWarning(ex, "Tonight badge refresh failed");
+        }
     }
 
     private async Task RefreshAsync()

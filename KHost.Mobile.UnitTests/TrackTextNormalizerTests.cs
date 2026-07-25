@@ -61,4 +61,18 @@ public class TrackTextNormalizerTests
         => Assert.NotEqual(
             TrackTextNormalizer.Normalize("Africa"),
             TrackTextNormalizer.Normalize("Rosanna"));
+
+    // ---- StripAsides ----
+
+    [Theory]
+    [InlineData("Creep (Acoustic)", "Creep")]
+    [InlineData("Exit Music (For a Film)", "Exit Music")]   // documented lossy case — pinned deliberately
+    [InlineData("  Creep [Live]  ", "Creep")]
+    [InlineData("Don't Stop Believin' (2022 Remaster)", "Don't Stop Believin'")]
+    public void StripAsides_drops_bracketed_qualifiers_but_leaves_the_rest_alone(string input, string expected)
+        => Assert.Equal(expected, TrackTextNormalizer.StripAsides(input));
+
+    [Fact]
+    public void StripAsides_falls_back_to_the_trimmed_original_when_wholly_parenthetical()
+        => Assert.Equal("(Nice Dream)", TrackTextNormalizer.StripAsides("(Nice Dream)"));
 }

@@ -149,7 +149,8 @@ public sealed class JsonFileLyricsCache(IAppDataDirectory paths, ILogger<JsonFil
             // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app. (Lyrics
             // re-download on next view, so this is the most disposable cache — but stay consistent with the stores.)
             _log.LogWarning(ex, "Lyrics cache file at {Path} is corrupt; quarantining it and starting empty", _filePath);
-            AtomicFile.Quarantine(_filePath);
+            if (!AtomicFile.Quarantine(_filePath))
+                _log.LogWarning("Corrupt {Path} could not be quarantined; the next save will overwrite it", _filePath);
             _entries = new Dictionary<string, LyricsCacheEntry>(StringComparer.Ordinal);
         }
 

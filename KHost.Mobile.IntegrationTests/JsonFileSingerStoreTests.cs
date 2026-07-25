@@ -173,6 +173,88 @@ public sealed class JsonFileSingerStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task A_corrupt_file_is_quarantined_to_a_dot_corrupt_sibling()
+    {
+        var path = _dir.FilePath("singers.json");
+        await File.WriteAllTextAsync(path, "}not valid{");   // e.g. a pre-atomic-write interrupted save
+
+        Assert.Empty(await NewStore().GetAllAsync());
+
+        Assert.False(File.Exists(path));                    // the bad file was moved aside...
+        Assert.True(File.Exists(path + ".corrupt"));         // ...to a .corrupt sibling...
+        Assert.Equal("}not valid{", await File.ReadAllTextAsync(path + ".corrupt"));   // ...with its bytes intact
+    }
+
+    [Fact]
+    public async Task Changed_fires_on_real_mutations_but_not_on_no_ops()
+    {
+        var store = NewStore();
+        var fired = 0;
+        store.Changed += (_, _) => fired++;
+
+        var singer = await store.AddAsync(new Singer { Name = "Mike" });
+        Assert.Equal(1, fired);
+
+        singer.Name = "Michael";
+        await store.UpdateAsync(singer);
+        Assert.Equal(2, fired);
+
+        await store.UpdateAsync(new Singer { Id = Guid.NewGuid(), Name = "Ghost" });   // unknown id → no-op
+        Assert.Equal(2, fired);
+
+        await store.RemoveAsync(Guid.NewGuid());   // unknown id → no-op
+        Assert.Equal(2, fired);
+
+        await store.RemoveAsync(singer.Id);
+        Assert.Equal(3, fired);
+    }
+
+    [Fact]
+    public async Task EnsureSeededAsync_fires_Changed_only_on_the_first_call()
+    {
+        var store = NewStore();
+        var fired = 0;
+        store.Changed += (_, _) => fired++;
+
+        await store.EnsureSeededAsync();
+        Assert.Equal(1, fired);
+
+        await store.EnsureSeededAsync();   // roster already seeded → idempotent, no fire
+        Assert.Equal(1, fired);
+    }
+
+    [Fact]
+    public async Task EnsureSeededAsync_never_touches_an_already_migrated_singers_files_on_a_repeat_call()
+    {
+        // The literal guard in MigrateLegacyFile (skip when the destination already exists) only fires when the
+        // freshly-generated singer id from THIS seed call happens to already have a namespaced file on disk. That id
+        // comes from a fresh Guid.NewGuid() inside EnsureSeededAsync with no way to inject or predict it, so the
+        // exact collision can't be constructed through the public API. This pins the closest observable guarantee:
+        // once a singer is seeded, a second call is a pure no-op that never rewrites that singer's per-singer files,
+        // even if a legacy file has since reappeared on disk.
+        var legacy = new List<SongListItem> { new() { Title = "Africa", Artist = "Toto" } };
+        await File.WriteAllTextAsync(
+            _dir.FilePath("song-list.json"),
+            JsonSerializer.Serialize(legacy, SongListJsonContext.Default.ListSongListItem));
+
+        var store = NewStore();
+        var me = await store.EnsureSeededAsync();
+        var destination = _dir.FilePath($"song-list-{me.Id:N}.json");
+        Assert.True(File.Exists(destination));
+
+        // Overwrite the migrated destination with a sentinel, then drop a legacy file back in — as if a manual
+        // restore reintroduced it after the migration already ran.
+        const string sentinel = "SENTINEL";
+        await File.WriteAllTextAsync(destination, sentinel);
+        await File.WriteAllTextAsync(_dir.FilePath("song-list.json"), sentinel);
+
+        await NewStore().EnsureSeededAsync();   // roster already has a singer → returns early, no migration re-run
+
+        Assert.Equal(sentinel, await File.ReadAllTextAsync(destination));
+        Assert.Equal(sentinel, await File.ReadAllTextAsync(_dir.FilePath("song-list.json")));
+    }
+
+    [Fact]
     public async Task Glyph_round_trips_and_drives_the_avatar()
     {
         var store = NewStore();

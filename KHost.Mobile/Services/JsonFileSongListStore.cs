@@ -330,7 +330,8 @@ public sealed class JsonFileSongListStore : ISongListStore
             // Corrupt file (e.g. interrupted write on a pre-atomic-write version) — quarantine it aside so the bad
             // bytes aren't erased by the next save, then start clean rather than crash the app.
             _log.LogWarning(ex, "Song list file at {Path} is corrupt; quarantining it and starting with an empty list", path);
-            AtomicFile.Quarantine(path);
+            if (!AtomicFile.Quarantine(path))
+                _log.LogWarning("Corrupt {Path} could not be quarantined; the next save will overwrite it", path);
             _items = [];
         }
 

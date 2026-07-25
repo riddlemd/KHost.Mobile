@@ -115,4 +115,17 @@ public sealed class JsonFileLyricsCacheTests : IDisposable
 
         Assert.Equal(0, await NewCache().CountAsync());
     }
+
+    [Fact]
+    public async Task A_corrupt_file_is_quarantined_to_a_dot_corrupt_sibling()
+    {
+        var path = _dir.FilePath("lyrics-cache.json");
+        await File.WriteAllTextAsync(path, "not json at all}");   // e.g. a pre-atomic-write interrupted save
+
+        Assert.Equal(0, await NewCache().CountAsync());
+
+        Assert.False(File.Exists(path));                         // the bad file was moved aside...
+        Assert.True(File.Exists(path + ".corrupt"));              // ...to a .corrupt sibling...
+        Assert.Equal("not json at all}", await File.ReadAllTextAsync(path + ".corrupt"));   // ...with its bytes intact
+    }
 }

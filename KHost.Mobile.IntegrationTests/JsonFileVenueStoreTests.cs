@@ -106,6 +106,19 @@ public sealed class JsonFileVenueStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task A_corrupt_file_is_quarantined_to_a_dot_corrupt_sibling()
+    {
+        var path = _dir.FilePath("venues.json");
+        await File.WriteAllTextAsync(path, "}not valid{");   // e.g. a pre-atomic-write interrupted save
+
+        Assert.Empty(await NewStore().GetAllAsync());
+
+        Assert.False(File.Exists(path));                    // the bad file was moved aside...
+        Assert.True(File.Exists(path + ".corrupt"));         // ...to a .corrupt sibling...
+        Assert.Equal("}not valid{", await File.ReadAllTextAsync(path + ".corrupt"));   // ...with its bytes intact
+    }
+
+    [Fact]
     public async Task Deserializes_a_hand_written_file()
     {
         var seeded = new List<Venue> { new() { Name = "The Dive", Glyph = "🍸" } };

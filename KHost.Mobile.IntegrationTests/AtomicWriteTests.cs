@@ -49,4 +49,37 @@ public sealed class AtomicWriteTests : IDisposable
         var reread = await new JsonFileSongListStore(_dir).GetAllAsync();
         Assert.Equal("Africa", Assert.Single(reread).Title);
     }
+
+    // AtomicFile itself is internal, but its source is compiled directly into this test assembly (see the
+    // KHost.Mobile.IntegrationTests.csproj Compile/Link items), so it's callable here without InternalsVisibleTo.
+    [Fact]
+    public async Task An_interrupted_write_leaves_the_previous_good_file_intact()
+    {
+        var path = _dir.FilePath("atomic-write-test.json");
+        await AtomicFile.WriteAsync(path, s => s.WriteAsync(System.Text.Encoding.UTF8.GetBytes("original")).AsTask());
+        var original = await File.ReadAllTextAsync(path);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            AtomicFile.WriteAsync(path, async s =>
+            {
+                await s.WriteAsync(System.Text.Encoding.UTF8.GetBytes("half-writ"));
+                throw new InvalidOperationException("simulated crash mid-write");
+            }));
+
+        // The failed write never reached the rename, so the target still has the last good bytes.
+        Assert.Equal(original, await File.ReadAllTextAsync(path));
+        // Pinning actual behavior: WriteAsync doesn't clean up on throw, so the failed attempt's .tmp sibling remains.
+        Assert.True(File.Exists(path + ".tmp"));
+    }
+
+    [Fact]
+    public void Quarantine_when_the_target_doesnt_exist_is_a_no_op()
+    {
+        var path = _dir.FilePath("never-written.json");
+
+        AtomicFile.Quarantine(path);   // nothing to move — must not throw or create a .corrupt file
+
+        Assert.False(File.Exists(path));
+        Assert.False(File.Exists(path + ".corrupt"));
+    }
 }

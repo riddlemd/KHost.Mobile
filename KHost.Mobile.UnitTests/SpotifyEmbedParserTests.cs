@@ -90,4 +90,60 @@ public class SpotifyEmbedParserTests
 
         Assert.Throws<SpotifyImportException>(() => SpotifyEmbedParser.Parse(html));
     }
+
+    [Fact]
+    public void Parse_leaves_the_name_null_when_the_entity_is_not_a_playlist()
+    {
+        // TryFindPlaylistName only accepts a node whose "type" is literally "playlist" — an album or
+        // show entity still carries a trackList, but its name must not be reported as the playlist name.
+        var html = "<html><body>\n<script id=\"__NEXT_DATA__\" type=\"application/json\">\n"
+            + "{\"props\":{\"pageProps\":{\"state\":{\"data\":{\"entity\":"
+            + "{\"type\":\"album\",\"name\":\"Some Album\",\"trackList\":"
+            + """[{"uri":"spotify:track:aaa","title":"Song A","subtitle":"Artist A"}]"""
+            + "}}}}}}\n</script>\n</body></html>";
+
+        var result = SpotifyEmbedParser.Parse(html);
+
+        Assert.Null(result.Name);
+        Assert.Single(result.Tracks);
+        Assert.Equal("Song A", result.Tracks[0].Title);
+    }
+
+    [Fact]
+    public void Parse_includes_a_track_whose_uri_is_missing_or_not_a_track_uri()
+    {
+        var html = HtmlWith("""
+            [
+              {"title":"No Uri Song","subtitle":"Artist A"},
+              {"uri":"spotify:episode:zzz","title":"Episode Uri Song","subtitle":"Artist B"}
+            ]
+            """);
+
+        var result = SpotifyEmbedParser.Parse(html);
+
+        Assert.Equal(2, result.Tracks.Count);
+        Assert.Null(result.Tracks[0].SpotifyTrackId);
+        Assert.Null(result.Tracks[1].SpotifyTrackId);
+    }
+
+    [Fact]
+    public void Parse_descends_past_a_decoy_sibling_to_find_a_deeper_entity()
+    {
+        // The decoy sits beside the real entity and is visited first (document order); it must not
+        // satisfy the name/array search itself, forcing the recursion one level deeper than HtmlWith's
+        // fixed data.entity path to find the real playlist under data.wrapper.entity.
+        var html = "<html><body>\n<script id=\"__NEXT_DATA__\" type=\"application/json\">\n"
+            + "{\"props\":{\"pageProps\":{\"state\":{\"data\":{"
+            + "\"decoy\":{\"type\":\"track\",\"name\":\"Not This\",\"somethingElse\":[1,2,3]},"
+            + "\"wrapper\":{\"entity\":{\"type\":\"playlist\",\"name\":\"Deep Playlist\",\"trackList\":"
+            + """[{"uri":"spotify:track:zzz","title":"Deep Song","subtitle":"Deep Artist"}]"""
+            + "}}"
+            + "}}}}}\n</script>\n</body></html>";
+
+        var result = SpotifyEmbedParser.Parse(html);
+
+        Assert.Equal("Deep Playlist", result.Name);
+        Assert.Single(result.Tracks);
+        Assert.Equal("Deep Song", result.Tracks[0].Title);
+    }
 }

@@ -225,7 +225,8 @@ public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFil
         {
             // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app.
             _log.LogWarning(ex, "Singers file at {Path} is corrupt; quarantining it and starting with an empty roster", _filePath);
-            AtomicFile.Quarantine(_filePath);
+            if (!AtomicFile.Quarantine(_filePath))
+                _log.LogWarning("Corrupt {Path} could not be quarantined; the next save will overwrite it", _filePath);
             _singers = [];
         }
 

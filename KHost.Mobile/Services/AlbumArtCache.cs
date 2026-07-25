@@ -89,7 +89,11 @@ public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory ht
                 foreach (var file in Directory.EnumerateFiles(_dir))
                 {
                     try { File.Delete(file); changed = true; }
-                    catch { /* a locked/vanished file shouldn't abort clearing the rest */ }
+                    catch (Exception ex)
+                    {
+                        // A locked/vanished file shouldn't abort clearing the rest.
+                        _log.LogWarning(ex, "Couldn't delete cached album art {Path}", file);
+                    }
                 }
             }
         }

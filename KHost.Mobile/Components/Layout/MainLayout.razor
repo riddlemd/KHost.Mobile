@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@using Microsoft.Extensions.Logging
 @inject IJSRuntime JS
 @inject IAppSettings Settings
 @inject NavigationManager Nav
@@ -6,6 +7,7 @@
 @inject ISingerStore Singers
 @inject IAppSession Session
 @inject ISafeAreaInsets Insets
+@inject ILogger<MainLayout> Log
 @implements IDisposable
 
 @* Gate the shell on the singer bootstrap: at least one singer must exist and the active one chosen before any
@@ -141,7 +143,11 @@ else
         _ = InvokeAsync(async () =>
         {
             try { await PushInsetsAsync(); }
-            catch { /* a push racing teardown is harmless — the next render pushes again */ }
+            catch (Exception ex)
+            {
+                // a push racing teardown is harmless — the next render pushes again
+                Log.LogWarning(ex, "Safe-area inset push failed");
+            }
         });
 
     // Routes the Android back button to close the ⋮ menu instead of navigating; active only while it's open.

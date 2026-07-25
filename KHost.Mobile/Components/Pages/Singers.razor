@@ -1,5 +1,7 @@
 @page "/singers"
 @layout MainLayout
+@using Microsoft.Extensions.Logging
+@inject ILogger<Singers> Log
 @inject ISingerStore Store
 @inject IAppSession Session
 @inject IAppSettings Settings
@@ -78,7 +80,11 @@
     private async Task ReloadOnUiAsync()
     {
         try { await InvokeAsync(ReloadAsync); }
-        catch { /* best-effort refresh */ }
+        catch (Exception ex)
+        {
+            // best-effort refresh
+            Log.LogWarning(ex, "Singers reload after a store change failed");
+        }
     }
 
     private async Task ReloadAsync()
