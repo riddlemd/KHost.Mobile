@@ -5,11 +5,12 @@ using Microsoft.Maui.Devices.Sensors;
 
 namespace KHost.Mobile.Services;
 
-/// <summary>
-/// <see cref="ILocationProvider"/> over MAUI Geolocation. Permission is requested lazily on first use; every failure
-/// path (denied, disabled, timeout) degrades to <c>null</c> rather than throwing. The whole lookup is marshalled to
-/// the main thread since the permission prompt requires it.
-/// </summary>
+/// <inheritdoc />
+/// <remarks>
+/// Over MAUI Geolocation. Permission is requested lazily on first use; every failure path (denied, disabled,
+/// timeout) degrades to <c>null</c> rather than throwing. The whole lookup is marshalled to the main thread
+/// because the permission prompt requires it.
+/// </remarks>
 public sealed class MauiLocationProvider(ILogger<MauiLocationProvider> logger) : ILocationProvider
 {
     // A medium-accuracy fix is plenty to tell venues apart and is faster / lighter than best-accuracy GPS.

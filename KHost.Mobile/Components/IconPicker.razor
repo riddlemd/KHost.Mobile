@@ -1,8 +1,5 @@
-@* A tappable identity preview that toggles a collapsible picker — an optional color row and an emoji/glyph grid
-   (with an optional "use the first letter" tile). Collapsed by default; tapping the preview opens it. Shared by the
-   singer editor (color + emoji + letter fallback → a colored avatar preview) and the venue editor (emoji only → a
-   surface-tile preview). The name input is passed as ChildContent so it sits on the preview's row. Two-way binds
-   Glyph, and Color when a palette is supplied. *@
+@* Collapsible color + glyph picker, shared by the singer editor (color + emoji + letter fallback) and the venue
+   editor (emoji only). Two-way binds Glyph, and Color when a palette is supplied. *@
 
 <div class="icon-picker">
     <div class="icon-picker__row">
@@ -30,7 +27,7 @@
                 </div>
             }
             <div class="glyph-grid @(HasColorPalette ? "icon-picker__glyphs--accent" : "")" role="radiogroup" aria-label="Icon">
-                @* The letter tile keeps the name's first letter (clears the glyph); only offered when a fallback is given. *@
+                @* The letter tile selects "no glyph" — an empty string, not a value of its own. *@
                 @if (LetterFallback is not null)
                 {
                     <button type="button" class="glyph-grid__item glyph-grid__item--letter @(string.IsNullOrEmpty(Glyph) ? "is-sel" : "")"
@@ -82,7 +79,8 @@
 
     private void Toggle() => _open = !_open;
 
-    // Picking a glyph is the primary choice — collapse the panel after (matches the venue picker's quick flow).
+    // Glyph is the primary choice, so picking one closes the panel; picking a color (below) leaves it open so a
+    // glyph can still be chosen in the same pass.
     private async Task SelectGlyphAsync(string g)
     {
         Glyph = g;
@@ -90,7 +88,6 @@
         _open = false;
     }
 
-    // Picking a color leaves the panel open so a glyph can still be chosen in the same pass.
     private Task SelectColorAsync(string c)
     {
         Color = c;

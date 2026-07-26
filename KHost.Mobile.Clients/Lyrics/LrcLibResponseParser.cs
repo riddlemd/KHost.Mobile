@@ -7,9 +7,8 @@ namespace KHost.Mobile.Clients.Lyrics;
 /// Parses an LRCLIB <c>/api/search</c> response (a JSON array of records) into a <see cref="LyricsResult"/>.
 /// Pure — no network. Each record looks like
 /// <c>{ id, trackName, artistName, albumName, duration, instrumental, plainLyrics, syncedLyrics }</c>.
-/// Mirrors KHost's "take the first result" behaviour, but prefers the first record that actually carries
-/// lyrics (or is flagged instrumental) so a bare metadata-only hit doesn't win. Returns null when the
-/// array is empty or unparseable.
+/// Takes the first record that actually carries lyrics (or is flagged instrumental) rather than the first
+/// result outright, so a bare metadata-only hit doesn't win. Returns null when nothing parses.
 /// </summary>
 public static class LrcLibResponseParser
 {
@@ -35,7 +34,7 @@ public static class LrcLibResponseParser
                     return Map(record);
             }
 
-            // No record carried lyrics — fall back to the first (surfaces as "no lyrics" in the UI).
+            // No record carried lyrics — the first result still names the matched track.
             return firstOverall is { } f ? Map(f) : null;
         }
     }

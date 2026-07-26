@@ -1,8 +1,6 @@
-// First-run tutorial overlay positioning. Blazor (Components/TutorialOverlay.razor) owns the step content and
-// visibility; this module just measures the current step's target element and lays out the spotlight hole, the
-// caret, and the tip card around it. Mirrors the khScroll/khSheet convention: a window.kh<Feature> object driven
-// from the component. `position` returns false when the target isn't on-screen yet, so the component can retry
-// (right after a navigation) or fall back to a centered card.
+// First-run tutorial overlay positioning; TutorialOverlay.razor owns step content and visibility.
+// `position` returns false when the target isn't on-screen yet, so the component can retry (right after a
+// navigation) or fall back to a centered card.
 window.khTutorial = {
     _ctx: null,          // last positioned step, so a resize can re-lay-it-out
     _resizeBound: false,
@@ -44,8 +42,7 @@ window.khTutorial = {
         const caretX = Math.min(Math.max(left + w / 2 - 7, tipLeft + 12), tipLeft + tipW - 26);
         caret.style.left = caretX + 'px';
 
-        // Keep the tip within the usable band — below the app header (clear of the status bar) and above the app's
-        // bottom nav / OS gesture area — so it never renders under chrome or off-screen.
+        // The usable band: below the app header (clear of the status bar) and above the bottom nav / OS gesture area.
         const header = document.querySelector('.app-header');
         const nav = document.querySelector('.app-nav');
         const safeTop = Math.max(12, header ? header.getBoundingClientRect().bottom + 8 : 12);
@@ -86,8 +83,7 @@ window.khTutorial = {
         return true;
     },
 
-    // Strip the inline positioning so a centered step can be laid out purely by CSS (.tutorial--center). Also
-    // clears the caret's inline display so the .tutorial--center CSS rule (which hides it) can take over again.
+    // Strip the inline positioning — including the caret's inline display — so .tutorial--center can take over.
     reset(hole, caret, tip) {
         this._ctx = null;
         tip.style.top = ''; tip.style.left = ''; tip.style.right = ''; tip.style.bottom = ''; tip.style.transform = '';

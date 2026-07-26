@@ -1,12 +1,10 @@
 namespace KHost.Mobile.Services;
 
 /// <summary>
-/// Central naming for the per-singer JSON data files, so the per-singer stores (which read/write them by active
-/// singer) and <see cref="JsonFileSingerStore"/> (which migrates the legacy files in and deletes a removed
-/// singer's files) all agree on the exact file names. A singer's files live alongside the shared stores in the app
-/// data directory, suffixed with the singer's id; the legacy single-user names (<c>song-list.json</c> /
-/// <c>tonight.json</c>) are what those files were called before multi-singer support and are what a store falls
-/// back to when no singer is active yet.
+/// Central naming for the per-singer JSON data files, so the per-singer stores and
+/// <see cref="JsonFileSingerStore"/> (which migrates the legacy files in and deletes a removed singer's files) agree
+/// on the exact names. A singer's files sit in the app data directory suffixed with their id; the legacy
+/// single-user names are what a store falls back to when no singer is active yet.
 /// </summary>
 internal static class SingerDataFiles
 {

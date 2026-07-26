@@ -3,20 +3,18 @@
 @inject IAlbumArtService AlbumArt
 @inject IJSRuntime JS
 
-@* Shared song detail card. Shown when @Item is set: the song's fields, its ratings and history, the quick links,
-   and (when AllowEdit) an edit form. Presentational — it owns only the edit buffers and its own pull-down-to-dismiss;
-   the host owns the @Item state, does every store write and link launch, and supplies the values it can't derive on
-   its own (the rating math, whether the song is in tonight). Reused by My Songs and the Tonight tab.
-   An action's button renders only when the host wired its callback, so a host that can't service one (Tonight has
-   no lyrics or history sheet of its own) simply doesn't offer it. *@
+@* Shared song detail card (My Songs + Tonight). Presentational — it owns only the edit buffers; the host owns the
+   @Item state, does every store write and link launch, and supplies what can't be derived here (the rating math,
+   whether the song is in tonight). Each action's button renders only when the host wired its callback, so a host
+   that can't service one simply doesn't offer it. *@
 <Sheet Open="Item is not null" OnClose="OnClose" AriaLabel="Song details">
     @if (Item is not null)
     {
 
         @if (!_editing)
         {
-            @* Asks the art service itself rather than being handed a style, like every other art surface. That
-               also means opening a song nobody has scrolled to yet fetches its cover. *@
+            @* Asks the art service rather than taking a style parameter, so opening a song nobody has scrolled
+               to yet still fetches its cover. *@
             var art = AlbumArt.ViewFor(Item);
             <div class="sheet__header @(art.HasArt ? "sheet__header--art" : "") @(art.Loading ? "kh-art-loading" : "")"
                  data-art-song="@Item.Id" style="@art.Style">
@@ -24,8 +22,8 @@
                     @Item.Title
                     @if (HasSuggestion)
                     {
-                        @* Beside the name, because the name is what's wrong. The offer itself stays folded away
-                           until asked for — it's a guess, and it shouldn't push the song's own details down. *@
+                        @* Anchored to the name because that's the field the suggestion corrects; the offer itself
+                           stays folded until asked for. *@
                         <button type="button" class="sheet__typo" aria-expanded="@_suggestionOpen"
                                 aria-label="Possible misspelling — show the suggested spelling"
                                 title="Possible misspelling"
@@ -181,10 +179,8 @@
             {
                 @if (Settings.TonightEnabled && !InTonight)
                 {
-                    @* Split button: the main segment opens KaraFun; the chevron queues the song for tonight first,
-                       then opens it. Degrades to a plain button below when Tonight is off (no menu to offer) OR the
-                       song is already queued for tonight (the "add to tonight" shortcut would be a no-op — the
-                       sheet's "🎤 In tonight ✓" row above already shows it's on deck). *@
+                    @* Degrades to the plain button below when Tonight is off (no menu to offer) or the song is
+                       already queued (the menu's only item would be a no-op). *@
                     <SplitButton Class="kh-split--karafun" PrimaryLabel="🎙 Find on KaraFun"
                                  OnPrimary="OnOpenKaraFun" Direction="SplitDirection.Up"
                                  ToggleAriaLabel="More KaraFun options">
@@ -292,7 +288,7 @@
     /// <summary>Existing tags across the list, offered as suggestions in the edit form.</summary>
     [Parameter] public IReadOnlyList<string> UsedTags { get; set; } = [];
 
-    /// <summary>Whether to offer Edit. Tonight opens the card read-only — a set list is for singing, not curating.</summary>
+    /// <summary>Whether to offer Edit; Tonight opens the card read-only.</summary>
     [Parameter] public bool AllowEdit { get; set; } = true;
 
     /// <summary>Raised on ✕, the backdrop, or a pull-down dismiss. The host clears <see cref="Item"/>.</summary>

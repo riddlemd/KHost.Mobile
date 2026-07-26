@@ -1,7 +1,7 @@
 @inject IAlbumArtService AlbumArt
 
-@* What the 🎲 picked, shown as the app's own song card so a suggestion reads like it came from the list.
-   Display-only — no ★ or tonight buttons; they'd compete with the actions right below the card. *@
+@* What the 🎲 picked, shown as the app's own song card. Display-only — the card's usual ★ / 🎤 buttons are left
+   off so they don't compete with the sheet's own actions right below it. *@
 <Sheet Open="Item is not null" Class="sheet--roll" BackdropClass="sheet-backdrop--roll"
        AriaLabel="Your random pick" ClosePx="150" OnClose="OnClose">
     @if (Item is { } item)
@@ -10,9 +10,8 @@
 
         @* No Changed subscription of its own — the host must re-render this on AlbumArt.Changed. *@
         var art = AlbumArt.ViewFor(item);
-        @* Tappable, because it's a song card and reads as one — the shared .song-card styling carries a
-           pointer cursor and press feedback, so leaving it inert made the whole card look broken. Does what
-           the Open song button does; that button stays as the labelled, reachable route. *@
+        @* Tappable because the shared .song-card styling carries a pointer cursor and press feedback — inert, the
+           card reads as broken. The "Open song" button stays as the labelled, reachable route. *@
         <div class="song-card song-card--roll @(art.HasArt ? "song-card--art" : "") @(art.Loading ? "kh-art-loading" : "")"
              data-art-song="@item.Id" style="@art.Style"
              role="button" tabindex="0" aria-label="Open @item.Title"
@@ -62,8 +61,6 @@
             </div>
         </div>
 
-        @* Lining the song up for tonight is what a singer usually wants from a suggestion — opening it to read
-           the details is the follow-up, not the goal — so Tonight takes the primary button. *@
         @if (ShowTonight)
         {
             <button type="button" class="btn btn-primary roll-result__primary" @onclick="OnAddToTonight" disabled="@InTonight">

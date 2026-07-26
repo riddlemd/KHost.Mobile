@@ -1,7 +1,6 @@
-// Manual light/dark theme. The chosen theme is stamped as `data-theme` on <html> (which
-// wins over the OS `prefers-color-scheme` in app.css) and persisted in localStorage so it
-// survives restarts. A tiny inline script in index.html <head> applies the stored value
-// before first paint to avoid a flash; this module drives the header toggle at runtime.
+// Manual light/dark theme: `data-theme` on <html> wins over the OS `prefers-color-scheme` in app.css.
+// An inline script in index.html <head> applies the stored value before first paint to avoid a flash;
+// this module only drives the header toggle at runtime — keep the two in sync on the storage key.
 window.khTheme = {
     KEY: 'kh-theme',
 

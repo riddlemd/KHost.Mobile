@@ -1,11 +1,10 @@
 namespace KHost.Mobile.Models;
 
 /// <summary>
-/// The curated set of accent colors a singer can carry. Each singer picks one; the whole app chrome (header
-/// gradient, active tab, primary buttons) recolors to the active singer's choice, so a glance tells you whose
-/// phone this is. A fixed palette — rather than a free color wheel — keeps every choice legible on both the light
-/// and dark grounds and on-theme with the violet brand. Stored on <see cref="Singer.Color"/> as a raw hex string;
-/// a singer whose saved color isn't in this list still renders fine — the picker just won't highlight it.
+/// The curated set of accent colors a singer can carry; the active singer's choice re-tints the app. A fixed
+/// palette rather than a free color wheel, so every choice stays legible on both the light and dark grounds.
+/// Stored on <see cref="Singer.Color"/> as a raw hex string; a saved color that isn't in this list still renders
+/// fine — the picker just won't highlight it.
 /// </summary>
 public static class SingerColors
 {

@@ -19,7 +19,7 @@ public interface IAlbumArtCache
     /// <summary>Deletes every cached image. They re-download the next time their songs are viewed.</summary>
     Task ClearAsync();
 
-    /// <summary>Number of cached images on disk (drives the Settings "clear" button's count).</summary>
+    /// <summary>Number of cached images on disk.</summary>
     Task<int> CountAsync();
 
     /// <summary>Raised after the cache grows (a new image was stored) or is cleared, so a live count stays current.</summary>

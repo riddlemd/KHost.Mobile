@@ -5,12 +5,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KHost.Mobile.Services;
 
-/// <summary>
-/// <see cref="IVenueStore"/> backed by a single JSON file in the app's private data directory — the same
-/// durable-JSON pattern as <see cref="JsonFileTonightStore"/>. The in-memory list is the source of truth once
-/// loaded; a <see cref="SemaphoreSlim"/> guards against concurrent UI actions. A corrupt file is treated as an
-/// empty list. Read results are sorted favorites-first then by name; storage order itself is insertion order.
-/// </summary>
+/// <inheritdoc />
+/// <remarks>
+/// Backed by a single JSON file in the app's private data directory — the same durable-JSON pattern as
+/// <see cref="JsonFileTonightStore"/>. A corrupt file is quarantined and treated as an empty list. Read results
+/// are sorted favorites-first then by name; storage order itself is insertion order.
+/// </remarks>
 public sealed class JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFileVenueStore>? logger = null) : IVenueStore
 {
     private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "venues.json");

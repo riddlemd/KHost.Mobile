@@ -1,14 +1,11 @@
-@* Add / edit a singer. Shown when @Editing is set (pass a fresh Singer() to add, or a working copy to edit — the
-   host owns whether it's new). Collects the name + accent color, writes them onto the passed instance, and raises
-   OnSave with it. Delete is offered on an existing singer via OnDelete, unless this is the only singer (CanDelete
-   false). Uses --history stacking so it sits above any page content, matching VenueEditSheet. *@
+@* Add / edit a singer. Pass a fresh Singer() to add or a working copy to edit — on save the fields are written
+   onto that same instance and handed back through OnSave, so never pass the stored object. *@
 <Sheet Open="Editing is not null" Class="sheet--history" BackdropClass="sheet-backdrop--history"
        AriaLabel="Edit singer" OnClose="OnClose">
     @if (Editing is not null)
     {
         <div class="sheet__title">@(IsNew ? "Add singer" : "Edit singer")</div>
 
-        @* Tap the avatar to open the color + emoji picker (collapsed by default). *@
         <IconPicker @bind-Glyph="_glyph" @bind-Color="_color"
                     AvailableGlyphs="SingerGlyphs.All" AvailableColors="SingerColors.All" LetterFallback="@Initial">
             <input class="input singer-edit__name" placeholder="Singer name" maxlength="16" aria-label="Singer name"
@@ -49,7 +46,7 @@
     /// add or a working copy to edit; on save its fields are written and it's handed back via <see cref="OnSave"/>.</summary>
     [Parameter] public Singer? Editing { get; set; }
 
-    /// <summary>Whether this is a brand-new singer (drives the title and hides delete). The host knows.</summary>
+    /// <summary>Whether this is a brand-new singer (drives the title and hides delete).</summary>
     [Parameter] public bool IsNew { get; set; }
 
     /// <summary>Whether delete is allowed — false when this is the only singer, so the last one can't be removed.</summary>
@@ -83,9 +80,8 @@
     private string Initial =>
         string.IsNullOrWhiteSpace(_name) ? "?" : char.ToUpperInvariant(_name.TrimStart()[0]).ToString();
 
-    // Reseed the buffers on every fresh open. Clearing _seededFor on close matters as much as the id check: the
-    // component stays mounted while hidden, so without it, reopening the SAME singer keeps the last open's buffers
-    // and abandoned edits read back as if they'd been saved.
+    // Clearing _seededFor on close matters as much as the id check: the component stays mounted while hidden, so
+    // without it, reopening the SAME singer keeps the last open's buffers and abandoned edits look saved.
     protected override void OnParametersSet()
     {
         if (Editing is null)
@@ -103,7 +99,6 @@
         }
     }
 
-    // Bind pull-down-to-dismiss while shown (same interop as the venue sheets); a swipe closes without saving.
     private async Task SaveAsync()
     {
         if (Editing is not { } s || string.IsNullOrWhiteSpace(_name))

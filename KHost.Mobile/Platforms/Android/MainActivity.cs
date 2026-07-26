@@ -18,31 +18,25 @@ public class MainActivity : MauiAppCompatActivity
     {
         base.OnCreate(savedInstanceState);
 
-        // Android 15+ / API 36 forces edge-to-edge: the Blazor WebView fills the whole window and the app header
-        // would draw under the status bar. Android's WebView never populates CSS env(safe-area-inset-*) for the
-        // system bars, so publish the measured insets to ISafeAreaInsets instead — MainLayout forwards them into
-        // the --kh-inset-* CSS variables once its DOM exists (native can't know when that is; Blazor can). The web
-        // side then paints the header's own gradient full-bleed under the bars while padding its content clear of
-        // them, so the tint (incl. the per-singer re-tint) extends under the status bar in every theme. The
-        // listener re-fires whenever the insets change, which covers rotation.
+        // Android 15+ / API 36 forces edge-to-edge, and Android's WebView never populates CSS
+        // env(safe-area-inset-*) for the system bars — so publish the measured insets to ISafeAreaInsets and let
+        // MainLayout write them into the --kh-inset-* CSS variables once its DOM exists. The listener re-fires
+        // whenever the insets change, which covers rotation.
         var window = Window!;
         var content = window.DecorView!.FindViewById(Android.Resource.Id.Content)!;
         ViewCompat.SetOnApplyWindowInsetsListener(content, new InsetPublisher());
         if (WindowCompat.GetInsetsController(window, window.DecorView!) is { } barsController)
             barsController.AppearanceLightStatusBars = false;   // white status-bar icons on the saturated header
 
-        // Route the hardware/gesture back button through the app's overlay registry: while an in-page overlay
-        // (sheet, confirm, menu) is open, back closes it instead of minimizing the app. The callback stays
-        // enabled and decides per-press; the service resolve is deferred to press time because the MAUI service
-        // provider isn't guaranteed built at OnCreate.
+        // Route the hardware/gesture back button through the app's overlay registry, so back closes an open
+        // sheet/menu instead of minimizing. The callback stays enabled and decides per-press.
         OnBackPressedDispatcher.AddCallback(this, new OverlayBackPressedCallback(this));
     }
 
     // Publishes each window-insets pass to ISafeAreaInsets (in CSS px). The service resolve is deferred to fire
-    // time, same as the back-button callback below, because the MAUI service provider isn't guaranteed at OnCreate.
-    // Uses the SystemBars ∪ DisplayCutout union: on a punch-hole device the cutout can reach deeper than the
-    // status-bar inset (Pixel 7: cutout 136px vs statusBars 74px) and the system clock/icons clear the cutout, so
-    // the union is what keeps the header content out from under them.
+    // time — the MAUI service provider isn't guaranteed built at OnCreate. Takes the SystemBars ∪ DisplayCutout
+    // union: on a punch-hole device the cutout reaches deeper than the status-bar inset (Pixel 7: 136px vs 74px)
+    // and the system clock/icons sit clear of the cutout, so only the union keeps header content out from under them.
     private sealed class InsetPublisher : Java.Lang.Object, IOnApplyWindowInsetsListener
     {
         public WindowInsetsCompat OnApplyWindowInsets(AView? view, WindowInsetsCompat? insets)

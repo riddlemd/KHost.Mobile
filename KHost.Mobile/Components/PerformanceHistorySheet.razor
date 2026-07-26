@@ -1,13 +1,9 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-@* Every performance of one song: when, how it went, and a note. Extracted from My Songs so the Tonight tab's detail
-   card can open the same sheet — a song's history is the song's, not one page's.
-
-   Rows carry the app's standard row gestures (swipe.js): swipe left to remove, press and hold to change the
-   date. swipe.js ignores the note field and the stars, so a hold lands on the date, which is what it edits.
-   The component owns the undo and the date editor because both are per-row and neither host has anything
-   useful to add to them; the host only applies and persists the resulting change. *@
+@* Every performance of one song: when, how it went, and a note. Rows carry the standard row gestures (swipe.js):
+   swipe left to remove, press and hold to change the date. swipe.js ignores the note field and the stars, so a
+   hold lands on the date. The undo and the date editor live here; the host only persists the resulting change. *@
 <Sheet Open="Item is not null" Class="sheet--history" BackdropClass="sheet-backdrop--history"
        AriaLabel="Performance history" ClosePx="150" OnClose="OnClose">
     @if (Item is { } item)
@@ -43,15 +39,13 @@
                 </div>
             }
         </div>
-        @* No assistive-tech gesture maps to swipe or long-press, so both actions are spelled out — the same
-           reason Venues and Singers keep a reachable equivalent for their press-and-hold. *@
+        @* No assistive-tech gesture maps to swipe or long-press, so both actions are spelled out. *@
         <div class="history__hint">Swipe a row left to remove it · press and hold a date to change it</div>
     }
 </Sheet>
 
-@* A swipe removes straight away and offers an undo, the way the song, venue and singer lists do — rather
-   than a confirm, which asks before anything has happened and can't be reconsidered after. Rendered outside
-   the Sheet, and .snackbar outranks it, so it floats above the sheet it belongs to. *@
+@* A swipe removes straight away and offers an undo, the way the song, venue and singer lists do. Must stay
+   OUTSIDE the Sheet — .snackbar's z-index only outranks it from here. *@
 @if (_undone is not null)
 {
     <div class="snackbar" role="status">

@@ -1,5 +1,4 @@
-@* One row in a <see cref="SplitButton"/>'s dropdown. Runs its OnClick, then asks the parent to close the menu.
-   The label is the child content; Icon and Description are optional. *@
+@* One row in a <see cref="SplitButton"/>'s dropdown. Runs its OnClick, then asks the parent to close the menu. *@
 <button type="button" class="kh-split__item @(Separated ? "kh-split__item--sep" : "")" role="menuitem"
         disabled="@Disabled" @onclick="ClickAsync">
     @if (!string.IsNullOrEmpty(Icon))

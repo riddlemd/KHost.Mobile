@@ -1,10 +1,7 @@
-// Row gestures: tap, press-and-hold, and swipe-left-to-remove. Event-delegated on a stable container; works
-// with pointer events so it covers touch + mouse. Vertical scrolling stays native via `touch-action: pan-y`
-// on the rows. As a row slides left it uncovers a red "Remove" strip (a single reusable fixed element)
-// sized to the vacated space, so the pending action is always labelled.
-// Reused by the song, venue and singer lists; `options` names the per-list attribute/class/methods
-// (defaults keep the original song-table contract), so each gesture calls that list's own [JSInvokable]
-// handlers. `holdMethod` and `swipeEnabled` are opt-in: the singer list wants hold + tap but no swipe.
+// Row gestures: tap, press-and-hold, and swipe-left-to-remove. Event-delegated on a stable container.
+// Vertical scrolling stays native via `touch-action: pan-y` on the rows — don't drop it or the list stops
+// scrolling. Shared by the song, venue and singer lists; `options` names the per-list attribute/class/[JSInvokable]
+// methods (defaults are the song-table contract), and `holdMethod`/`swipeEnabled` are opt-in per list.
 window.khSwipe = {
     register(container, dotNetRef, options) {
         if (!container || container._khSwipeBound) return;
@@ -38,14 +35,12 @@ window.khSwipe = {
             a.row.classList.remove(holdingClass);
         };
 
-        // A completed hold is still followed by a click when the finger lifts. When the hold opened something
-        // under the finger — the sung-history date editor — that click lands on the new overlay's backdrop and
-        // dismisses it instantly. Same guard press-hold.js carries, but on the document, because by then the
-        // click targets whatever is on top rather than the row.
+        // A completed hold is still followed by a click when the finger lifts, and if the hold opened something
+        // under the finger (the sung-history date editor) that click dismisses it instantly. Bound on the
+        // document, not the row, because by then the click targets whatever is on top.
         //
-        // Armed on release, not when the hold fires: the click follows the lift, and a hold held for a while
-        // would outlive any timeout armed at fire time. The timeout is only so a release that draws no click
-        // can't leave the next genuine click armed to be eaten.
+        // Armed on release, not when the hold fires: the click follows the lift, so a long hold would outlive a
+        // timeout armed at fire time. The timeout only stops a release that draws no click from eating the next one.
         const swallowNextClick = () => {
             const onClick = (e) => { e.preventDefault(); e.stopPropagation(); };
             document.addEventListener('click', onClick, { capture: true, once: true });
@@ -83,10 +78,9 @@ window.khSwipe = {
             // Let taps on the interactive controls (favorite, rating, inputs) work normally.
             if (e.target.closest('button, input, select, a, label')) return;
 
-            // One gesture at a time: a second finger landing before the first lifts must not hijack the state
-            // machine (it would strand the first row mid-drag and resolve the release against the wrong row).
-            // Kill the first gesture's hold timer so it can't fire for a row nobody is pressing, then ignore
-            // the new pointer entirely — the first finger keeps ownership until it lifts or cancels.
+            // One gesture at a time: a second finger landing before the first lifts would strand the first row
+            // mid-drag and resolve the release against the wrong row. Kill the first gesture's hold timer (nobody
+            // is pressing that row any more) but keep its ownership until it lifts or cancels.
             if (active) {
                 cancelHold(active);
                 return;
@@ -125,8 +119,8 @@ window.khSwipe = {
             const dx = e.clientX - active.startX;
             const dy = e.clientY - active.startY;
 
-            // Any real travel in either axis means this is a scroll or swipe — no longer a candidate tap,
-            // and no longer a candidate hold: a finger that moved was never dwelling in place.
+            // Any real travel in either axis means a scroll or swipe — no longer a candidate tap, and no longer
+            // a candidate hold either: a finger that moved was never dwelling in place.
             if (Math.abs(dx) > TAP_SLOP || Math.abs(dy) > TAP_SLOP) {
                 active.moved = true;
                 cancelHold(active);
@@ -160,9 +154,8 @@ window.khSwipe = {
                 swallowNextClick();
 
             if (!a.dragging) {
-                // Open the detail sheet ONLY on a genuine tap: a stationary pointerup that didn't already become a
-                // hold. A pointercancel means the browser took the gesture over to scroll, and any travel past the
-                // slop is a scroll/swipe — none of those should open the sheet.
+                // Only a stationary pointerup that never became a hold is a tap: pointercancel means the browser
+                // took the gesture over to scroll, and travel past the slop is a scroll/swipe.
                 if (e.type === 'pointerup' && !a.moved && !a.held && tapMethod) {
                     dotNetRef.invokeMethodAsync(tapMethod, a.id);
                 }

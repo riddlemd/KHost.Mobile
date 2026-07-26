@@ -30,8 +30,7 @@ public sealed class YouTubeMusicImportService(HttpClient httpClient) : IYouTubeM
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            // A genuine caller cancellation rethrows as OperationCanceledException; only a real network failure
-            // (or a request-timeout TaskCanceledException) maps to the domain error. Mirrors the sibling clients.
+            // Check first: a caller cancel must stay an OperationCanceledException, not become a domain error.
             cancellationToken.ThrowIfCancellationRequested();
             throw new YouTubeMusicImportException("Couldn't reach YouTube Music. Check your connection and try again.", ex);
         }

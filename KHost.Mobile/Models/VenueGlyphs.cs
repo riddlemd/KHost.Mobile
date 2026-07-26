@@ -1,10 +1,9 @@
 namespace KHost.Mobile.Models;
 
 /// <summary>
-/// The curated set of venue icons the add/edit picker offers. A fixed grid beats the native OS emoji keyboard here:
-/// in the Blazor WebView that keyboard's emoji section is unreliable, and a hand-picked set stays on-theme
-/// (instruments, nightlife, drinks, and tropical/latin locale cues). Stored on <see cref="Venue.Glyph"/> as the raw
-/// string; a venue whose saved glyph isn't in this list still renders fine — the picker just won't highlight it.
+/// The curated set of venue icons the picker offers. A fixed grid rather than the native OS emoji keyboard, whose
+/// emoji section is unreliable in the Blazor WebView. Stored on <see cref="Venue.Glyph"/> as the raw string; a
+/// saved glyph that isn't in this list still renders fine — the picker just won't highlight it.
 /// </summary>
 public static class VenueGlyphs
 {

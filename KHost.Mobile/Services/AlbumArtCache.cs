@@ -5,17 +5,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KHost.Mobile.Services;
 
-/// <summary>
-/// <see cref="IAlbumArtCache"/> that stores each cover as a raw image file under an <c>album-art</c> subfolder of
-/// the app data directory, named by a hash of its source URL (so identical covers dedupe and re-lookup is a no-op).
-/// A blob store rather than the JSON pattern the other caches use, because the payload is binary image bytes.
-/// </summary>
+/// <inheritdoc />
 /// <remarks>
-/// The cover bytes reach the WebView as a stream that the UI wraps in a <c>DotNetStreamReference</c> and turns into
-/// a <c>blob:</c> object URL — so the render tree holds a short URL, not a base64 copy of every image. The bytes are
-/// downloaded from the artwork CDN (not the rate-limited iTunes Search API), so caching the visible page is fine.
-/// No in-memory copy is kept here: repeat requests re-open the on-disk file (cheap) and the browser caches the
-/// decoded image behind its object URL.
+/// Each cover is a raw image file under an <c>album-art</c> subfolder of the app data directory, named by a hash of
+/// its source URL, so identical covers dedupe. A blob store rather than the JSON pattern the other caches use,
+/// because the payload is binary. No in-memory copy is kept: repeat requests re-open the on-disk file (cheap) and
+/// the browser caches the decoded image behind its object URL. Downloads hit the artwork CDN, not the rate-limited
+/// iTunes Search API.
 /// </remarks>
 public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory httpFactory, ILogger<AlbumArtCache>? logger = null) : IAlbumArtCache
 {
@@ -119,8 +115,8 @@ public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory ht
         }
     }
 
-    // Stable per-URL filename: SHA-256 of the URL, hex. Keeps arbitrary URL characters out of the filesystem and
-    // dedupes two songs that share a cover. No extension needed — the bytes are read back verbatim.
+    // SHA-256 of the URL, hex: keeps arbitrary URL characters out of the filesystem and dedupes two songs that
+    // share a cover. No extension needed — the bytes are read back verbatim.
     private string PathFor(string url)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(url));

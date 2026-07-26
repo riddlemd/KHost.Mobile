@@ -15,10 +15,9 @@ public sealed class MauiVenueLocator(
     IAppSettings settings,
     ILogger<MauiVenueLocator> logger) : IVenueLocator
 {
-    // Treat the singer as "at" a venue within this radius of its saved point. Venues are small (a ~15 m / 50 ft
-    // footprint) and often cluster on one block, so keep this tight — just the footprint plus typical medium-accuracy
-    // GPS wobble — rather than a city-block radius that would flag a venue you're merely walking past. This is only
-    // the "close enough to count" gate; among venues that are both in range, nearest-wins still picks the closest.
+    // Treat the singer as "at" a venue within this radius of its saved point. Kept tight — a venue footprint plus
+    // typical medium-accuracy GPS wobble — because venues often cluster on one block and a wider radius would flag
+    // one you're merely walking past.
     private const double AtVenueMeters = 75;
 
     public async Task ResolveActiveAsync(CancellationToken cancellationToken = default)

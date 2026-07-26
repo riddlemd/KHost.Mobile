@@ -41,7 +41,7 @@
     [JSInvokable]
     public Task Tap() => OnRoll.InvokeAsync();
 
-    /// <summary>Confirms the hold with the platform's long-press tick, the same feedback the row gestures give.</summary>
+    /// <summary>Confirms the hold with a haptic tick — the only cue that a hold registered.</summary>
     [JSInvokable]
     public Task Hold()
     {

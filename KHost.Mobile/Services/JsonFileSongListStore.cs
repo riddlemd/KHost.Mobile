@@ -5,12 +5,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KHost.Mobile.Services;
 
-/// <summary>
-/// <see cref="ISongListStore"/> backed by a single JSON file in the app's private data directory. Mirrors the KHost
-/// desktop's "durable JSON cache" pattern for small, frequently-mutated state. The in-memory list is the source of
-/// truth once loaded; every mutation rewrites the file. Guarded by a <see cref="SemaphoreSlim"/> so concurrent UI
-/// actions can't corrupt the file or the cache.
-/// </summary>
+/// <inheritdoc />
+/// <remarks>
+/// Backed by a single JSON file in the app's private data directory. The in-memory list is the source of truth once
+/// loaded; every mutation rewrites the file, under a <see cref="SemaphoreSlim"/> so concurrent UI actions can't
+/// corrupt either. A corrupt file is quarantined and treated as an empty list.
+/// </remarks>
 public sealed class JsonFileSongListStore : ISongListStore
 {
     private readonly IAppDataDirectory _paths;
@@ -23,9 +23,8 @@ public sealed class JsonFileSongListStore : ISongListStore
 
     /// <summary>
     /// The song list is per-singer: it reads/writes the active singer's file (<see cref="IAppSession.ActiveSingerId"/>).
-    /// <paramref name="session"/> is optional so the integration tests can <c>new</c> the store without wiring a
-    /// session — it then reads the single legacy file, exactly as before multi-singer support. The optional logger
-    /// keeps those tests loggerless; DI supplies both.
+    /// <paramref name="session"/> and <paramref name="logger"/> are optional so the integration tests can <c>new</c>
+    /// the store bare; with no session it falls back to the single legacy file. DI supplies both.
     /// </summary>
     public JsonFileSongListStore(IAppDataDirectory paths, IAppSession? session = null, ILogger<JsonFileSongListStore>? logger = null)
     {
@@ -348,8 +347,8 @@ public sealed class JsonFileSongListStore : ISongListStore
     }
 
     // Fold a legacy song into the Performances model: each old sung timestamp becomes a Performance carrying the
-    // song's old single rating; a rated-but-dateless legacy entry gets one performance stamped at AddedAt. The legacy
-    // fields are then emptied so new writes stop carrying them. Returns true if anything changed. No-op once migrated.
+    // song's old single rating. The legacy fields are then emptied so new writes stop carrying them. Returns true
+    // if anything changed; no-op once migrated.
     private static bool MigrateToPerformances(SongListItem item)
     {
         if (item.Performances.Count > 0)

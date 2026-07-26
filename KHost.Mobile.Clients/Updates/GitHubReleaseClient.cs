@@ -5,7 +5,6 @@ namespace KHost.Mobile.Clients.Updates;
 /// Hits the anonymous GitHub REST API (<c>api.github.com/repos/{owner}/{repo}/releases</c>). The base
 /// address, the mandatory <c>User-Agent</c>, and the <c>Accept: application/vnd.github+json</c> header are
 /// configured on the injected <see cref="HttpClient"/> at registration (keeping this library MAUI-free).
-/// A page of recent releases is fetched and <see cref="GitHubReleaseParser"/> picks the highest version.
 /// </remarks>
 public sealed class GitHubReleaseClient(HttpClient httpClient) : IUpdateClient
 {
@@ -21,8 +20,7 @@ public sealed class GitHubReleaseClient(HttpClient httpClient) : IUpdateClient
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            // A genuine caller-cancel bubbles as OperationCanceledException; any real failure is swallowed —
-            // an update check that can't reach the network simply reports "nothing new".
+            // Check first: a caller cancel must still propagate. Anything else degrades to "nothing new".
             cancellationToken.ThrowIfCancellationRequested();
             return null;
         }

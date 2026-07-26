@@ -6,13 +6,12 @@ using KHost.Mobile.Clients.Json;
 namespace KHost.Mobile.Clients.YouTubeMusic;
 
 /// <summary>
-/// Extracts the tracklist from a YouTube Music <c>/playlist?list={id}</c> page. YT Music embeds its
-/// data inside <c>initialData.push({ ... data: '&lt;JS-escaped JSON&gt;' })</c> — a single-quoted string
-/// with <c>\xNN</c> escapes — so this un-escapes and parses each such blob, then reads the rows at
+/// Extracts the tracklist from a YouTube Music <c>/playlist?list={id}</c> page. Pure — no network.
+/// The data sits in <c>initialData.push({ … data: '&lt;JS-escaped JSON&gt;' })</c> — a single-quoted string
+/// with <c>\xNN</c> escapes, so it needs un-escaping before it is JSON at all. Tracks are the rows at
 /// <c>musicResponsiveListItemRenderer.flexColumns[]</c> (column 0 = title, column 1 = artist).
-///
-/// This is an UNOFFICIAL, undocumented shape and can change without notice, so parsing is deliberately
-/// tolerant: it searches by property name rather than a fixed path and skips anything unrecognized. Pure — no network.
+/// <para>UNOFFICIAL and undocumented: it changes without notice, so everything is looked up by property
+/// name rather than a fixed path and anything unrecognized is skipped instead of throwing.</para>
 /// </summary>
 public static partial class YouTubeMusicPlaylistParser
 {
@@ -66,17 +65,18 @@ public static partial class YouTubeMusicPlaylistParser
         return new YouTubeMusicPlaylistImport(PlaylistName(html), best, bestTruncated);
     }
 
-    // Yields the decoded JSON of every `data: '…'` assignment (the single-quoted, \xNN-escaped payloads).
+    // Scanned by hand, not by regex: the payload is a single-quoted JS string, so the terminator is the
+    // first UNESCAPED quote.
     private static IEnumerable<string> EnumerateDataBlobs(string html)
     {
         foreach (Match m in DataBlobRegex().Matches(html))
         {
-            var start = m.Index + m.Length;   // first char after the opening quote
+            var start = m.Index + m.Length;
             var i = start;
             for (; i < html.Length; i++)
             {
-                if (html[i] == '\\') { i++; continue; }   // skip the escaped char
-                if (html[i] == '\'') break;               // unescaped closing quote
+                if (html[i] == '\\') { i++; continue; }
+                if (html[i] == '\'') break;
             }
             if (i <= html.Length)
                 yield return JsUnescape(html.AsSpan(start, i - start));
@@ -114,7 +114,6 @@ public static partial class YouTubeMusicPlaylistParser
         return sb.ToString();
     }
 
-    // Depth-first: each musicResponsiveListItemRenderer with a title + video id becomes a track.
     private static void CollectTracks(JsonElement element, List<YouTubeMusicTrack> acc)
     {
         switch (element.ValueKind)
@@ -176,12 +175,12 @@ public static partial class YouTubeMusicPlaylistParser
 
     private static string? VideoId(JsonElement row)
     {
-        // Preferred: the playlist item's own id.
         var direct = row.Prop("playlistItemData").Str("videoId");
         if (direct is not null && VideoIdRegex().IsMatch(direct))
             return direct;
 
-        // Fallback: the play-button's watch endpoint. Found by property name to survive layout shuffles.
+        // Fallback for a row without playlistItemData: the play-button's watch endpoint, found by property
+        // name so a layout shuffle doesn't break it.
         return FindVideoId(row);
     }
 

@@ -5,8 +5,7 @@ namespace KHost.Mobile.Clients.Matching;
 
 /// <summary>
 /// Shared, pure text normalization for matching a requested song's title/artist against a third-party
-/// search result. Used by the metadata/cover-art parsers (iTunes, Deezer) which cannot trust a free-text
-/// API's top-ranked hit and must instead verify that a candidate's title and artist match what was asked for.
+/// search result (iTunes, Deezer).
 /// </summary>
 /// <remarks>
 /// Deliberately conservative: it should accept the same song written slightly differently
@@ -58,9 +57,8 @@ internal static class TrackTextNormalizer
     /// of the rest alone — for text that will be shown or written back, not compared.
     /// </summary>
     /// <remarks>
-    /// A title that genuinely contains brackets ("Exit Music (For a Film)") loses that part. That's the same
-    /// call <see cref="Normalize"/> already makes for matching, so the two agree on what counts as one song,
-    /// and catalogue version-suffixes are far more common than bracketed real titles.
+    /// A title that genuinely contains brackets ("Exit Music (For a Film)") loses that part — accepted so the
+    /// two stay in step with <see cref="Normalize"/>, and version suffixes outnumber real bracketed titles.
     /// </remarks>
     public static string StripAsides(string value)
     {

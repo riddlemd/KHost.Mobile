@@ -7,10 +7,9 @@ namespace KHost.Mobile.Clients.Deezer;
 /// Uses the keyless Deezer public API (<c>api.deezer.com/search</c>), and deliberately NOT the field-scoped
 /// <c>artist:"…" track:"…"</c> form <see cref="DeezerCoverArtLookup"/> uses. Measured against the live API,
 /// the field-scoped query is exact-only — a typo returns zero results — while the plain free-text query is
-/// typo-tolerant ("Radiohead Creap" → "Creep — Radiohead"). The two ask different questions and need
-/// different query shapes; that's why this is a separate call rather than a second reading of the art one.
-/// <para>Rate limit is ~50 req/5s per IP. Callers reach this only for a song iTunes couldn't place, once per
-/// song, so the volume is the same order as the cover-art fallback's.</para>
+/// typo-tolerant ("Radiohead Creap" → "Creep — Radiohead"). Hence a separate call rather than a second
+/// reading of the cover-art response.
+/// <para>Rate limit ~50 req/5s per IP; reached only for a song iTunes couldn't place, once per song.</para>
 /// </remarks>
 public sealed class DeezerSpellingSuggestionLookup(HttpClient httpClient) : ISpellingSuggestionLookup
 {

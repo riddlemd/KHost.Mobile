@@ -1,13 +1,8 @@
-// Drag-to-dismiss for the song detail bottom sheet.
-// Pull DOWN to close; pulling up does nothing (the page behind is locked, so it can't scroll — the
-// old behaviour was the background list scrolling under the open sheet). Internal scrolling is
-// respected: the drag only takes over when the sheet is scrolled to its top and you pull down, so a
-// tall sheet still scrolls its own content normally.
+// Drag-to-dismiss for bottom sheets: pull DOWN from the top of the sheet to close.
 //
-// Touch is handled with non-passive touch events so we can preventDefault() and take the gesture
-// away from the browser's native scroll/overscroll — with pointer events the browser claims a
-// downward pull for its overscroll bounce and fires pointercancel, so the sheet never closed. Mouse
-// (desktop / Windows head) is handled separately via pointer events.
+// Touch uses non-passive touch events, not pointer events, so preventDefault() can take the gesture away from
+// native overscroll — with pointer events the browser claims a downward pull for its bounce and fires
+// pointercancel, so the sheet never closed. Mouse (desktop / Windows head) is handled separately below.
 window.khSheet = {
     register(sheet, dotNetRef, options) {
         if (!sheet || sheet._khSheetBound) return;
@@ -28,9 +23,8 @@ window.khSheet = {
 
         const onControl = (t) => t && t.closest && t.closest('button, input, select, textarea, a');
 
-        // A sheet can have its own inner scroller (e.g. the history list); drag-to-dismiss only engages when
-        // THIS one is at its top, so a scrolled-down list keeps scrolling instead of the pull dragging the
-        // sheet closed.
+        // Drag-to-dismiss only engages when the innermost scroller under the finger is at its top, so a
+        // scrolled-down inner list (e.g. the history sheet) keeps scrolling instead of dragging the sheet closed.
         const scrollerFor = (target) => {
             let el = target;
             while (el && el !== sheet.parentElement) {
@@ -95,16 +89,14 @@ window.khSheet = {
         sheet.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') end(); });
     },
 
-    // Page-scroll lock behind sheets, driven from Blazor by whether ANY sheet is open. Because it's set from
-    // component state on every render (not toggled per open/close), it can never get stranded on a close path
-    // that skips cleanup — the touch swipe-dismiss bug that stuck the lock on and killed scrolling everywhere.
+    // Set from component state on every render, never toggled per open/close — a toggle gets stranded "on" when a
+    // sheet closes on a path that skips cleanup (touch swipe-dismiss), killing page scrolling everywhere.
     setLock(on) {
         document.body.classList.toggle('kh-sheet-open', !!on);
     },
 
-    // Same lock, but read off the DOM instead of a caller's state: any .sheet on the page means locked. Sheets
-    // stack (a detail sheet under a history sheet), so a caller-driven lock has to know about every other open
-    // sheet to avoid unlocking the page out from under one still showing. The DOM already knows.
+    // Same lock, read off the DOM rather than a caller's state. Sheets stack (a detail sheet under a history
+    // sheet), so a caller-driven lock would unlock the page out from under a sheet still showing.
     syncLock() {
         document.body.classList.toggle('kh-sheet-open', !!document.querySelector('.sheet'));
     },

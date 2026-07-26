@@ -8,11 +8,9 @@
 @inject ILogger<SingerChip> Log
 @implements IDisposable
 
-@* The active-singer avatar + "Who's singing?" quick switcher, mounted top-right in the header by MainLayout. The
-   avatar shows the active singer (their color + initial); tapping it opens a dropdown to switch who's singing or
-   jump to the Singers page. Switching sets the active singer (session) and remembers it for next launch; the app
-   chrome re-tints to the new singer's color (see OnAfterRenderAsync → khSinger.apply). Reflects live changes via
-   the store's Changed event and IAppSession's ActiveSingerChanged. *@
+@* The active-singer avatar + "Who's singing?" quick switcher, mounted in the header by MainLayout. Switching sets
+   the session's active singer and remembers it for next launch; this component also owns the app-wide re-tint to
+   that singer's color (OnAfterRenderAsync → khSinger.apply). *@
 <div class="singer-chip-host">
     <button type="button" class="singer-chip" data-tut="singer-chip" @onclick="Toggle" aria-haspopup="true" aria-expanded="@_open"
             style="@AvatarStyle(_active)"
@@ -84,7 +82,7 @@
         StateHasChanged();
     }
 
-    // JS interop, so it lives here rather than in the render path; guarded so we only call on a real color change.
+    // Guarded on _appliedColor so a re-render doesn't re-invoke interop when the color hasn't actually changed.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         var color = _active?.Color;

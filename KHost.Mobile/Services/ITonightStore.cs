@@ -3,12 +3,10 @@ using KHost.Mobile.Models;
 namespace KHost.Mobile.Services;
 
 /// <summary>
-/// The "Tonight" on-deck set list — an ordered, persisted queue of songs to work through at the venue, with a
-/// per-entry completed flag. Its own store (separate from <see cref="ISongListStore"/>) so the ephemeral set and
-/// its completion state are decoupled from the song entities. Entries reference a <see cref="SongListItem"/> by
-/// id; orphans (whose song was deleted) are dropped by <see cref="PruneAsync"/>, which the pages call after loading
-/// their song list — not automatically on load/save. The UI binds to this interface only; <see cref="Changed"/>
-/// drives refresh, matching the song store.
+/// The "Tonight" on-deck set list — an ordered, persisted queue of songs with a per-entry completed flag. Its own
+/// store (separate from <see cref="ISongListStore"/>) so the ephemeral set and its completion state are decoupled
+/// from the song entities. Entries reference a <see cref="SongListItem"/> by id; orphans (whose song was deleted)
+/// are dropped by <see cref="PruneAsync"/>, which callers must invoke — it never runs automatically on load/save.
 /// </summary>
 public interface ITonightStore
 {

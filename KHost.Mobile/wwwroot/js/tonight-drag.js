@@ -1,8 +1,5 @@
-// Drag-to-reorder for the "Tonight" set list.
-// Delegated on a stable container; the drag starts only from a row's ⠿ handle (`.setrow__handle`), so tapping
-// the check/remove buttons or the row body still works. Pointer events cover touch + mouse. As you drag, the
-// lifted row follows the pointer and the others shuffle live via a CSS translate; on drop we hand .NET the new
-// order (array of data-song-id strings, top-to-bottom) and let Blazor re-render from the persisted result.
+// Drag-to-reorder for the "Tonight" set list. Delegated on a stable container, and the drag starts only from a
+// row's ⠿ handle (`.setrow__handle`) so tapping the check/remove buttons or the row body still works.
 window.khTonight = {
     register(container, dotNetRef) {
         if (!container || container._khTonightBound) return;

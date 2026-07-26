@@ -21,17 +21,12 @@
 @inject IBackButtonService BackButton
 @implements IDisposable
 
-@* The wishlist. "Tonight" lives on its own tab now (Components/Pages/Tonight.razor); each card here still carries
-   the 🎤 quick-add so you can line a song up for tonight from the list. *@
-@* Adding a song is a floating "+" (bottom-right) that opens the add sheet, so it stays reachable while scrolling
-   and doesn't take a card's worth of room at the top. It tucks away whenever any sheet/overlay is open (so it never
-   sits under a dim backdrop) and during the undo-toast window. data-tut="add" moved here from the old add card. *@
 <button type="button" class="mysongs-fab @(Settings.TonightEnabled ? "" : "mysongs-fab--no-nav") @(AnyOverlayOpen ? "is-hidden" : "")"
         data-tut="add" aria-label="Add a song you'd like to sing" @onclick="OpenAdd">
     <span class="mysongs-fab__plus" aria-hidden="true">＋</span>
 </button>
 
-@* 🎲 rides above the "+". Needs two songs to be worth offering — with one there's nothing to be surprised by. *@
+@* Needs two songs to be worth offering — with one there's nothing to be surprised by. *@
 @if (Settings.SurpriseEnabled && _items.Count >= 2)
 {
     <SurpriseFab NoNav="!Settings.TonightEnabled" Hidden="AnyOverlayOpen"
@@ -40,8 +35,6 @@
 
 <SurpriseSheet Open="_surpriseSheetOpen" OnRoll="RollFromSheetAsync" OnClose="CloseSurpriseOptions" />
 
-@* The roll's result, as a sheet showing the pick's own card. Rerolling leaves it open, so trying a few costs
-   one tap each rather than a close-then-roll. *@
 <RollResultSheet Item="_rollPick"
                  InTonight="IsInTonight(_rollPick)"
                  ShowTonight="Settings.TonightEnabled"
@@ -55,10 +48,7 @@
 
 @if (_items.Count > 0)
 {
-    @* Search floats sticky under the header (see .mysongs-floatbar) so a new search never needs a scroll-to-top;
-       active-filter pills ride along in the same sticky bar so they stay visible while scrolling. *@
     <div class="mysongs-floatbar">
-        @* One bar searches song OR artist — the common case. The rest of the filters live behind the funnel. *@
         <div class="filter-search" data-tut="search">
             <span class="filter-search__icon" aria-hidden="true">🔍</span>
             <input class="filter-search__input" placeholder="Search songs or artists"
@@ -95,7 +85,6 @@
     </div>
 }
 
-@* Each active filter also shows as a removable pill above. *@
 @if (_filterSheetOpen)
 {
     <div class="sheet-backdrop" @onclick="CloseFilterSheet"></div>
@@ -109,8 +98,8 @@
             }
         </div>
         <div class="filters__grid filter-sheet__grid">
-            @* Multi-select filters use a native <details>/<summary> + checkboxes — no custom popover, so mobile
-               WebViews render them reliably. Multiple picks within a filter are OR'd; filters still AND together. *@
+            @* Native <details>/<summary> rather than a custom popover — mobile WebViews render it reliably.
+               Multiple picks within a filter are OR'd; filters still AND together. *@
             <div class="field filters__field filters__field--wide">
                 <label class="field__label">Genre</label>
                 <details class="msf" name="msf-filter">
@@ -222,7 +211,6 @@
             {
                 <div class="field filters__field filters__field--wide">
                     <label class="field__label">Release year</label>
-                    @* Tapping either bound opens the year grid; the slider still drags the same two values. *@
                     <div class="range-row">
                         <button type="button" class="input input--sm range-num range-num--btn"
                                 @onclick="() => OpenYearPicker(high: false)"
@@ -245,7 +233,6 @@
     </div>
 }
 
-@* Year grid, stacked above the filter sheet that opens it. *@
 <YearPickerSheet Open="_yearPickerOpen"
                  Title="@(_yearPickerHigh ? "Latest year" : "Earliest year")"
                  Years="_libraryYears"
@@ -255,7 +242,6 @@
                  OnPick="PickYear"
                  OnClose="CloseYearPicker" />
 
-@* Add-a-song sheet — opened by the floating "+". Same bottom-sheet + pull-to-dismiss treatment as the other sheets. *@
 @if (_addOpen)
 {
     <div class="sheet-backdrop" @onclick="CloseAdd"></div>
@@ -328,9 +314,8 @@
     if (listSig != _lastListSig) { _renderCount = PageSize; _lastListSig = listSig; _pagingReset = true; }
     var page = visible.Take(_renderCount).ToList();
     _listRendered = !_loading && visible.Count > 0;
-    // The art observer only needs re-wiring when the set of art-bearing elements can have changed — not on
-    // every repaint (see OnAfterRenderAsync). _listRendered has to be in here: the cards live behind it, so a
-    // render while still loading has a page count but no card elements for the observer to find.
+    // _listRendered has to be in the signature: the cards live behind it, so a render while still loading has a
+    // page count but no card elements for the observer to find.
     _artSurfaceSig = $"{_itemsVersion}:{page.Count}:{_listRendered}:{listSig}:{_detailItem?.Id}:{_rollPick?.Id}";
 }
 
@@ -479,8 +464,7 @@ else
             </div>
         }
     </div>
-    @* Infinite-scroll sentinel: while more songs remain, khInfinite watches this and loads the next page as it nears
-       the viewport. Rendered only when there's more to show, so reaching it means the whole list is on screen. *@
+    @* Infinite-scroll sentinel: khInfinite watches this and loads the next page as it nears the viewport. *@
     @if (_renderCount < _visibleCount)
     {
         <div class="song-cards__more" @ref="_sentinel" role="status" aria-label="Loading more songs">
@@ -497,7 +481,6 @@ else
     </div>
 }
 
-@* The card itself is Components/SongDetailSheet.razor — the Tonight tab opens the same one (read-only). *@
 <SongDetailSheet Item="_detailItem"
                  SuggestionLoading="_suggestionLoading" AutoFilledNote="@_autoFilledNote"
                  InTonight="IsInTonight(_detailItem)"
@@ -604,15 +587,14 @@ else
     private SortColumn _sort = SortColumn.Title;
     private bool _sortDescending = false;   // default: A→Z by song title
 
-    // Swipe-to-remove wiring: the JS module is delegated on the stable <tbody> element.
+    // Swipe-to-remove wiring: the JS module is delegated on the card-list container, not per card.
     private ElementReference _swipeRoot;
     private DotNetObjectReference<MySongs>? _swipeRef;
     private bool _listRendered;
     private bool _swipeBound;
 
-    // Infinite scroll: render only _renderCount of the filtered/sorted list and grow by PageSize as the sentinel
-    // nears the viewport, so a 500+ song list paints ~20 cards instead of all of them. _lastListSig rewinds paging
-    // to the first page whenever the filter/sort changes; _visibleCount is the full filtered count (set each render).
+    // Infinite scroll: render only _renderCount of the filtered/sorted list so a 500+ song list paints ~20 cards
+    // instead of all of them. _lastListSig rewinds paging to page 1 whenever the filter/sort changes.
     private const int PageSize = 20;
     private int _renderCount = PageSize;
     private int _visibleCount;
@@ -634,8 +616,7 @@ else
     private bool _lyricsSheetBound;
     private bool _pageLocked;   // mirrors body.kh-sheet-open; reconciled from sheet state each render
 
-    // "Tonight" on-deck set list (its own store). Read here only to light up each card's 🎤 quick-add state
-    // (IsInTonight); the set itself is managed on the Tonight tab (Components/Pages/Tonight.razor).
+    // Read here only to light up each card's 🎤 quick-add state; the set itself is managed on the Tonight tab.
     private IReadOnlyList<TonightEntry> _tonight = [];
 
     // Lyrics lookup (LRCLIB) shown in its own sheet; fetched fresh each open.
@@ -662,14 +643,13 @@ else
     private static string ScrollKeyFor(Guid? singerId) => singerId is { } id ? $"mysongs:{id:N}" : "mysongs";
     private bool _scrollRestored;
 
-    // The song whose detail card is open (tapped from a card). The card itself — including its edit form and
-    // pull-down-to-dismiss — is SongDetailSheet; this page owns the selection and every store write behind it.
+    // The song whose detail card is open; the card itself is SongDetailSheet, but every store write behind it
+    // stays here.
     private SongListItem? _detailItem;
     private bool _addFieldsBound;    // khNumeric bound to the add-form year input (re-bind when the form reopens)
 
-    // Metadata auto-fill: look up a not-yet-looked-up song's blank year/genre and fill it from the match.
-    // Runs in the background on add, and again when the detail sheet opens (which also shows a note of what
-    // filled — the spinner + note below are sheet-only UI).
+    // Metadata auto-fill runs in the background on add, and again when the detail sheet opens; the spinner + note
+    // below are sheet-only UI.
     private bool _suggestionLoading;
     private string? _autoFilledNote;
     private CancellationTokenSource? _suggestCts;                // detail-sheet lookup; cancelled when the sheet closes
@@ -899,8 +879,7 @@ else
     // ---- The funnel's active filters as removable pills ----
     private sealed record FilterPill(string Label, Action Remove);
 
-    // One pill per pick (genre / how it went / enjoyment / tag), plus a single span for the year range. Removing a
-    // pill only mutates local filter state — the @onclick re-renders — so there's no store write.
+    // Removing a pill only mutates local filter state — the @onclick re-renders — so there's no store write.
     private List<FilterPill> FilterPills()
     {
         var pills = new List<FilterPill>();
@@ -964,10 +943,9 @@ else
     private void SetEnjoymentFilter(int value, bool on) { if (on) _filterEnjoyments.Add(value); else _filterEnjoyments.Remove(value); }
     private void SetTagFilter(string tag, bool on) { if (on) _filterTags.Add(tag); else _filterTags.Remove(tag); }
 
-    // Every tag in use across the list (distinct, case-insensitive, alphabetized). Doubles as the Tags filter's
-    // options and the reuse-suggestions for the add/edit tag inputs — no separate tag catalogue is kept.
-    // Memoized: this is a parameter of the always-rendered detail sheet, so as a plain property it walked every
-    // song's tags on every repaint. Invalidated when _items reloads (RefreshAsync).
+    // Every tag in use, doubling as the Tags filter's options and the tag inputs' suggestions — no separate tag
+    // catalogue is kept. Memoized because it's a parameter of the always-rendered detail sheet: as a plain
+    // property it walked every song's tags on every repaint. Invalidated when _items reloads (RefreshAsync).
     private IReadOnlyList<string>? _usedTagsCache;
     private IReadOnlyList<string> UsedTags => _usedTagsCache ??= _items
         .SelectMany(i => i.Tags)
@@ -979,7 +957,6 @@ else
         ? "Any tag"
         : SummaryList(UsedTags.Where(_filterTags.Contains).ToList());
 
-    // Summary shown on a filter's collapsed control: up to two picks, then "+N".
     // Only genres that at least one song actually uses — no point offering a filter that matches nothing.
     private IReadOnlyList<string> UsedGenres => _items
         .Select(i => i.Genre)
@@ -1064,9 +1041,8 @@ else
         var startedAt = Environment.TickCount64;
         await RefreshAsync();
 
-        // Smart landing (once per launch): if a set is queued for tonight, open onto the Tonight tab instead of
-        // the wishlist — you walk into the venue and your set is right there. With nothing queued (or Tonight
-        // off) we stay here. Every later navigation is left alone, so tapping "My Songs" never bounces away.
+        // Smart landing, once per launch: a queued set opens onto the Tonight tab instead. Every later navigation
+        // is left alone, so tapping "My Songs" never bounces away.
         if (!Session.LandingResolved)
         {
             Session.LandingResolved = true;
@@ -1086,18 +1062,16 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Pick up the art elements this render added, so only the covers actually on screen get fetched. Gated
-        // on the surface signature: re-wiring scans the whole DOM, and most repaints change no art elements.
+        // Gated on the surface signature: re-wiring scans the whole DOM, and most repaints change no art elements.
         if (_artSurfaceSig != _artObservedSig)
         {
             _artObservedSig = _artSurfaceSig;
             await AlbumArt.ObserveAsync();
         }
 
-        // Attaching the listener only AFTER restoring is deliberate: on a tab change the incoming page fires a
-        // mount-time scroll-to-0, and a listener attached earlier would record that 0 (during the loading delay)
-        // and clobber the saved position before we restore it. Waiting for !_loading means the list has painted,
-        // so the page has its full height to scroll to.
+        // Attach the listener only AFTER restoring: a tab change fires a mount-time scroll-to-0, and a listener
+        // attached earlier would record that 0 and clobber the saved position. Waiting for !_loading also means
+        // the list has painted, so the page has its full height to scroll to.
         if (!_scrollRestored && !_loading)
         {
             _scrollRestored = true;
@@ -1138,8 +1112,8 @@ else
             _swipeBound = false;
         }
 
-        // Observe the load-more sentinel while there's more to show; disconnect once everything's rendered (the
-        // sentinel unmounts then) or the list is gone, and re-observe when a filter change brings it back.
+        // The sentinel unmounts once everything's rendered, so disconnect then and re-observe when a filter
+        // change brings it back.
         var wantSentinel = _listRendered && _renderCount < _visibleCount;
         if (wantSentinel && !_infiniteBound)
         {
@@ -1266,10 +1240,9 @@ else
     }
 
     // ---- 🎲 Surprise me ----
-    // A tap on the FAB rolls straight away and reports the pick in the snackbar; a press-and-hold opens the
-    // options sheet. The narrowing and weighting live in SurprisePicker so they can be tested without a UI.
+    // The narrowing and weighting live in SurprisePicker so they can be tested without a UI.
     private Guid? _lastSurpriseId;
-    private SongListItem? _rollPick;        // the current suggestion, shown in the snackbar
+    private SongListItem? _rollPick;        // the current suggestion
     private bool _surpriseSheetOpen;
 
     private SurpriseOptions SurpriseOptions => new(
@@ -1315,7 +1288,6 @@ else
         SurprisePicker.Pick(candidates, SurpriseOptions, Random.Shared.NextDouble(),
             BayesStar, neutralStar: _ratingContext.PriorMean ?? 3.0);
 
-    // "Open song" — hand the pick to the normal detail sheet and close the result.
     private Task OpenRolledAsync()
     {
         if (_rollPick is not { } pick)
@@ -1324,8 +1296,7 @@ else
         return OpenDetail(pick.Id.ToString());
     }
 
-    // The primary action: line the pick up for tonight. The sheet stays open showing it as added, so a reroll
-    // can queue several in a row without reopening.
+    // The sheet stays open showing it as added, so a reroll can queue several in a row without reopening.
     private async Task AddRolledToTonightAsync()
     {
         if (_rollPick is not { } pick || IsInTonight(pick))
@@ -1346,13 +1317,9 @@ else
         return Task.CompletedTask;
     }
 
-    // Whether to spend a lookup on this song: the toggle is on, we haven't looked it up before, and there's a
-    // title AND artist to search on (the parser rejects an artist-less result outright, so a call without one
-    // can only come back empty).
-    //
-    // Deliberately NOT gated on genre/year still being blank. The lookup also decides whether the title looks
-    // misspelled, and a song can have complete metadata and a wrong title — gating on blank fields meant an
-    // edited title was never re-checked, so no ⚠ could ever appear for it.
+    // Artist is required: the parser rejects an artist-less result, so a call without one can only come back empty.
+    // Deliberately NOT gated on genre/year still being blank — the lookup also decides whether the title looks
+    // misspelled, and a song can have complete metadata and a wrong title.
     private bool ShouldLookUp(SongListItem item) =>
         Settings.AutoFillMetadata &&
         !item.MetadataLookedUp &&
@@ -1364,10 +1331,8 @@ else
     private static bool WouldFillFields(SongListItem item) =>
         string.IsNullOrWhiteSpace(item.Genre) || !item.Year.HasValue;
 
-    // Look up a year/genre and fill any blank field straight from the match — no chip, no confirmation. Runs
-    // at most once per song (gated on MetadataLookedUp). Persists the fills + the looked-up flag; returns an
-    // "auto-filled ..." note when it filled something, else null. A transient failure returns null WITHOUT
-    // stamping the flag, so a later add/open can retry. Shared by the add-form and detail-sheet paths.
+    // Runs at most once per song (gated on MetadataLookedUp) and fills blanks straight from the match. A transient
+    // failure returns null WITHOUT stamping the flag, so a later add/open can retry.
     private async Task<string?> TryAutoFillMetadataAsync(SongListItem item, CancellationToken token)
     {
         if (!ShouldLookUp(item))
@@ -1425,10 +1390,9 @@ else
                 Log.LogWarning(ex, "Deezer cover fallback failed for “{Title}” — “{Artist}”; will retry later", item.Title, item.Artist);
             }
         }
-        // Nothing matched, but something may have been one slip away. iTunes offers its own near-miss from the
-        // call already made; Deezer costs an extra one, so it's asked only when iTunes had nothing at all AND
-        // the exact-title cover search above also came up empty — a cover found by exact title+artist proves
-        // the spelling is already right, so there'd be nothing to correct.
+        // iTunes offers its near-miss from the call already made; Deezer costs an extra one, so it's asked only
+        // when iTunes had nothing AND the exact-title cover search came up empty — a cover found by exact
+        // title+artist proves the spelling is already right.
         var suggestion = lookup.Suggestion;
         if (suggestion is null && meta is null && artUrl is null)
         {
@@ -1454,9 +1418,8 @@ else
             : null;
     }
 
-    // Detail-sheet entry point: enrich the open song and surface the year/genre result as the sheet's note. The
-    // spinner + note are sheet-only UI; the actual fill/persist lives in TryAutoFillMetadataAsync. Skips all
-    // network when there's nothing to fill — the cover is the art service's job, driven by the sheet rendering.
+    // Detail-sheet entry point: the fill/persist lives in TryAutoFillMetadataAsync, this only drives the sheet's
+    // spinner + note. The cover is the art service's job, driven by the sheet rendering.
     private async Task LoadDetailSuggestionAsync(SongListItem? item)
     {
         _suggestCts?.Cancel();
@@ -1527,8 +1490,6 @@ else
         _ => $"{string.Join(", ", parts.Take(parts.Count - 1))}, & {parts[^1]}",
     };
 
-    // Applies the detail card's edit form. The card collects and validates the values; the write, the art
-    // invalidation and the re-lookup are this page's job.
     private async Task SaveDetailEditAsync(SongDetailSheet.Edit edit)
     {
         if (_detailItem is null)
@@ -1536,8 +1497,8 @@ else
 
         var newTitle = edit.Title;
         var newArtist = edit.Artist;
-        // A title/artist change makes the current cover art belong to a different song — clear it so a fresh cover is
-        // fetched for the new title/artist (rather than keeping the old, now-wrong image).
+        // A title/artist change makes the current cover belong to a different song — clear it so a fresh one is
+        // fetched rather than keeping the now-wrong image.
         var identityChanged = !string.Equals(newTitle, _detailItem.Title, StringComparison.Ordinal)
                            || !string.Equals(newArtist, _detailItem.Artist, StringComparison.Ordinal);
 
@@ -1563,9 +1524,8 @@ else
     }
 
     // ---- ⚠ Spelling suggestion ---------------------------------------------------------------
-    // When nothing matched but one result was a near-miss, the lookup parks it on the song and the card
-    // flags it. Both answers are terminal: applying re-runs the lookup on the corrected text, and waving it
-    // off clears it for good — MetadataLookedUp is already set, so no later lookup can raise it again.
+    // Both answers are terminal: applying re-runs the lookup on the corrected text, and waving it off clears it
+    // for good — MetadataLookedUp is already set, so no later lookup can raise it again.
 
     // A different title/artist invalidates the one-shot lookup and anything it concluded.
     private static void ReopenLookup(SongListItem item)
@@ -1603,11 +1563,10 @@ else
     }
 
     // ---- "Sang it" rating prompt -------------------------------------------------------------
-    // Marking a song sung records a new performance; the singer rates how it went (or skips → unrated).
 
     private SongListItem? _ratingPromptItem;
 
-    // Opens the shared rating prompt for a song (the component resets its own star/note buffers on open).
+    // The shared prompt resets its own star/note buffers on open — nothing to clear here.
     private void OpenRatingPrompt(SongListItem? item)
     {
         if (item is not null)
@@ -1617,8 +1576,7 @@ else
     // Dismissed without logging (✕ / backdrop).
     private void CloseRatingPrompt() => _ratingPromptItem = null;
 
-    // The prompt committed (Save / Skip / swipe): append the performance (its how-it-went rating — 0 when
-    // skipped — plus an optional note) and mark the song sung.
+    // Fires on Save, Skip AND swipe-away — all three commit (a skip logs it unrated, 0); only ✕ / backdrop cancel.
     private async Task OnRatingCommitAsync((int howItWent, string? note) result)
     {
         var item = _ratingPromptItem;
@@ -1685,7 +1643,6 @@ else
         await Store.UpdateAsync(_historyItem);
     }
 
-    // Edit one performance's "how it went" rating from the history sheet; the song's average recomputes from it.
     private async Task UpdatePerformanceRatingAsync(int index, int rating)
     {
         if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
@@ -1695,7 +1652,6 @@ else
         await Store.UpdateAsync(_historyItem);
     }
 
-    // Edit one performance's note from the history sheet (saved on blur/change).
     private async Task UpdatePerformanceNoteAsync(int index, string? note)
     {
         if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
@@ -1705,27 +1661,25 @@ else
         await Store.UpdateAsync(_historyItem);
     }
 
-    // Opens a YouTube search for the song in the OS browser / YouTube app (not the in-app WebView).
+    // Opens in the OS browser / YouTube app — never the in-app WebView.
     private Task OpenYouTubeAsync() =>
         _detailItem is null
             ? Task.CompletedTask
             : Links.OpenAsync(YouTubeSearch.UrlFor(_detailItem.Title, _detailItem.Artist));
 
-    // Opens a Spotify search for the song in the OS browser / Spotify app (not the in-app WebView).
+    // Opens in the OS browser / Spotify app — never the in-app WebView.
     private Task OpenSpotifyAsync() =>
         _detailItem is null
             ? Task.CompletedTask
             : Links.OpenAsync(SpotifySearch.UrlFor(_detailItem.Title, _detailItem.Artist));
 
-    // Search the active venue's KaraFun catalog. The button only renders when _activeVenueKaraFunId is set, so it's
-    // always present here.
+    // The button only renders when _activeVenueKaraFunId is set, so it's always present here.
     private Task OpenKaraFunAsync() =>
         _detailItem is null || string.IsNullOrWhiteSpace(_activeVenueKaraFunId)
             ? Task.CompletedTask
             : Links.OpenAsync(KaraFunSearch.UrlFor(_activeVenueKaraFunId, _detailItem.Title, _detailItem.Artist));
 
-    // Split-button variant of the KaraFun action: queue the song for tonight (unless it's already there), then open
-    // KaraFun — the common "I'm about to sing this" move in one tap.
+    // Split-button variant of the KaraFun action: queue for tonight (unless already there), then open KaraFun.
     private async Task AddToTonightAndOpenKaraFunAsync()
     {
         if (_detailItem is null)
@@ -1735,8 +1689,8 @@ else
         await OpenKaraFunAsync();
     }
 
-    // The active venue's KaraFun ID (null when there's no active venue or it has none). Tracked reactively so the
-    // "Find on KaraFun" button appears/disappears as the venue is switched or its KaraFun ID is edited.
+    // Tracked reactively so the "Find on KaraFun" button appears/disappears as the venue is switched or its
+    // KaraFun ID is edited.
     private string? _activeVenueKaraFunId;
     private void OnVenueContextChanged(object? sender, EventArgs e) => _ = RefreshActiveVenueKaraFunAsync();
 
@@ -1751,9 +1705,8 @@ else
     }
 
     // ---- Lyrics sheet (LRCLIB) ---------------------------------------------------------------
-    // Opens the lyrics sheet for the current song and fetches its plain lyrics fresh. State is cleared to the
-    // loading view first so a re-open never flashes the previous song's lyrics; the fetch is cancellable so a
-    // quick close (or reopening on another song) abandons an in-flight lookup without touching stale state.
+    // State is cleared to the loading view first so a re-open never flashes the previous song's lyrics; the fetch
+    // is cancellable so a quick close (or reopening on another song) can't land on stale state.
     private async Task OpenLyricsAsync()
     {
         if (_detailItem is null)
@@ -1843,7 +1796,6 @@ else
             return;
         }
 
-        // New songs start on the wishlist (unsung). Sung-state + rating are set later from the detail sheet.
         var added = await Store.AddAsync(_title, _artist, _notes, _genre, _year);
         // AddAsync has no tags parameter — persist any in a follow-up write so the store stays simple.
         var tags = SongTags.Normalize(_tags);
@@ -1862,15 +1814,13 @@ else
         _confirmedDuplicate = false;
         _addOpen = false;   // collapse the form on a successful add; the new song is now visible at the top
 
-        // Fill the new song's blank year/genre in the background so the card populates shortly after it
-        // appears — the add returns immediately and doesn't block on the network. Same one-shot lookup the
-        // detail sheet uses; when it lands, Store.UpdateAsync fires Changed → the list re-renders with it.
+        // Background so the add returns immediately and never blocks on the network; when the lookup lands,
+        // Store.UpdateAsync fires Changed → the list re-renders with it.
         _ = AutoFillAddedAsync(added);
     }
 
     // Fire-and-forget from AddAsync: swallows its own failures (a lookup must never crash the app) and is
-    // cancelled if the page is disposed mid-flight. The gate lives in TryAutoFillMetadataAsync, so this is a
-    // no-op when auto-fill is off or the song has no blanks to fill.
+    // cancelled if the page is disposed mid-flight.
     private async Task AutoFillAddedAsync(SongListItem item)
     {
         try
@@ -1902,9 +1852,8 @@ else
         await Store.UpdateAsync(item);
     }
 
-    // The confidence-weighted "how it went" star (Bayesian shrinkage toward the whole list's average), rebuilt
-    // whenever the list reloads. This is what the card star, the sort, and the rating filter buckets all read — so a
-    // song with one lucky 5 doesn't outrank one with a solid ten-performance record. Null until the first rated one.
+    // The confidence-weighted "how it went" star (Bayesian shrinkage toward the list average), rebuilt whenever the
+    // list reloads. The card star, the sort and the rating filter buckets all read this — keep them on it.
     private RatingContext _ratingContext = new(null, RatingConfig.Default, default);
     private double? BayesStar(SongListItem item) => RatingScore.StarFor(item, _ratingContext);
 
@@ -1921,17 +1870,15 @@ else
 
     private void OnArtChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
 
-    // Edit the per-song enjoyment rating (blue). Independent of sung-state.
+    // Enjoyment is independent of sung-state — a never-sung song can still carry one.
     private async Task UpdateEnjoymentAsync(SongListItem item, int rating)
     {
         item.Enjoyment = Math.Clamp(rating, 0, 5);
         await Store.UpdateAsync(item);
     }
 
-    // Bridge the store's synchronous Changed event to async work without `async void`: a void handler hands
-    // the reload to InvokeAsync, which marshals it onto the render thread (Changed can fire from a background
-    // thread) and owns the continuation. Fire-and-forget by necessity — an event has nothing to await it — but
-    // the task swallows its own failures so nothing is unobserved, matching the store's "don't crash" approach.
+    // Not `async void`: InvokeAsync marshals the reload onto the render thread (Changed can fire from a background
+    // thread), and the task swallows its own failures so nothing is left unobserved.
     private void OnStoreChanged(object? sender, EventArgs e) => _ = RefreshFromStoreAsync();
 
     private async Task RefreshFromStoreAsync()
@@ -1949,10 +1896,9 @@ else
 
     private async Task RefreshAsync()
     {
-        // A singer switch keeps this page mounted but fires the store's Changed (its file changed under it). Detect
-        // it here: stash the outgoing singer's view state + stop tracking its scroll (its last position is already
-        // committed under its own key), then load the incoming singer's — defaults overlaid with their saved state —
-        // and re-arm the scroll restore so OnAfterRender lands their position once the new list paints.
+        // A singer switch keeps this page mounted but fires the store's Changed (its file changed under it), so
+        // this is the only place it can be detected: stash the outgoing singer's view state, load the incoming
+        // one's, and re-arm the scroll restore so OnAfterRender lands their position once the new list paints.
         var current = Session.ActiveSingerId;
         if (current != _viewSinger)
         {
@@ -1967,7 +1913,7 @@ else
         _items = await Store.GetAllAsync();
         _itemsVersion++;         // invalidate the sorted cache and re-wire the art observer
         _usedTagsCache = null;
-        // Rebuild the shared rating context (the list-wide prior) once per load; the recency toggle picks the config.
+        // The prior is list-wide, so the context is rebuilt once per load, never per song.
         _ratingContext = RatingScore.BuildContext(_items,
             RatingConfig.Default with { RecencyEnabled = Settings.RecencyWeightedRatings },
             DateTimeOffset.Now);
@@ -2000,14 +1946,12 @@ else
     }
 
     // ---- Tonight quick-add (from the wishlist) -----------------------------------------------
-    // The set itself lives on the Tonight tab; here each card / the detail sheet just toggle a song in or out.
 
     // A set, not a scan of _tonight: this runs several times per card per render.
     private HashSet<Guid> _tonightIds = [];
     private bool IsInTonight(SongListItem? item) => item is not null && _tonightIds.Contains(item.Id);
 
-    // Card quick-add: a direct toggle (like the favorite star) — no confirm, since it's a one-tap action and
-    // re-adding is just as quick. Deliberate removals-with-confirm live on the Tonight tab's set-list ✕.
+    // No remove-confirm here: re-adding is one tap. The confirmed removal lives on the Tonight tab's ✕.
     private Task QuickToggleTonightAsync(SongListItem item) =>
         IsInTonight(item) ? Tonight.RemoveAsync(item.Id) : Tonight.AddAsync(item.Id);
 

@@ -8,10 +8,8 @@
 @inject ILogger<VenueChip> Log
 @implements IDisposable
 
-@* Always-visible active-venue chip + quick switcher, mounted in the header by MainLayout (only when the Venues
-   feature is on). The chip shows where you are right now (glyph + name, or "Set venue" when none); tapping it opens
-   a dropdown to switch active venue or jump to the Venues page. Reflects live changes to the active venue (a switch
-   here, a "Set active" on the Venues page, or a venue delete that clears it) via IAppSession's change event. *@
+@* Active-venue chip + quick switcher, mounted in the header by MainLayout. The active venue lives on IAppSession,
+   so a switch here, a "Set active" on the Venues page, and a delete that clears it all arrive through one event. *@
 <div class="venue-chip-host">
     <button type="button" class="venue-chip @(_active is null ? "venue-chip--empty" : "")"
             data-tut="venue" @onclick="Toggle" aria-haspopup="true" aria-expanded="@_open"
@@ -129,9 +127,8 @@
     // the chip, and management still sees everything); only the dropdown rows honor ShowInSwitcher.
     private IEnumerable<Venue> ListedVenues => _venues.Where(v => v.ShowInSwitcher);
 
-    // Auto-detect can't do anything until some venue has a saved point — MauiVenueLocator short-circuits on the
-    // same check — so until then Auto/Pinned is a choice with no effect. Counts hidden venues too: they're still
-    // matched on proximity.
+    // MauiVenueLocator short-circuits on this same check, so without it Auto/Pinned would be a choice with no
+    // effect. Counts hidden venues too — they're still matched on proximity.
     private bool AnyGeolocatedVenue => _venues.Any(v => v.HasLocation);
 
     // One-time move of the old single global KaraFun venue ID into a real venue, so upgraders start with one saved.
@@ -189,8 +186,8 @@
         Close();
     }
 
-    // Unpin so location drives the venue again; resolve now so the nearest applies without waiting for the timer.
-    // Left open so the mode flip stays visible.
+    // Resolve immediately, not just on the next timer tick, or the mode flip appears to do nothing.
+    // The switcher is left open so the flip stays visible.
     private async Task SetAutoAsync()
     {
         Session.SetActiveVenue(Session.ActiveVenueId, pinned: false);

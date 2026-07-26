@@ -25,7 +25,7 @@ public interface ISongListStore
 
     /// <summary>Bulk-persist edits to many existing items in one shot: loads once, updates each match by
     /// <see cref="SongListItem.Id"/>, saves once, and fires <see cref="Changed"/> a single time — not per
-    /// item. Ids not present are skipped. Used by the post-import review to write all rows at once.</summary>
+    /// item. Ids not present are skipped.</summary>
     Task UpdateRangeAsync(IEnumerable<SongListItem> items);
 
     /// <summary>Remove an item by id. No-op if it isn't present.</summary>
@@ -34,8 +34,8 @@ public interface ISongListStore
     /// <summary>Remove every song. No-op (and no <see cref="Changed"/>) if the list is already empty.</summary>
     Task ClearAsync();
 
-    /// <summary>Re-insert a previously removed item verbatim (same Id, timestamps, rating). No-op if it's
-    /// already present. Backs swipe-to-remove Undo so a restored song returns to its exact place.</summary>
+    /// <summary>Re-insert a previously removed item verbatim (same Id, timestamps, rating) — the Undo path. No-op
+    /// if it's already present.</summary>
     Task RestoreAsync(SongListItem item);
 
     /// <summary>

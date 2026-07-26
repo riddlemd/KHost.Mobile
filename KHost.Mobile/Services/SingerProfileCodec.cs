@@ -5,9 +5,8 @@ namespace KHost.Mobile.Services;
 
 /// <summary>
 /// Pure (no-I/O) serialize/parse for the Import/Export page's file round-trips — a singer profile, a legacy
-/// songs-only export, or a venue list. Isolated from the page so the shape logic is unit-testable, mirroring the
-/// page's existing "testable core" split. Detection lets the profile-import button accept both a new profile and
-/// an old songs-only file (a bare JSON array) and route each correctly.
+/// songs-only export, or a venue list. Detection lets the profile import accept both a new profile and an old
+/// songs-only file (a bare JSON array) and route each correctly.
 /// </summary>
 public static class SingerProfileCodec
 {

@@ -1,12 +1,11 @@
 namespace KHost.Mobile.Services;
 
-/// <summary>
-/// Default <see cref="IBackButtonService"/>: a plain LIFO list of overlay-close handlers. Registered as a
-/// singleton so every component and the Android back-press callback share the one instance.
-/// </summary>
+/// <inheritdoc />
 /// <remarks>
-/// All access is on the UI thread — components register/unregister from the Blazor renderer thread and the
-/// Android <c>OnBackPressedDispatcher</c> fires on that same main thread — so no locking is needed.
+/// A plain LIFO list of overlay-close handlers, singleton so every component and the Android back-press callback
+/// share the one instance.
+/// <para>All access is on the UI thread — components register/unregister from the Blazor renderer thread and the
+/// Android <c>OnBackPressedDispatcher</c> fires on that same main thread — so no locking is needed.</para>
 /// </remarks>
 public sealed class BackButtonService : IBackButtonService
 {

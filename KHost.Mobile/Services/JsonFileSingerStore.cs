@@ -5,13 +5,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KHost.Mobile.Services;
 
-/// <summary>
-/// <see cref="ISingerStore"/> backed by a single JSON file in the app's private data directory — the same
-/// durable-JSON pattern as <see cref="JsonFileVenueStore"/>. The in-memory list is the source of truth once loaded;
-/// a <see cref="SemaphoreSlim"/> guards against concurrent UI actions. A corrupt file is treated as an empty
-/// roster. Read results are ordered by <see cref="Singer.Order"/>; a removed singer's personal data files are
-/// deleted so they don't orphan on disk.
-/// </summary>
+/// <inheritdoc />
+/// <remarks>
+/// Backed by a single JSON file in the app's private data directory — the same durable-JSON pattern as
+/// <see cref="JsonFileVenueStore"/>. A corrupt file is quarantined and treated as an empty roster. Removing a
+/// singer also deletes their personal data files so they don't orphan on disk.
+/// </remarks>
 public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFileSingerStore>? logger = null) : ISingerStore
 {
     private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "singers.json");

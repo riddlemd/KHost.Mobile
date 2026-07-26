@@ -1,7 +1,5 @@
-@* Add / edit a venue. Shown when @Editing is set (pass a fresh Venue() to add, or a working copy of an existing
-   one to edit — the host owns whether it's new). Collects glyph + name (+ optional KaraFun id, captured location,
-   favorite, notes), writing them onto the passed instance, and raises OnSave with it. Uses --history stacking so it
-   sits above the venue detail sheet. *@
+@* Add / edit a venue. Pass a fresh Venue() to add or a working copy to edit — on save the fields are written onto
+   that same instance and handed back through OnSave, so never pass the stored object. *@
 @using Microsoft.Maui.Devices
 @inject IQrScanner Scanner
 @inject ILocationProvider Geo
@@ -13,7 +11,6 @@
 
         <div class="field" style="margin-top:0.85rem">
             <label class="field__label" for="venue-name">Name</label>
-            @* Tap the glyph tile to open the icon picker (collapsed by default). *@
             <IconPicker @bind-Glyph="_glyph" AvailableGlyphs="VenueGlyphs.All">
                 <input id="venue-name" class="input venue-name" placeholder="Venue name" aria-label="Venue name"
                        maxlength="16" @bind="_name" @bind:event="oninput" />
@@ -96,7 +93,7 @@
     /// add or a working copy to edit; on save its fields are written and it's handed back via <see cref="OnSave"/>.</summary>
     [Parameter] public Venue? Editing { get; set; }
 
-    /// <summary>Whether this is a brand-new venue (drives the title). The host knows; the sheet just displays it.</summary>
+    /// <summary>Whether this is a brand-new venue (drives the title).</summary>
     [Parameter] public bool IsNew { get; set; }
 
     /// <summary>Raised with the populated venue when the user saves (name guaranteed non-blank).</summary>
@@ -123,9 +120,8 @@
     private static bool _scanSupported =>
         DeviceInfo.Current.Platform == DevicePlatform.Android || DeviceInfo.Current.Platform == DevicePlatform.iOS;
 
-    // Reseed the buffers on every fresh open. Clearing _seededFor on close matters as much as the id check: the
-    // component stays mounted while hidden, so without it, reopening the SAME venue keeps the last open's buffers
-    // and abandoned edits read back as if they'd been saved.
+    // Clearing _seededFor on close matters as much as the id check: the component stays mounted while hidden, so
+    // without it, reopening the SAME venue keeps the last open's buffers and abandoned edits look saved.
     protected override void OnParametersSet()
     {
         if (Editing is null)
@@ -172,10 +168,8 @@
 
     private void ClearLocation() => (_lat, _lng) = (null, null);
 
-    // Bind pull-down-to-dismiss while shown (same interop as the song detail / rating sheets); a swipe closes
-    // without saving, like Cancel. The sheet element remounts on each open, so re-bind then and reset when hidden.
-    // Pull-down-to-dismiss from khSheet (the sheet already animated off-screen): discard, same as Cancel.
-    // Strict host check (not the loose paste parser) so an arbitrary scanned string can't silently become a venue.
+    // Parsed with the strict host check, not the loose paste parser, so an arbitrary scanned string can't silently
+    // become a venue ID.
     private async Task ScanAsync()
     {
         if (_scanning)

@@ -12,11 +12,9 @@
 @inject IHaptics Haptics
 @implements IDisposable
 
-@* The Venues page — manage saved karaoke venues and see your history at each. Reached from the header ⋮ menu and
-   the active-venue chip. The active venue (a session pointer, not persisted here) is pinned + badged; performances
-   logged while a venue is active are tagged with it, which is what powers the per-venue history below.
-   Row gestures come from swipe.js: tap opens the detail sheet, press-and-hold sets the venue active (the detail
-   sheet's Active toggle is the equivalent that a screen reader can reach), swipe-left removes. *@
+@* The active venue is a session pointer, not persisted here; performances logged while it's active are tagged with
+   it, which is what the per-venue history reads. The detail sheet's Active toggle is the equivalent a screen reader
+   can reach, since the press-and-hold gesture has none. *@
 <section class="venues">
     <div class="page-head">
         <NavLink class="page-back" href="" aria-label="Back to my songs">←</NavLink>
@@ -250,8 +248,8 @@
 
     private bool IsActive(Venue v) => Session.ActiveVenueId == v.Id;
 
-    // Always plain A→Z by name (not favorites-first, not active-pinned): the Active badge marks the active venue and
-    // the star marks favorites, so nothing needs to float — a fixed order keeps rows from jumping as you activate/favorite.
+    // Plain A→Z, never favorites-first or active-pinned: the badge and ★ already mark those rows, and a fixed
+    // order keeps rows from jumping under your finger as you activate/favorite.
     private IEnumerable<Venue> Ordered()
     {
         IEnumerable<Venue> matches = string.IsNullOrWhiteSpace(_search)
@@ -261,8 +259,7 @@
         return matches.OrderBy(v => v.Name, StringComparer.CurrentCultureIgnoreCase);
     }
 
-    // Just the sung count here (KaraFun status dropped from the row); empty when nothing's been sung, so the row
-    // shows only the name.
+    // Empty when nothing's been sung here, so the row collapses to just the name.
     private string SubLine(Venue v)
     {
         var count = _songs.SelectMany(s => s.Performances).Count(p => p.VenueId == v.Id);
@@ -310,9 +307,8 @@
         return Task.CompletedTask;
     }
 
-    // Press-and-hold from swipe.js sets the row's venue active — the gesture replaces the old radio dot, so the
-    // haptic tick is the only signal the hold registered before the row re-renders. Called from JS, so render
-    // explicitly.
+    // Press-and-hold from swipe.js sets the row's venue active — the haptic tick is the only signal the hold
+    // registered before the row re-renders. Called from JS, so render explicitly.
     [JSInvokable]
     public Task SetActiveById(string id)
     {
@@ -381,12 +377,10 @@
             Session.SetActiveVenue(venue.Id, pinned: true);
     }
 
-    // Bind pull-down-to-dismiss on the detail sheet (same interop as the song detail / rating sheets). The element
-    // remounts each open, so re-bind then and reset the flag when it's hidden.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Swipe-left-to-remove on the venue rows (same interop as My Songs). The .venue-list container unmounts when
-        // a search matches nothing, so re-bind against the fresh element on the next mount.
+        // The .venue-list container unmounts when a search matches nothing, so re-bind against the fresh element
+        // on the next mount.
         var listShown = _venues.Count > 0 && Ordered().Any();
         if (listShown && !_swipeBound)
         {
@@ -484,7 +478,6 @@
         return false;
     }
 
-    // Per-venue history is a pure derivation over venue-tagged performances — see Models/VenueHistory.
     private VenueHistory History(Venue v) => VenueHistory.ForVenue(_songs, v.Id);
 
     public void Dispose()

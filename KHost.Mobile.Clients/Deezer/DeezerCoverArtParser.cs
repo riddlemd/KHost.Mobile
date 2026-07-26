@@ -7,8 +7,7 @@ namespace KHost.Mobile.Clients.Deezer;
 /// <summary>
 /// Parses a Deezer <c>/search</c> response into a cover-art URL. Pure — no network. The API returns
 /// <c>{ "data": [ { "title", "artist": { "name" }, "album": { "cover_big", "cover_xl", … } } ] }</c>.
-/// We return the album cover of the first result whose track title matches AND whose artist matches (after
-/// normalization), or null when nothing matches — better no art than the wrong cover.
+/// Title AND artist must both match: better no art than the wrong cover.
 /// </summary>
 public static class DeezerCoverArtParser
 {
@@ -33,7 +32,7 @@ public static class DeezerCoverArtParser
         using (doc)
         {
             // Deezer signals quota (code 4) and other faults as a 200 body with an "error" object, not an
-            // HTTP status. As a best-effort fallback we just treat any Deezer-side error as "no cover".
+            // HTTP status. Any Deezer-side error is treated as "no cover".
             if (doc.RootElement.TryGetProperty("error", out _))
                 return null;
 
@@ -57,8 +56,7 @@ public static class DeezerCoverArtParser
         }
     }
 
-    // Prefer a 500×500 cover (good on a card without bloating the cached/base64-encoded image), then fall
-    // back through the other Deezer sizes.
+    // cover_big is Deezer's 500×500 — sharp enough without bloating the cached/base64-encoded image.
     private static string? CoverUrl(JsonElement album)
     {
         foreach (var field in (ReadOnlySpan<string>)["cover_big", "cover_xl", "cover_medium", "cover_small", "cover"])

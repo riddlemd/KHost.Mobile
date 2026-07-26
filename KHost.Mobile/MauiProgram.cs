@@ -37,23 +37,19 @@ public static class MauiProgram
         // MAUI-free and unit-testable; the app binds it to the real FileSystem.AppDataDirectory.
         builder.Services.AddSingleton<IAppDataDirectory, MauiAppDataDirectory>();
 
-        // On-device song list. Singleton so its in-memory cache and Changed event are shared app-wide. The UI binds
-        // to ISongListStore; the concrete type is also registered so both resolve to the one instance.
+        // Singleton so the in-memory cache and Changed event are shared app-wide. The concrete type is registered
+        // too, so both it and ISongListStore resolve to the one instance.
         builder.Services.AddSingleton<JsonFileSongListStore>();
         builder.Services.AddSingleton<ISongListStore>(sp => sp.GetRequiredService<JsonFileSongListStore>());
 
-        // "Tonight" on-deck set list — its own JSON-file store (separate from the song list). Singleton so its
-        // in-memory set + Changed event are shared app-wide.
+        // "Tonight" on-deck set list — its own JSON-file store, deliberately separate from the song list.
         builder.Services.AddSingleton<ITonightStore, JsonFileTonightStore>();
 
-        // On-device venue list (name + optional KaraFun id / location / notes). Its own JSON-file store; singleton
-        // so its in-memory list + Changed event are shared app-wide. The active venue is a separate ephemeral
-        // pointer on IAppSession, not persisted here.
+        // The saved venues. The ACTIVE venue is not persisted here — it's an ephemeral pointer on IAppSession.
         builder.Services.AddSingleton<IVenueStore, JsonFileVenueStore>();
 
-        // Roster of singers who share this device. Its own JSON-file store; singleton so its list + Changed event
-        // are shared app-wide. The active singer (whose My Songs + Tonight the app shows) is a separate ephemeral
-        // pointer on IAppSession; the per-singer song/tonight stores above read it to pick each singer's file.
+        // Roster of singers who share this device. Like the venue, the ACTIVE singer lives on IAppSession — the
+        // per-singer song/tonight stores above read it from there to pick each singer's file.
         builder.Services.AddSingleton<ISingerStore, JsonFileSingerStore>();
 
         // Device location + the venue auto-selector behind it. ILocationProvider wraps MAUI Geolocation (best-effort,
@@ -70,27 +66,23 @@ public static class MauiProgram
         // On-device lyrics cache (JSON file). Singleton so its in-memory map + Changed event are shared app-wide.
         builder.Services.AddSingleton<ILyricsCache, JsonFileLyricsCache>();
 
-        // On-device album-art cache (image blobs). Singleton so its in-memory memo + Changed event are shared
-        // app-wide; it pulls a pooled HttpClient from the factory per download (see the named client below).
+        // On-device album-art cache (image blobs); pulls a pooled HttpClient from the factory per download.
         builder.Services.AddSingleton<IAlbumArtCache, AlbumArtCache>();
-        // Shared across pages: My Songs and Tonight list the same songs, so a per-page map would fetch, decode and
-        // hold every cover twice. SCOPED, not singleton — it talks to the WebView through IJSRuntime, which is
-        // itself scoped; a singleton would capture a JS runtime that isn't attached to this WebView and every
-        // transfer would fail. Blazor Hybrid has one scope per WebView, so scoped is still app-wide here.
+        // SCOPED, not singleton — it talks to the WebView through IJSRuntime, which is itself scoped; a singleton
+        // captures a JS runtime that isn't attached to this WebView and every transfer silently fails. Blazor
+        // Hybrid has one scope per WebView, so scoped is still app-wide (and shared by My Songs + Tonight).
         builder.Services.AddScoped<IAlbumArtService, AlbumArtService>();
 
         builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
 
         builder.Services.AddSingleton<IHaptics, MauiHaptics>();
 
-        // Safe-area insets for platforms whose WebView can't see the system bars via CSS env() (Android). The
-        // Android MainActivity writes measured values in; MainLayout forwards them to CSS variables. Singleton so
-        // the activity's listener and the layout share one instance.
+        // Safe-area insets for platforms whose WebView can't see the system bars via CSS env() (Android).
+        // Singleton so the activity's inset listener and MainLayout share one instance.
         builder.Services.AddSingleton<ISafeAreaInsets, SafeAreaInsets>();
 
-        // App-wide registry for the Android back button: components register an overlay-close callback while
-        // mounted, and the Android MainActivity consults it so hardware back dismisses the top-most sheet/menu
-        // instead of minimizing the app. Singleton so the components and the platform callback share one instance.
+        // Overlay registry the Android back button consults. Singleton so the components and the platform
+        // callback share one instance.
         builder.Services.AddSingleton<IBackButtonService, BackButtonService>();
 
         // QR scanner for the KaraFun venue link. Native (ML Kit / Apple Vision) on Android/iOS; a no-op stub on
@@ -101,11 +93,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<IQrScanner, UnsupportedQrScanner>();
 #endif
 
-        // HTTP-backed services go through IHttpClientFactory (AddHttpClient) so their message handlers are
-        // pooled and rotated — a plain long-lived `new HttpClient()` never picks up DNS changes. Each service
-        // is stateless (only const fields) and consumed via @inject, so the typed client's transient lifetime
-        // is fine. The two that need a browser User-Agent set it per-request, so no config lambda is needed.
-        // Every client below chains LoggingHttpMessageHandler so its requests/responses are logged at one seam.
+        // HTTP-backed services go through IHttpClientFactory so their message handlers are pooled and rotated —
+        // a plain long-lived `new HttpClient()` never picks up DNS changes. Every client below chains
+        // LoggingHttpMessageHandler so its requests/responses are logged at one seam.
         builder.Services.AddTransient<LoggingHttpMessageHandler>();
 
         // Token-free import of public YouTube Music playlists (title + artist) via the playlist page.
@@ -147,9 +137,8 @@ public static class MauiProgram
                 $"KHost.Mobile/{AppInfo.Current.VersionString} (+https://github.com/riddlemd/KHost.Mobile)");
         }).AddHttpMessageHandler<LoggingHttpMessageHandler>();
 
-        // "Update available" check — reads this repo's GitHub Releases feed. GitHub's REST API requires a
-        // User-Agent; the Accept header pins the v3 media type. Orchestrated by IAppUpdateService (which owns
-        // the version compare, the setting gate, and the once-per-launch memoization).
+        // "Update available" check — reads this repo's GitHub Releases feed. GitHub's REST API rejects a request
+        // with no User-Agent; the Accept header pins the v3 media type.
         builder.Services.AddHttpClient<IUpdateClient, GitHubReleaseClient>(http =>
         {
             http.BaseAddress = new Uri("https://api.github.com/");
@@ -167,8 +156,7 @@ public static class MauiProgram
         // "KHostCue" tag (adb logcat -s KHostCue) so the app's own diagnostics are actually visible on-device.
         builder.Logging.AddProvider(new AndroidLogcatLoggerProvider());
 #endif
-        // Surface the app's own diagnostics (HTTP + stores + the artwork/metadata flow) at Debug in logcat while
-        // keeping the framework's own chatter down so those lines stand out. Debug-build only — Release stays quiet.
+        // App diagnostics at Debug, framework chatter at Warning so they stand out. Debug-build only.
         builder.Logging.SetMinimumLevel(LogLevel.Debug);
         builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
         builder.Logging.AddFilter("KHost.Mobile", LogLevel.Debug);

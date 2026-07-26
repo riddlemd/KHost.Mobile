@@ -1,14 +1,11 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-@* The bottom-sheet shell every sheet in the app sits in: the backdrop, the panel, the ✕, and — the reason this
-   exists — the pull-down-to-dismiss plumbing. Each sheet used to carry its own copy of that: an ElementReference,
-   a "did I bind yet" flag, a register call in OnAfterRender, a [JSInvokable] the swipe calls back into, and a
-   DotNetObjectReference to dispose. Nine sheets, nine copies, differing only in a string.
+@* The shell every bottom sheet sits in — backdrop, panel, ✕, and the pull-down-to-dismiss plumbing. Don't
+   hand-roll khSheet.register in a page; wrap this instead.
 
-   The page-scroll lock is kept in sync from the DOM (khSheet.syncLock), not from any one caller's state, because
-   sheets stack — a caller-driven lock has to know about every other open sheet to avoid unlocking the page out
-   from under one that's still showing. *@
+   The page-scroll lock is synced from the DOM (khSheet.syncLock), not from any one caller's state, because sheets
+   stack — a caller-driven lock would unlock the page out from under a sheet still showing. *@
 @if (Open)
 {
     <div class="sheet-backdrop @BackdropClass" @onclick="CloseAsync"></div>
@@ -23,8 +20,7 @@
 
 @code {
     /// <summary>Whether the sheet is showing. Defaults to true so a sheet already guarded by the host's own
-    /// <c>@if</c> can just be wrapped, which also keeps that block's markup context intact (Razor rejects
-    /// <c>@{ }</c> inside a component's child content).</summary>
+    /// <c>@if</c> can just be wrapped — needed because Razor rejects <c>@{ }</c> inside child content.</summary>
     [Parameter] public bool Open { get; set; } = true;
 
     /// <summary>Extra classes on the panel, for a variant (e.g. <c>sheet--history</c>, <c>filter-sheet</c>).</summary>
@@ -59,8 +55,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // The panel remounts on each open, so bind again then and drop the flag when it's gone. (khSheet.register
-        // is itself idempotent per element; the flag only saves a redundant interop call every render.)
+        // The panel remounts on each open, so rebind then and drop the flag when it's gone.
         if (Open && !_bound)
         {
             _selfRef ??= DotNetObjectReference.Create(this);

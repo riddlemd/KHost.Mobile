@@ -2,9 +2,8 @@ namespace KHost.Mobile.Models;
 
 /// <summary>
 /// One cached lyrics lookup, persisted on-device so re-opening a song's lyrics doesn't re-hit LRCLIB. Keyed by
-/// the normalized title+artist that was searched. A miss is cached too (<see cref="Found"/> = false) so a known
-/// "no lyrics" answer is also served without a network round-trip. Mutable class per the persisted-entity
-/// convention (DTOs are records; things we store and rewrite are classes).
+/// the normalized title+artist that was searched. A miss is cached too (<see cref="Found"/> = false), so a known
+/// "no lyrics" answer is served without a network round-trip. Mutable class per the persisted-entity convention.
 /// </summary>
 public sealed class LyricsCacheEntry
 {

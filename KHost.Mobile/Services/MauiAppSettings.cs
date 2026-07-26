@@ -2,11 +2,11 @@ using Microsoft.Maui.Storage;
 
 namespace KHost.Mobile.Services;
 
-/// <summary>
-/// <see cref="IAppSettings"/> backed by MAUI <see cref="Preferences"/> — the per-app key/value store that
-/// persists across launches. Reads/writes are synchronous; each flag defaults to <c>true</c> so a fresh install
-/// (or a key that was never written) keeps the original behavior.
-/// </summary>
+/// <inheritdoc />
+/// <remarks>
+/// Backed by MAUI <see cref="Preferences"/>, the per-app key/value store that persists across launches.
+/// Reads/writes are synchronous.
+/// </remarks>
 public sealed class MauiAppSettings : IAppSettings
 {
     private const string AutoFillMetadataKey = "settings.autofill_metadata";

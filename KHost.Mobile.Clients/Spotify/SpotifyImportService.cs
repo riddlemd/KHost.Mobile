@@ -13,7 +13,6 @@ public sealed class SpotifyImportService(HttpClient httpClient) : ISpotifyImport
 {
     private const string EmbedUrlFormat = "https://open.spotify.com/embed/playlist/{0}";
 
-    // Set per-request (see <remarks>) so the service works regardless of how the injected HttpClient was configured.
     private const string BrowserUserAgent =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 
@@ -32,8 +31,7 @@ public sealed class SpotifyImportService(HttpClient httpClient) : ISpotifyImport
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            // A genuine caller cancellation rethrows as OperationCanceledException; only a real network failure
-            // (or a request-timeout TaskCanceledException) maps to the domain error. Mirrors the sibling clients.
+            // Check first: a caller cancel must stay an OperationCanceledException, not become a domain error.
             cancellationToken.ThrowIfCancellationRequested();
             throw new SpotifyImportException("Couldn't reach Spotify. Check your connection and try again.", ex);
         }

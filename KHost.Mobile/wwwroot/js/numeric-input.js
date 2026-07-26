@@ -1,8 +1,5 @@
-// <input type=number> accepts 'e'/'E' (exponent) plus '+', '-', '.' because they're all
-// legal characters in a floating-point number literal. For plain integer fields (a release
-// year) that's just confusing, so block any printable key that isn't a digit, and reject
-// non-digit pastes. Editing/navigation keys and Ctrl/Cmd shortcuts are left alone.
-// Idempotent per element (guarded by a data attribute), so it's safe to call on every render.
+// <input type=number> accepts 'e'/'E', '+', '-' and '.' — all legal in a floating-point literal, all nonsense in an
+// integer field like a release year. Idempotent per element, so it's safe to call on every render.
 window.khNumeric = {
     register() {
         document.querySelectorAll('input.num-year:not([data-num-bound])').forEach((el) => {

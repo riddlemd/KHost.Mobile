@@ -17,16 +17,16 @@ public sealed class Venue
     /// <summary>The only required field — the human label ("The Mint", "Palms Thursday karaoke").</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>An assignable emoji shown on venue rows / the header chip for at-a-glance ID. Defaults to the mic;
-    /// the add/edit form picks from the curated <see cref="VenueGlyphs"/> set. Stored as the raw emoji string.</summary>
+    /// <summary>An assignable emoji identifying the venue, from the curated <see cref="VenueGlyphs"/> set.
+    /// Defaults to the mic. Raw emoji string.</summary>
     public string Glyph { get; set; } = VenueGlyphs.Default;
 
-    /// <summary>The venue's KaraFun catalog ID, or null if it doesn't use KaraFun. When set, powers "Open KaraFun
-    /// Catalog". Digits with leading zeros significant — stored as a string exactly as it appears in the link.</summary>
+    /// <summary>The venue's KaraFun catalog ID, or null if it doesn't use KaraFun. Leading zeros are significant —
+    /// stored as a string exactly as it appears in the link.</summary>
     public string? KaraFunVenueId { get; set; }
 
     /// <summary>Latitude captured via "use my current location", or null if not set. Paired with
-    /// <see cref="Longitude"/>; enables nearest-venue auto-select once geolocation lands.</summary>
+    /// <see cref="Longitude"/>; both are required for nearest-venue auto-select.</summary>
     public double? Latitude { get; set; }
 
     /// <summary>Longitude captured via "use my current location", or null if not set. See <see cref="Latitude"/>.</summary>
@@ -35,9 +35,8 @@ public sealed class Venue
     /// <summary>Starred by the singer. Favorites float to the top of the venue list and the switcher.</summary>
     public bool IsFavorite { get; set; }
 
-    /// <summary>When false, the venue is kept out of the header switcher's quick list — it still exists on the Venues
-    /// page, can be set active there, and still tags sings / opens its KaraFun catalog. Defaults to <c>true</c> so
-    /// existing venues (and a file that predates this field) stay listed.</summary>
+    /// <summary>When false, the venue is kept out of the quick switcher — it still exists, can be set active, and
+    /// still tags sings. Defaults to <c>true</c> so a file that predates this field stays listed.</summary>
     public bool ShowInSwitcher { get; set; } = true;
 
     /// <summary>Free-text notes ("great sound", "cash only", "ask for Dana"). Null when unset.</summary>

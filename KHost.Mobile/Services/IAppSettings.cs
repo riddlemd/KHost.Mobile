@@ -1,72 +1,64 @@
 namespace KHost.Mobile.Services;
 
 /// <summary>
-/// User-adjustable app preferences — simple on/off flags surfaced on the Settings page and persisted across
-/// launches. Both default to <c>true</c> so the app behaves exactly as before until the user opts out.
+/// User-adjustable app preferences, persisted across launches. Every flag defaults to <c>true</c> unless its
+/// summary says otherwise, so a fresh install behaves as it did before the setting existed.
 /// </summary>
 public interface IAppSettings
 {
-    /// <summary>
-    /// When true, iTunes is used to auto-fill a song's blank year/genre: when a song is added, when the detail
-    /// sheet is opened, and via the post-import enrichment/review pass. When false, no iTunes lookups run.
-    /// </summary>
+    /// <summary>When true, iTunes is used to auto-fill a song's blank year/genre. When false, no iTunes lookups run.</summary>
     bool AutoFillMetadata { get; set; }
 
     /// <summary>
-    /// When true, the "Tonight" on-deck set list is available: it gets its own tab in the bottom bar and every
-    /// song gets a quick "add to tonight" control. When false, the Tonight tab (and with it the whole bottom bar,
-    /// since it's then the only extra destination) and the per-song controls are hidden — the saved set is left
-    /// untouched, so turning it back on restores it.
+    /// When true, the "Tonight" on-deck set list is available. When false it's hidden everywhere, but the saved set
+    /// is left untouched, so turning it back on restores it.
     /// </summary>
     bool TonightEnabled { get; set; }
 
     /// <summary>
-    /// The id (as a string) of the singer that was active when the app last closed, so the same singer's lists
-    /// re-open on the next launch. Empty when never set; the bootstrap falls back to the first singer when it's
-    /// empty or names a singer that no longer exists. String-typed to sit in the same key/value store as the rest.
+    /// The id (as a string) of the singer that was active when the app last closed. Empty when never set; the
+    /// bootstrap falls back to the first singer when it's empty or names a singer that no longer exists.
+    /// String-typed to sit in the same key/value store as the rest.
     /// </summary>
     string LastActiveSingerId { get; set; }
 
-    /// <summary>When true, the song detail sheet shows the "Find on YouTube" button.</summary>
+    /// <summary>When true, the YouTube quick link is offered for a song.</summary>
     bool YouTubeSearchEnabled { get; set; }
 
-    /// <summary>When true, the song detail sheet shows the "Find on Spotify" button.</summary>
+    /// <summary>When true, the Spotify quick link is offered for a song.</summary>
     bool SpotifySearchEnabled { get; set; }
 
-    /// <summary>When true, the song detail sheet shows the "Find on KaraFun" button (needs <see cref="KaraFunVenueId"/>).</summary>
+    /// <summary>When true, the KaraFun quick link is offered for a song (needs <see cref="KaraFunVenueId"/>).</summary>
     bool KaraFunEnabled { get; set; }
 
     /// <summary>
-    /// One-time guard for the legacy <see cref="KaraFunVenueId"/> → seeded-venue migration. Defaults to <c>false</c>
-    /// (like <see cref="TutorialCompleted"/>): the first time the venue feature loads with an old global KaraFun ID
-    /// set and no saved venues, one venue is seeded from it and this flips to <c>true</c> so it never re-seeds.
+    /// One-time guard for the legacy <see cref="KaraFunVenueId"/> → seeded-venue migration. Defaults to <c>false</c>:
+    /// the first time the venue feature loads with an old global KaraFun ID set and no saved venues, one venue is
+    /// seeded from it and this flips to <c>true</c> so it never re-seeds.
     /// </summary>
     bool VenuesSeeded { get; set; }
 
     /// <summary>
-    /// When true, the active venue is auto-selected from the device's location — switching to the nearest saved
-    /// venue as the singer moves, and re-checking every <see cref="VenueRecheckMinutes"/> minutes while the app is
-    /// open (foreground only). Defaults to <c>true</c>, but stays dormant — and does not request the location
-    /// permission — until at least one venue has a saved point to match against; the permission is requested the first
-    /// time it actually runs. Manually picking a venue pins it until "resume auto-detect"; turn this off to switch
-    /// venues only by hand.
+    /// When true, the active venue is auto-selected from the device's location, re-checking every
+    /// <see cref="VenueRecheckMinutes"/> minutes while the app is in the foreground. Stays dormant — and does not
+    /// request the location permission — until at least one venue has a saved point to match against. Manually
+    /// picking a venue pins it until "resume auto-detect".
     /// </summary>
     bool LocationAutoDetect { get; set; }
 
     /// <summary>
-    /// How often (minutes) the location auto-detect re-checks the current venue while the app is open. Defaults to
-    /// 5; the UI offers a small set of choices and the tracker clamps to ~2–30.
+    /// How often (minutes) location auto-detect re-checks the current venue while the app is open. Defaults to 5;
+    /// the tracker clamps to ~2–30.
     /// </summary>
     int VenueRecheckMinutes { get; set; }
 
     /// <summary>
-    /// Legacy single global KaraFun venue ID. KaraFun is now per-venue (each <c>Venue</c> carries its own ID and the
-    /// "Find on KaraFun" button follows the active venue), so this is no longer set from the UI — it's kept only so
-    /// the one-time upgrade migration can seed a venue from an older install's value.
+    /// Legacy single global KaraFun venue ID. KaraFun is now per-venue, so this is no longer set from the UI — it's
+    /// kept only so the one-time upgrade migration can seed a venue from an older install's value.
     /// </summary>
     string KaraFunVenueId { get; set; }
 
-    /// <summary>When true, the song detail sheet shows the "Lyrics" button (looks lyrics up from LRCLIB).</summary>
+    /// <summary>When true, LRCLIB lyrics lookup is offered for a song.</summary>
     bool LyricsEnabled { get; set; }
 
     /// <summary>
@@ -75,38 +67,34 @@ public interface IAppSettings
     /// </summary>
     bool LyricsCacheEnabled { get; set; }
 
-    /// <summary>When true, tapping a song's favorite star scrolls the list to reveal that song's new position.</summary>
+    /// <summary>When true, favoriting a song scrolls the list to reveal that song's new position.</summary>
     bool ScrollToFavorited { get; set; }
 
     /// <summary>
-    /// When true, a song's free-form tags are shown as chips on its card and detail sheet, the Tags filter is
-    /// offered on My Songs, and the tag inputs appear on the add / edit forms. When false, all of that is hidden;
-    /// any tags already saved on songs are left untouched, so turning it back on restores them.
+    /// When true, a song's free-form tags are shown and editable, and the Tags filter is offered. When false all of
+    /// that is hidden; tags already saved on songs are left untouched, so turning it back on restores them.
     /// </summary>
     bool TagsEnabled { get; set; }
 
     /// <summary>
-    /// When true, each song's cover art (fetched from iTunes and cached on-device) is shown as its card background
-    /// and behind the title on its detail sheet, with a scrim behind the text for legibility. Defaults to
-    /// <c>true</c> like the other feature flags; turn it off to keep plain cards and skip the cover lookups/downloads.
+    /// When true, each song's cover art is looked up, downloaded and displayed. When false, no cover lookups or
+    /// downloads run and no art is shown.
     /// </summary>
     bool AlbumArtEnabled { get; set; }
 
-    /// <summary>When true, the "Surprise me" random-picker button is shown on My Songs. When false it's hidden.</summary>
+    /// <summary>When true, the "Surprise me" random picker is available.</summary>
     bool SurpriseEnabled { get; set; }
 
     /// <summary>
-    /// When true, the "Surprise me" random picker skips any song already sung today, so it suggests something
-    /// fresh. If every candidate has already been sung today it falls back to the full list rather than doing
-    /// nothing.
+    /// When true, the "Surprise me" random picker skips any song already sung today. If every candidate has already
+    /// been sung today it falls back to the full list rather than doing nothing.
     /// </summary>
     bool SurpriseSkipSungToday { get; set; }
 
     /// <summary>
-    /// When true, the "Surprise me" draw is weighted by each song's "how it went" star, so it leans toward songs
-    /// you sing well; unrated songs draw on the list average and everything keeps a small floor. When false every
-    /// candidate is equally likely. Defaults to <c>true</c> — this was the picker's fixed behaviour before the
-    /// options sheet existed.
+    /// When true, the "Surprise me" draw is weighted by each song's "how it went" star; unrated songs draw on the
+    /// list average and everything keeps a small floor. When false every candidate is equally likely. Defaults to
+    /// <c>true</c> — this was the picker's fixed behaviour before the options sheet existed.
     /// </summary>
     bool SurpriseFavourWellSung { get; set; }
 
@@ -117,43 +105,41 @@ public interface IAppSettings
     bool SurpriseFavoritesOnly { get; set; }
 
     /// <summary>
-    /// When true, the "Surprise me" draw uses only the currently filtered/visible songs rather than the whole
-    /// list. Defaults to <c>true</c> — the picker always scoped itself to the filtered list before the options
-    /// sheet made the choice explicit.
+    /// When true, the "Surprise me" draw uses only the currently filtered/visible songs rather than the whole list.
+    /// Defaults to <c>true</c> — the picker always scoped itself to the filtered list before the options sheet made
+    /// the choice explicit.
     /// </summary>
     bool SurpriseRespectFilters { get; set; }
 
     /// <summary>
-    /// When true, marking a song sung shows a "how it went" star rating on the prompt. Turn off for singers who'd
-    /// rather just log the performance (and jot a note) without judging it — the prompt then only asks for a note.
+    /// When true, marking a song sung asks for a "how it went" star rating. When false the prompt only asks for a note.
     /// </summary>
     bool RatePerformances { get; set; }
 
     /// <summary>
-    /// When true, a song's how-it-went star weights recent sings more than old ones (an exponential time-decay), so
-    /// what you're crushing lately ranks above what you nailed years ago. When false (the default), every rated sing
-    /// counts equally. Affects only the derived star + list ranking on My Songs — the stored performances are untouched.
+    /// When true, a song's derived how-it-went star weights recent sings more than old ones (exponential time-decay).
+    /// When false (the default), every rated sing counts equally. Affects only the derived star and the ranking that
+    /// uses it — the stored performances are untouched.
     /// </summary>
     bool RecencyWeightedRatings { get; set; }
 
     /// <summary>
-    /// When true, the app checks GitHub for a newer release once at startup and shows a banner when one is
-    /// available. When false, no update check runs (no network request) and the banner never appears.
+    /// When true, the app checks GitHub for a newer release once at startup. When false, no update check runs (no
+    /// network request).
     /// </summary>
     bool UpdateCheckEnabled { get; set; }
 
     /// <summary>
-    /// Whether the first-run tutorial has been completed or skipped. Unlike the feature flags above this defaults
-    /// to <c>false</c> (opposite semantics), so the coach-marks overlay shows once on a fresh install and never
-    /// again after. Set back to <c>false</c> (from Settings → "Replay tutorial") to see the tour again.
+    /// Whether the first-run tutorial has been completed or skipped. Defaults to <c>false</c> (opposite semantics to
+    /// the feature flags), so the tour shows once on a fresh install and never again after.
     /// </summary>
     bool TutorialCompleted { get; set; }
 
     /// <summary>
-    /// Comma-joined ids of the user's OWN songs the tutorial queued onto an empty Tonight set (the tour's
-    /// no-seeded-songs path), persisted so a tour interrupted by an app kill can still remove exactly those rows
-    /// on its next run — the in-memory tracking list doesn't survive a restart, and those rows aren't the fixed-id
-    /// samples the self-heal already knows. Empty when no tour seeding is outstanding.
+    /// Comma-joined ids of the user's OWN songs the tutorial queued onto an empty Tonight set, persisted so a tour
+    /// interrupted by an app kill can still remove exactly those rows on its next run — the in-memory tracking list
+    /// doesn't survive a restart, and those rows aren't the fixed-id samples the self-heal already knows. Empty when
+    /// no tour seeding is outstanding.
     /// </summary>
     string TutorialSeededTonightIds { get; set; }
 }

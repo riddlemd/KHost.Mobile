@@ -5,12 +5,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KHost.Mobile.Services;
 
-/// <summary>
-/// <see cref="ITonightStore"/> backed by a single JSON file in the app's private data directory — the same
-/// durable-JSON pattern as <see cref="JsonFileSongListStore"/>. The in-memory list is the source of truth once
-/// loaded; every mutation renumbers <see cref="TonightEntry.Order"/> to stay contiguous and rewrites the file. A
-/// <see cref="SemaphoreSlim"/> guards against concurrent UI actions. A corrupt file is treated as an empty set.
-/// </summary>
+/// <inheritdoc />
+/// <remarks>
+/// Backed by a single JSON file in the app's private data directory — the same durable-JSON pattern as
+/// <see cref="JsonFileSongListStore"/>. Every mutation renumbers <see cref="TonightEntry.Order"/> to stay
+/// contiguous and rewrites the file, under a <see cref="SemaphoreSlim"/>. A corrupt file is quarantined and
+/// treated as an empty set.
+/// </remarks>
 public sealed class JsonFileTonightStore : ITonightStore
 {
     private readonly IAppDataDirectory _paths;
@@ -23,9 +24,8 @@ public sealed class JsonFileTonightStore : ITonightStore
 
     /// <summary>
     /// The Tonight set is per-singer: it reads/writes the active singer's file (<see cref="IAppSession.ActiveSingerId"/>).
-    /// <paramref name="session"/> is optional so the integration tests can <c>new</c> the store without wiring a
-    /// session — it then reads the single legacy file, exactly as before multi-singer support. The optional logger
-    /// keeps those tests loggerless; DI supplies both.
+    /// <paramref name="session"/> and <paramref name="logger"/> are optional so the integration tests can <c>new</c>
+    /// the store bare; with no session it falls back to the single legacy file. DI supplies both.
     /// </summary>
     public JsonFileTonightStore(IAppDataDirectory paths, IAppSession? session = null, ILogger<JsonFileTonightStore>? logger = null)
     {

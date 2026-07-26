@@ -9,10 +9,9 @@ namespace KHost.Mobile.Services;
 public sealed record LyricsCacheHit(LyricsResult? Result);
 
 /// <summary>
-/// On-device cache of lyrics lookups, keyed by title+artist. Lets the lyrics sheet serve a repeat open without
-/// re-hitting LRCLIB. The UI binds to this interface only; a server-backed cache could drop in later. Both a
-/// found result and a "no match" are cacheable (see <see cref="LyricsCacheHit"/>). <see cref="Changed"/> fires
-/// on any mutation so the Settings page can keep its entry count live.
+/// On-device cache of lyrics lookups, keyed by title+artist, so a repeat open doesn't re-hit LRCLIB. Both a found
+/// result and a "no match" are cacheable (see <see cref="LyricsCacheHit"/>). <see cref="Changed"/> fires on any
+/// mutation so a live entry count stays current.
 /// </summary>
 public interface ILyricsCache
 {

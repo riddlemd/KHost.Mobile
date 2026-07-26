@@ -21,9 +21,8 @@ public static class KaraFunSearch
     }
 
     /// <summary>
-    /// The venue's KaraFun catalog home (no song query), e.g. <c>karafun.com/012345/</c> — for "Open KaraFun
-    /// Catalog" on the venue page, distinct from the song-scoped <see cref="UrlFor"/>. Opens the venue's whole
-    /// songbook so the singer can browse it directly.
+    /// The venue's KaraFun catalog home, e.g. <c>karafun.com/012345/</c> — the whole songbook, with no song query,
+    /// as distinct from the song-scoped <see cref="UrlFor"/>.
     /// </summary>
     public static string CatalogUrlFor(string venueId) => $"https://www.karafun.com/{venueId.Trim()}/";
 }

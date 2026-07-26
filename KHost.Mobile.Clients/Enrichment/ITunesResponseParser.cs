@@ -7,20 +7,17 @@ namespace KHost.Mobile.Clients.Enrichment;
 /// <summary>
 /// Parses an iTunes Search API response into a <see cref="TrackLookupResult"/>. Pure — no network. The API
 /// returns <c>{ "resultCount": n, "results": [ { trackName, artistName, releaseDate, primaryGenreName, … } ] }</c>.
-/// We do NOT trust the top-ranked result: iTunes free-text matching happily returns covers and unrelated
-/// songs. Instead we keep only a result whose track name AND artist both match the requested song (after
-/// light normalization) — better no data than wrong data.
+/// The top-ranked result is NOT trusted: iTunes free-text matching happily returns covers and unrelated
+/// songs, so only a title+artist match counts — better no data than wrong data.
 /// </summary>
 public static class ITunesResponseParser
 {
     /// <summary>
     /// Returns metadata from the first result whose <c>trackName</c> and <c>artistName</c> both match
     /// <paramref name="requestedTitle"/> / <paramref name="requestedArtist"/> (case/punctuation/accent- and
-    /// feature-suffix-insensitive).
-    /// <para>Failing that, returns the closest near-miss as a <see cref="TrackLookupResult.Suggestion"/> so
-    /// the caller can offer a spelling correction — see <see cref="FindSuggestion"/> for how narrow that is.
-    /// Returns <see cref="TrackLookupResult.None"/> when nothing matches or the artist is unknown (nothing
-    /// to verify against).</para>
+    /// feature-suffix-insensitive); failing that, the closest near-miss as a
+    /// <see cref="TrackLookupResult.Suggestion"/>. <see cref="TrackLookupResult.None"/> when nothing matches,
+    /// or when the artist is blank — there'd be nothing to verify a candidate against.
     /// </summary>
     public static TrackLookupResult ParseBestMatch(string json, string requestedTitle, string requestedArtist)
     {
@@ -73,8 +70,8 @@ public static class ITunesResponseParser
             wantArtist,
             artist => TrackTextNormalizer.Normalize(artist) == wantArtist);
 
-    // iTunes returns a 100×100 thumbnail URL like ".../source/100x100bb.jpg". Swap the dimensions for a
-    // crisper 300×300 that still covers a card background without bloating the cached/base64-encoded image.
+    // artworkUrl100 is ".../source/100x100bb.jpg" — the dimensions are just path text, so rewriting them
+    // serves a real 300×300. Bigger sizes bloat the cached/base64-encoded image for no visible gain.
     private static string? UpscaleArtwork(string? url)
         => string.IsNullOrEmpty(url) ? url : url.Replace("100x100", "300x300", StringComparison.Ordinal);
 

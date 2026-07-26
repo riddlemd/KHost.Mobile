@@ -247,11 +247,9 @@ public sealed class AlbumArtService(
             {
                 var song = _pending.Dequeue();
 
-                // Scrolled out of view before its turn came. Drop it rather than spend a paced lookup on
-                // something nobody is looking at: the queue is sequential, so without this a fast scroll
-                // back and forth buries the songs actually on screen behind everything they scrolled past,
-                // and those sit on a loading placeholder for as long as the backlog takes. Clearing _queued
-                // lets it re-enqueue from ViewFor/SetVisibleAsync if it comes back.
+                // Scrolled out of view before its turn came. The queue is sequential, so keeping it would bury
+                // the songs actually on screen behind a fast scroll's backlog. Clearing _queued lets it
+                // re-enqueue from ViewFor/SetVisibleAsync if it comes back.
                 if (!_visible.Contains(song.Id))
                 {
                     _queued.Remove(song.Id);
@@ -323,8 +321,7 @@ public sealed class AlbumArtService(
         RaiseChanged();
     }
 
-    // iTunes first; Deezer only when iTunes has no cover. The attempt is recorded hit or miss, so a coverless
-    // song is never re-chased.
+    // iTunes first; Deezer only when iTunes has no cover.
     private async Task DiscoverArtworkUrlAsync(SongListItem song)
     {
         if (string.IsNullOrWhiteSpace(song.Title) || string.IsNullOrWhiteSpace(song.Artist))
@@ -360,9 +357,8 @@ public sealed class AlbumArtService(
             song.ArtworkUrl = art;
         song.ArtworkLookedUp = true;   // record the attempt, hit or miss, so we never re-spend on it
 
-        // NOT persisted per song: each store write rewrites the whole song-list file and fires Changed (a full
-        // page refresh), so a cold sweep used to cost one full-file write per undiscovered song. The flags are
-        // already live in memory on the shared item; the batch is only for the next launch.
+        // Batched, not persisted per song: each store write rewrites the whole file and fires Changed. The flags
+        // are already live in memory on the shared item; the batch is only for the next launch.
         _unsaved.Add(song);
         if (_unsaved.Count >= FlushEvery)
             await FlushUnsavedAsync();

@@ -1,9 +1,8 @@
 @implements IDisposable
 @inject IBackButtonService BackButton
 
-@* Concept-1 split button: a primary action segment + a chevron that drops a menu of related actions. Reusable —
-   pass the default action via OnPrimary and the extra actions as <SplitButtonItem> children. Dismissed by tapping
-   outside (the scrim) or the Android back button (via IBackButtonService), exactly like the header ⋮ menu. *@
+@* A primary action segment + a chevron dropping a menu of related actions (<SplitButtonItem> children).
+   Dismissed by tapping outside or by the Android back button, exactly like the header ⋮ menu. *@
 <div class="kh-split @Class @(_open ? "is-open" : "")">
     <button type="button" class="btn @VariantBtnClass kh-split__main" disabled="@Disabled" @onclick="PrimaryClickAsync">
         @if (PrimaryContent is not null)
@@ -21,7 +20,7 @@
     </button>
     @if (_open)
     {
-        @* Transparent full-screen catcher: a tap anywhere outside the menu closes it (same trick as the header menu). *@
+        @* Transparent full-screen catcher, so a tap anywhere outside the menu closes it. *@
         <div class="kh-split__scrim" @onclick="Close"></div>
         <div class="kh-split__menu kh-split__menu--@DirectionAttr kh-split__menu--@AlignAttr" role="menu">
             <CascadingValue Value="this" IsFixed="true">
@@ -66,9 +65,8 @@
     private bool _open;
     private BackButtonOverlayGuard? _backGuard;
 
-    // Registered for the component's lifetime so the Android back button closes an open menu instead of navigating
-    // (mirrors the header ⋮ menu). The guard no-ops when the menu is closed, so it only consumes a back press
-    // when there's something to dismiss.
+    // Registered for the component's lifetime, not per open: the guard no-ops when the menu is closed, so it only
+    // consumes a back press when there's something to dismiss.
     protected override void OnInitialized() =>
         _backGuard = new BackButtonOverlayGuard(BackButton, TryClose, StateHasChanged);
 

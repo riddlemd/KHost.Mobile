@@ -1,10 +1,8 @@
 
-@* Shared "Sang it" prompt. Shown when @Item is set; marking a song sung records a performance, and the singer
-   rates how it went (or skips → unrated). Presentational only: it owns the star value + note and its own
-   pull-down-to-dismiss, and raises OnCommit (Save / Skip / swipe-away) or OnCancel (✕ / backdrop, no log). The
-   host owns the @Item state, decides what "commit" means (log a performance, and — from Tonight — check the row
-   off), and reconciles the page-scroll lock. Reused by My Songs ("Log performance") and the Tonight tab (check-off). *@
-@* A pull-down dismiss here LOGS the sing unrated (same as Skip) rather than discarding it, so it takes the
+@* Shared "Sang it" prompt (My Songs "Log performance" + the Tonight check-off). Presentational only — the host
+   owns the @Item state and decides what a commit means.
+
+   A pull-down dismiss here LOGS the sing unrated (same as Skip) rather than discarding it, so it takes the
    OnSwipeDismiss path instead of OnClose. *@
 <Sheet Open="Item is not null" Class="sheet--history rating-prompt" BackdropClass="sheet-backdrop--history"
        AriaLabel="How did it go?" OnClose="CancelAsync" OnSwipeDismiss="DismissFromSwipeAsync">
@@ -73,6 +71,5 @@
 
     private Task CancelAsync() => OnCancel.InvokeAsync();
 
-    // A pull-down dismiss logs the sing without a rating, same as Skip.
     private Task DismissFromSwipeAsync() => OnCommit.InvokeAsync((0, _note));
 }

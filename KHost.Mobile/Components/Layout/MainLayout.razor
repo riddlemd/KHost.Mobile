@@ -10,9 +10,8 @@
 @inject ILogger<MainLayout> Log
 @implements IDisposable
 
-@* Gate the shell on the singer bootstrap: at least one singer must exist and the active one chosen before any
-   personal page (My Songs / Tonight) loads its data, since those stores read the active singer. The bootstrap is a
-   couple of file checks, so this is a brief flash at most. *@
+@* The shell is gated on the singer bootstrap: the per-singer stores read the active singer, so it must be resolved
+   before any personal page (My Songs / Tonight) can load its data. *@
 @if (_ready)
 {
 <header class="app-header">
@@ -67,9 +66,7 @@
     @Body
 </main>
 
-@* Bottom tab bar (Tonight + My Songs). Only shown when Tonight is enabled — with it off there's a single
-   destination, so the whole bar is hidden and navigation runs through the header menu. Settings has no Changed
-   event, so re-read it on every navigation (LocationChanged → StateHasChanged) to reflect a live toggle. *@
+@* Hidden entirely when Tonight is off — one destination needs no tab bar; nav runs through the header ⋮ menu. *@
 @if (Settings.TonightEnabled)
 {
     <NavMenu />
@@ -117,17 +114,16 @@ else
         _ready = true;
     }
 
-    // Re-render on navigation so the bottom bar reflects the current Tonight setting (e.g. right after it's
-    // toggled on the Settings page). The layout persists across pages, so nothing else re-reads the flag.
+    // IAppSettings has no Changed event and the layout persists across pages, so a navigation is the only cue to
+    // re-read TonightEnabled after it's toggled on the Settings page.
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => StateHasChanged();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Forward the native safe-area insets into CSS, now that the DOM exists to receive them — the native
-            // side measures long before Blazor renders, so this is the earliest reliable moment. Re-pushed on
-            // Changed (rotation). No-op where nothing was measured: the values stay 0 and CSS max() picks env().
+            // Earliest reliable moment to forward the native safe-area insets: the native side measures long before
+            // the DOM exists to receive them. Where nothing was measured the values stay 0 and CSS max() picks env().
             Insets.Changed += OnInsetsChanged;
             await PushInsetsAsync();
 

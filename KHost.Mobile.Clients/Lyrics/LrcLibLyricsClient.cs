@@ -6,8 +6,7 @@ namespace KHost.Mobile.Clients.Lyrics;
 /// <remarks>
 /// Uses the keyless LRCLIB search API (<c>lrclib.net/api/search</c>). LRCLIB's fair-use policy asks for a
 /// descriptive <c>User-Agent</c>; that (and the base address) are configured on the injected
-/// <see cref="HttpClient"/> at registration. Free-text search on "{artist} {title}" + first usable result,
-/// matching KHost's lookup.
+/// <see cref="HttpClient"/> at registration.
 /// </remarks>
 public sealed class LrcLibLyricsClient(HttpClient httpClient) : ILyricsClient
 {

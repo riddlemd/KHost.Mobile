@@ -3,10 +3,11 @@ using Microsoft.Maui.ApplicationModel;
 
 namespace KHost.Mobile.Services;
 
-/// <summary>
-/// <see cref="ILinkLauncher"/> backed by MAUI's <see cref="Launcher"/>: hands the URL to the OS so it opens
-/// in the native browser (or a matching app, e.g. YouTube) rather than the in-app WebView.
-/// </summary>
+/// <inheritdoc />
+/// <remarks>
+/// Backed by MAUI's <see cref="Launcher"/>: hands the URL to the OS so it opens in the native browser (or a
+/// matching app, e.g. YouTube) rather than the in-app WebView.
+/// </remarks>
 public sealed class MauiLinkLauncher(ILogger<MauiLinkLauncher> logger) : ILinkLauncher
 {
     public async Task OpenAsync(string url)

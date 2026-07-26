@@ -20,8 +20,8 @@ public enum SongListItemStatus
 public sealed class Performance
 {
     /// <summary>Stable identity for this performance, so other stores (e.g. the Tonight set) can reference the exact
-    /// one they logged and undo it later. Defaults to a fresh id; entries persisted before this field existed
-    /// deserialize to a new id on load (harmless — nothing references those).</summary>
+    /// one they logged and undo it later. Entries persisted before this field existed deserialize to a new id on
+    /// load — harmless, nothing references those.</summary>
     public Guid Id { get; set; } = Guid.NewGuid();
 
     /// <summary>When the song was sung.</summary>
@@ -62,8 +62,7 @@ public sealed class SongListItem
 
     /// <summary>Free-form personal tags the singer attaches to a song ("closer", "duet", "needs practice").
     /// Distinct from <see cref="Genre"/> (a single fixed-list value describing the music); tags are many,
-    /// arbitrary, and cross-cutting. Normalized on write via <see cref="SongTags.Normalize"/>. Empty by
-    /// default; entries persisted before this field existed deserialize to an empty list.</summary>
+    /// arbitrary and cross-cutting. Normalized on write via <see cref="SongTags.Normalize"/>.</summary>
     public List<string> Tags { get; set; } = [];
 
     /// <summary>Release year of the song. Null when unset.</summary>
@@ -113,19 +112,18 @@ public sealed class SongListItem
     /// <summary>Future link to a KHost.Online library song once online sync exists. Null for offline-only entries.</summary>
     public Guid? LibrarySongId { get; set; }
 
-    /// <summary>True once we've run the keyless year/genre auto-lookup for this song (hit OR miss), so we never
-    /// re-spend a rate-limited call on it. Replaces the old title+artist metadata cache. Defaults to false;
-    /// entries persisted before this field existed deserialize to false and get looked up on next open.</summary>
+    /// <summary>True once the keyless year/genre auto-lookup has run for this song (hit OR miss), so a
+    /// rate-limited call is never re-spent on it. Entries persisted before this field existed deserialize to
+    /// false and get looked up on next open.</summary>
     public bool MetadataLookedUp { get; set; }
 
-    /// <summary>Absolute URL of the song's cover art (from the iTunes match), used as the card background when
-    /// album art is enabled. Null when unknown or the song had no artwork match. The image bytes themselves are
-    /// downloaded + cached separately (see IAlbumArtCache); this only stores where to fetch them.</summary>
+    /// <summary>Absolute URL of the song's cover art. Null when unknown or the song had no artwork match. Only
+    /// where to fetch the image — the bytes are downloaded and cached separately (see IAlbumArtCache).</summary>
     public string? ArtworkUrl { get; set; }
 
-    /// <summary>True once we've run the artwork lookup for this song (hit OR miss), so we never re-spend a
-    /// rate-limited iTunes call chasing a cover that isn't there. Separate from <see cref="MetadataLookedUp"/>
-    /// because a song enriched before album art existed has year/genre but no <see cref="ArtworkUrl"/>.</summary>
+    /// <summary>True once the artwork lookup has run for this song (hit OR miss), so a rate-limited call is never
+    /// re-spent chasing a cover that isn't there. Separate from <see cref="MetadataLookedUp"/> because a song
+    /// enriched before album art existed has year/genre but no <see cref="ArtworkUrl"/>.</summary>
     public bool ArtworkLookedUp { get; set; }
 
     /// <summary>The catalogue's spelling of this song when the lookup found no exact match but one near-miss

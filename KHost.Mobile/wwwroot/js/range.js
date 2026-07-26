@@ -1,9 +1,7 @@
-// Dual-handle range slider: stop the two thumbs from crossing.
-// Blazor clamps the filter *state* in C#, but re-assigning an <input type=range> value
-// from .NET is async and the browser ignores it while a drag is in progress — so the
-// dragged thumb visually slides past the other. Setting `.value` *synchronously* inside
-// the element's own 'input' handler is honoured mid-drag, which pins each thumb at the
-// other's position. Idempotent per element, so it's safe to call on every render.
+// Dual-handle range slider: stop the two thumbs from crossing. C# clamping isn't enough — re-assigning an
+// <input type=range> value from .NET is async and the browser ignores it mid-drag, so the dragged thumb slides
+// past the other anyway. Only a *synchronous* `.value` write inside the element's own 'input' handler is honoured.
+// Idempotent per element, so it's safe to call on every render.
 window.khRange = {
     register() {
         const lo = document.getElementById('f-year-lo');

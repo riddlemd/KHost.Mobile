@@ -1,12 +1,8 @@
-// Scroll position is remembered here in JS, not in a C# view state, because MAUI's Android WebView has no
-// synchronous JS interop and its async JS→C# callbacks don't land reliably — so a page can't pull its scroll
-// offset into C# as it's disposed. This module-level map, by contrast, outlives the page (a tab change is SPA
-// navigation, not a WebView reload), so the remounted page reads its old position back.
+// Scroll position lives here in JS, not in a C# view state: MAUI's Android WebView has no synchronous JS interop
+// and its async JS→C# callbacks don't land reliably, so a page can't pull its offset into C# as it's disposed.
 //
-// Commits are debounced, not per scroll event, for correctness: a tab change resets window.scrollY to 0 for the
-// incoming page, firing a 'scroll' event while the outgoing page's listener may still be attached. A per-event
-// write would record that 0 and clobber the saved position; a debounced write is still pending when untrack
-// cancels it, so the last real position survives.
+// Commits are debounced for correctness, not perf: a tab change resets window.scrollY to 0 while the outgoing
+// page's listener may still be attached, and a per-event write would clobber the saved position with that 0.
 window.khScroll = {
     _pos: {},
     _handlers: {},
@@ -41,16 +37,15 @@ window.khScroll = {
     restore(key) {
         const target = this._pos[key] || 0;
 
-        // No saved position for this list (e.g. a singer who hasn't scrolled theirs) → show the top. Without this
-        // an unsaved list would keep whatever offset the outgoing list left window.scrollY at.
+        // Explicit top for an unsaved list (e.g. a singer who hasn't scrolled theirs) — otherwise it keeps whatever
+        // offset the outgoing list left window.scrollY at.
         if (target <= 0) {
             window.scrollTo({ top: 0, behavior: 'instant' });
             return;
         }
 
         // A freshly-rendered list (especially after a singer switch) may not have laid out to full height yet in the
-        // Android WebView, so a single scrollTo lands short. Re-apply across a few animation frames until the target
-        // is actually reachable (window.scrollY catches up) or we give up — then it settles at the true position.
+        // Android WebView, so a single scrollTo lands short. Re-apply until the target is actually reachable.
         let tries = 0;
         const apply = () => {
             window.scrollTo({ top: target, behavior: 'instant' });
@@ -64,9 +59,8 @@ window.khScroll = {
     toTop() { window.scrollTo({ top: 0, behavior: 'instant' }); },
 };
 
-// Infinite scroll: watch a sentinel element at the end of the list and, as it nears the viewport, ask .NET to
-// render the next page. rootMargin pre-loads before the user hits the very bottom so growth feels seamless. One
-// observer at a time (the page has a single list); re-observing swaps the target, disconnect stops it on unmount.
+// Infinite scroll: a sentinel at the end of the list asks .NET for the next page as it nears the viewport.
+// One observer at a time (the page has a single list) — re-observing swaps the target.
 window.khInfinite = {
     _observer: null,
     _suspended: false,

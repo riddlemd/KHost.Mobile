@@ -11,10 +11,8 @@ namespace KHost.Mobile.Diagnostics;
 /// </summary>
 /// <remarks>
 /// This is the single seam that captures what the <em>native platform</em> HTTP stack actually sends and receives
-/// on-device (Android <c>HttpClientHandler</c> → OkHttp), which a desktop reproduction can miss. When an external
-/// lookup "works on my machine" but returns nothing on the phone, the Debug-level body log is what tells the two
-/// apart. Body logging only touches textual responses (never an image download) and never lets a logging failure
-/// break the request.
+/// on-device (Android <c>HttpClientHandler</c> → OkHttp), which a desktop reproduction can miss. Body logging only
+/// touches textual responses (never an image download) and never lets a logging failure break the request.
 /// </remarks>
 public sealed class LoggingHttpMessageHandler(ILogger<LoggingHttpMessageHandler> logger) : DelegatingHandler
 {

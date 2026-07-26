@@ -9,13 +9,11 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-@* First-run coach-marks. Lives in MainLayout so it overlays every page and survives the navigations it drives
-   between My Songs, Tonight, Import and Settings. Shows once on a fresh install (IAppSettings.TutorialCompleted
-   defaults false); a per-launch guard (IAppSession.TutorialResolved) stops it re-triggering on every navigation.
-   Each step dims the screen and cuts a spotlight hole over one control; a step whose target isn't on-screen degrades
-   to a centered card. So the song/Tonight/venue/singer spotlights have something to point at on a fresh install,
-   sample rows are seeded for the duration of the tour and cleared on finish (see SeedSampleDataAsync).
-   Positioning is done in wwwroot/js/tutorial.js; this component owns the step list, content, and navigation. *@
+@* First-run coach-marks. Must live in MainLayout — it drives navigations between pages and has to survive them.
+   Shows once per install (IAppSettings.TutorialCompleted); IAppSession.TutorialResolved is the per-launch guard
+   that stops it re-triggering on every navigation. Sample rows are seeded for the duration of the tour so the
+   spotlights have targets on a fresh install, and cleared on finish (see SeedSampleDataAsync).
+   Positioning lives in wwwroot/js/tutorial.js. *@
 @if (_active)
 {
     <div class="tutorial @(_center ? "tutorial--center" : "")">
@@ -58,11 +56,10 @@
 }
 
 @code {
-    // One tour step. Chapter groups steps into a skippable section ("" = the chapter-less Welcome/outro). IsIntro
-    // marks a chapter's opening card. Route is the target page ("" = My Songs); Anchor is the data-tut value to
-    // spotlight (null = a centered explain card, also the graceful fallback when a target isn't on-screen). VenueDetail
-    // steps want the Venues detail sheet open (driven via the session signal). NeedsTonight/NeedsTags/NeedsSurprise
-    // steps drop out entirely when that feature is off.
+    // One tour step. Chapter "" = the chapter-less Welcome/outro; IsIntro marks a chapter's opening card. Route ""
+    // = My Songs. Anchor is the data-tut value to spotlight; null = a centered explain card, which is also the
+    // fallback when a target never appears. VenueDetail opens the Venues detail sheet via the session signal.
+    // NeedsTonight/NeedsTags/NeedsSurprise steps drop out entirely when that feature is off.
     private sealed record Step(string Chapter, string Route, string? Anchor, string Badge, string Title, string Body,
         bool IsIntro = false, bool NeedsTonight = false, bool NeedsTags = false, bool NeedsSurprise = false,
         bool VenueDetail = false);
@@ -257,8 +254,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Start once the overlay's own elements (hole/tip refs) are in the DOM. Seed sample rows first (a no-op
-        // when the lists aren't empty) so the very next steps have real targets to spotlight.
+        // Not OnInitialized: the hole/tip element refs have to be in the DOM before the first step positions.
         if (_active && !_started)
         {
             _started = true;
@@ -283,7 +279,6 @@
         // it as it mounts); cleared for every other step so the sheet closes again when we move on.
         Session.SetTutorialVenueDetail(step.VenueDetail ? _tourVenueId : null);
 
-        // Navigate to the step's page if we're not already there (the overlay persists across the nav).
         var currentPath = Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].TrimEnd('/');
         if (!string.Equals(currentPath, step.Route.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
             Nav.NavigateTo(step.Route.Length == 0 ? "/" : step.Route);
@@ -336,7 +331,7 @@
 
         await RemoveSampleDataAsync();
 
-        // Elements are gone now; just drop the stored resize context (safe — takes no element refs).
+        // clear(), not reset() — the elements are already gone, so nothing can be handed element refs here.
         try { await JS.InvokeVoidAsync("khTutorial.clear"); } catch { /* JS not ready — nothing to clean up */ }
 
         // Land back on My Songs where the tour began, if we ended on another page.
@@ -345,10 +340,9 @@
     }
 
     // ---- Sample data (seeded so the tour's spotlights have real targets on a fresh install) -----
-    // Seeded only when a list is empty and cleared when the tour ends. The sample songs use FIXED ids so cleanup is
-    // deterministic and self-healing: a tour interrupted by an app kill leaves recognizable rows that the next run
-    // removes before re-seeding. (Tonight rows we add on top of the user's OWN songs — the no-seeded-songs case — are
-    // tracked in _seededTonightSongIds instead, since their ids aren't fixed.)
+    // Seeded only when a list is empty and cleared when the tour ends. FIXED ids, so cleanup self-heals: a tour
+    // killed mid-run leaves recognizable rows the next run removes before re-seeding. Tonight rows queued on the
+    // user's OWN songs have no fixed id, so they're tracked in _seededTonightSongIds instead.
     private static readonly Guid[] SampleSongIds =
     [
         new("5a3f7e01-0000-4000-8000-000000000001"),
@@ -393,7 +387,6 @@
             Status = howItWent.Length > 0 ? SongListItemStatus.Sang : SongListItemStatus.WantToSing,
             MetadataLookedUp = true,
             ArtworkLookedUp = true,
-            // Tag performances to the sample venue so its history/go-to-songs have something to show.
             Performances = [.. howItWent.Select(h => new Performance { Date = now.AddDays(-i - 1), HowItWent = h, VenueId = SampleVenueId })],
         };
         return
@@ -445,8 +438,8 @@
                 _seededSongs = true;
             }
 
-            // Fill an empty Tonight set so its page has rows: the seeded samples if we just added them, otherwise the
-            // user's own first few songs (removed again on finish, leaving their set exactly as it was).
+            // Fill an empty Tonight set: the seeded samples if we just added them, otherwise the user's own first
+            // few songs (removed again on finish, leaving their set exactly as it was).
             if (Settings.TonightEnabled && (await Tonight.GetAllAsync()).Count == 0)
             {
                 var pool = _seededSongs
@@ -461,15 +454,13 @@
                 if (_seededTonightSongIds.Count > 0)
                     await Tonight.SetCompletedAsync(_seededTonightSongIds[0], true);
 
-                // Persist which rows we queued: when they're the user's OWN songs (not the fixed-id samples), an
-                // app kill mid-tour would otherwise leak them forever — the in-memory list doesn't survive a
-                // restart, and the fixed-id self-heal can't recognize them. The next run's cleanup reads this back.
+                // Persisted because the user's OWN songs carry no fixed id: an app kill mid-tour would leak these
+                // rows forever, since the in-memory list dies with the process and the self-heal can't spot them.
                 Settings.TutorialSeededTonightIds = string.Join(",", _seededTonightSongIds);
             }
 
-            // A venue for the Venues chapter to open + spotlight (KaraFun catalog, toggles, history). Seed a sample
-            // when there are none; otherwise point at the user's own, preferring one WITH a KaraFun id so the catalog
-            // spotlight has a target.
+            // A venue for the Venues chapter to open + spotlight. Prefer one of the user's own WITH a KaraFun id,
+            // so the catalog spotlight has a target.
             var venues = await VenueStore.GetAllAsync();
             if (venues.Count == 0)
             {
@@ -488,8 +479,7 @@
         catch { /* best-effort: the tour still runs; empty-target steps just fall back to centered cards */ }
     }
 
-    // Remove whatever SeedSampleDataAsync added: the Tonight rows we queued, then the fixed-id sample songs. Safe to
-    // call when nothing was seeded — every Remove is a no-op if absent, which is what makes the self-heal work.
+    // Safe to call when nothing was seeded — every Remove is a no-op if absent, which is what the self-heal relies on.
     private async Task RemoveSampleDataAsync()
     {
         try
@@ -500,8 +490,7 @@
             // a tour that ended on the sample singer would otherwise clean up the wrong list.
             await RestoreTourSingerAsync();
 
-            // The rows this run queued, UNION the persisted ids from a prior run that was killed mid-tour (its
-            // in-memory list is gone, but the setting survived — see SeedSampleDataAsync).
+            // Union with the persisted ids: a prior run killed mid-tour lost its in-memory list but left the setting.
             var seededTonight = new HashSet<Guid>(_seededTonightSongIds);
             foreach (var part in Settings.TutorialSeededTonightIds.Split(',', StringSplitOptions.RemoveEmptyEntries))
             {
@@ -534,8 +523,8 @@
         }
     }
 
-    // Undo a switch onto the sample singer (the Singers chapter invites exactly that). Falls back to any real singer
-    // when the tour started with none resolved, so we never leave the sample as the active one — it's about to go.
+    // Undo a switch onto the sample singer (the Singers chapter invites exactly that). Any real singer will do as a
+    // fallback — the sample must never be left active, it's about to be deleted.
     private async Task RestoreTourSingerAsync()
     {
         if (Session.ActiveSingerId != SampleSingerId)

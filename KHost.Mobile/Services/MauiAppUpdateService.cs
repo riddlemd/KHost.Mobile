@@ -4,12 +4,12 @@ using Microsoft.Maui.ApplicationModel;
 
 namespace KHost.Mobile.Services;
 
-/// <summary>
-/// <see cref="IAppUpdateService"/> that compares this build's <see cref="AppInfo.Current"/> version against
-/// the newest GitHub release (via <see cref="IUpdateClient"/>). Registered as a singleton so the check —
-/// and the session dismissal — are shared app-wide; the check <see cref="Task"/> is cached so the network
-/// call happens once per launch no matter how many components ask.
-/// </summary>
+/// <inheritdoc />
+/// <remarks>
+/// Compares this build's <see cref="AppInfo.Current"/> version against the newest GitHub release. Singleton, and
+/// the check <see cref="Task"/> is cached, so the network call happens once per launch no matter how many
+/// components ask.
+/// </remarks>
 public sealed class MauiAppUpdateService(IUpdateClient updateClient, IAppSettings settings, ILogger<MauiAppUpdateService> logger) : IAppUpdateService
 {
     private Task<AppUpdateStatus>? _check;

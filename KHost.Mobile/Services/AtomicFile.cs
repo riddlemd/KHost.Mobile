@@ -23,11 +23,9 @@ internal static class AtomicFile
         File.Move(tmp, path, overwrite: true);   // same-volume rename → atomic; the previous file survives a crash
     }
 
-    /// <summary>Move a file that failed to parse aside to a <c>.corrupt</c> sibling instead of leaving it to be
-    /// silently overwritten by the next (empty) save — so the bad bytes are preserved for possible recovery and
-    /// a load that quarantines then starts empty never erases the only copy. Best-effort; returns <see langword="true"/>
-    /// only when the corrupt file existed and was moved aside, <see langword="false"/> otherwise (including when
-    /// there was nothing to quarantine) — the caller starts empty in the failure case too, but can log it.</summary>
+    /// <summary>Move a file that failed to parse aside to a <c>.corrupt</c> sibling, so the bad bytes survive the
+    /// next (empty) save instead of being silently overwritten. Best-effort; returns <see langword="true"/> only
+    /// when the file existed and was moved aside. The caller starts empty either way, but can log the failure.</summary>
     public static bool Quarantine(string path)
     {
         try

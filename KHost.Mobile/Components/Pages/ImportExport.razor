@@ -370,10 +370,8 @@
         return false;
     }
 
-    // Bridge the store's synchronous Changed event to async work without `async void`: a void handler hands
-    // the reload to InvokeAsync, which marshals it onto the render thread (Changed can fire from a background
-    // thread) and owns the continuation. Fire-and-forget by necessity — an event has nothing to await it — but
-    // the task swallows its own failures so nothing is unobserved, matching the store's "don't crash" approach.
+    // Not `async void`: InvokeAsync marshals the reload onto the render thread (Changed can fire from a background
+    // thread), and the task swallows its own failures so nothing is left unobserved.
     private void OnStoreChanged(object? sender, EventArgs e) => _ = RefreshFromStoreAsync();
 
     private async Task RefreshFromStoreAsync()
@@ -792,8 +790,8 @@
         }
     }
 
-    // Look up each freshly-imported song one at a time, spaced out to stay under the lookup rate limit.
-    // Fire-and-forget from ImportSelectedAsync; cancelled if the sheet closes, a new import starts, or we navigate away.
+    // One song at a time, spaced out to stay under the lookup rate limit. Fire-and-forget from
+    // ImportSelectedAsync; cancelled if the sheet closes, a new import starts, or we navigate away.
     private const int ReviewThrottleMs = 3000;   // ~20/min
 
     private async Task StartReviewEnrichmentAsync()
@@ -817,8 +815,7 @@
                 token.ThrowIfCancellationRequested();
                 var row = rows[i];
 
-                // Every lookup here is a live call (these songs were just imported, so none are looked up
-                // yet), so always space them out to stay under the rate limit.
+                // Every lookup here is a live call — these songs were just imported, so none can be cached.
                 try
                 {
                     row.Suggestion = (await Metadata.LookupAsync(row.Item.Title, row.Item.Artist, token)).Match;

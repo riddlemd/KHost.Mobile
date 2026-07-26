@@ -13,10 +13,6 @@
 @inject ILogger<Tonight> Log
 @implements IDisposable
 
-@* The "Tonight" on-deck set — its own tab. Drag the ⠿ handle to reorder, tap ✓ to check a song off (which logs
-   a performance, prompting for a rating when that's enabled), ✕ to drop it, "End night" to clear the set. When
-   Tonight is switched off in Settings this route has no tab, so it bounces back to My Songs. *@
-
 @if (_loading)
 {
     <div class="loading-state" role="status" aria-live="polite">
@@ -76,10 +72,9 @@ else
 <RatingPromptSheet Item="_ratingPromptItem" RatePerformances="Settings.RatePerformances"
                    OnCommit="OnRatingCommitAsync" OnCancel="OnRatingCancel" />
 
-@* The same card My Songs opens, but informational here: the row's own ✓ / ✕ own the set mechanics, so leaving
-   Log performance and the tonight toggle unwired keeps the card from offering a second, subtly different way to do
-   either (a check-off also completes the row; the card's wouldn't). Lyrics stays unwired — that sheet is still
-   My Songs'. The card renders a button only for the callbacks it's given, so each just disappears. *@
+@* The card renders a button only for the callbacks it's given. Log performance / the tonight toggle / Lyrics are
+   left unwired on purpose: the row's own ✓ / ✕ own the set mechanics, and the card's versions wouldn't complete
+   the row. *@
 <SongDetailSheet Item="_detailItem" AllowEdit="false"
                  InTonight="true"
                  KaraFunAvailable="@(Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
@@ -91,7 +86,6 @@ else
                  OnOpenKaraFun="OpenKaraFunAsync"
                  OnEnjoymentChanged="UpdateEnjoymentAsync" />
 
-@* The same sheet My Songs uses — a song's history belongs to the song, not to one page. *@
 <PerformanceHistorySheet Item="_historyItem"
                   BayesScore="@(_historyItem is null ? null : RatingScore.StarFor(_historyItem, _ratingContext))"
                   OnRatingChanged="e => UpdatePerformanceRatingAsync(e.Index, e.Value)"
@@ -146,8 +140,7 @@ else
     private Guid? _completingSongId;
     private Guid? _toggling;             // in-flight guard so a double-tap can't double-log a check-off
 
-    // The song whose detail card is open (tapped from a row). The card is Components/SongDetailSheet — the same one
-    // My Songs opens; this page only supplies what it can answer and handles the actions it offers.
+    // The song whose detail card is open; the card itself is the shared Components/SongDetailSheet.
     private SongListItem? _detailItem;
     private string? _activeVenueKaraFunId;
     private RatingContext _ratingContext = new(null, RatingConfig.Default, default);
@@ -178,16 +171,14 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    // What the art observer was last wired against — rows, list identity, and the open detail song. Re-wiring
-    // scans the whole DOM, so it only happens when this changes (mirrors MySongs).
+    // Re-wiring the art observer scans the whole DOM, so it only happens when this signature changes.
     private int _itemsVersion;
     private string _artObservedSig = "";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Pick up the art elements this render added, so only the covers actually on screen get fetched.
-        // _loading belongs in here: the rows live behind it, so a render while still loading has a row count
-        // but no elements for the observer to find.
+        // _loading belongs in the signature: the rows live behind it, so a render while still loading has a row
+        // count but no elements for the observer to find.
         var artSig = $"{_itemsVersion}:{_tonight.Count}:{_loading}:{_detailItem?.Id}";
         if (artSig != _artObservedSig)
         {
@@ -195,10 +186,9 @@ else
             await AlbumArt.ObserveAsync();
         }
 
-        // Attaching the listener only AFTER restoring is deliberate: on a tab change the incoming page fires a
-        // mount-time scroll-to-0, and a listener attached earlier would record that 0 (during the loading delay)
-        // and clobber the saved offset before we restore it. Waiting for !_loading means the set has painted, so
-        // the page has its full height to scroll to.
+        // Attach the listener only AFTER restoring: a tab change fires a mount-time scroll-to-0, and a listener
+        // attached earlier would record that 0 and clobber the saved offset. Waiting for !_loading also means the
+        // set has painted, so the page has its full height to scroll to.
         if (!_scrollRestored && !_loading)
         {
             _scrollRestored = true;
@@ -247,7 +237,6 @@ else
         : Done == _tonight.Count ? $"all {_tonight.Count} done 🎉"
         : $"{Done} of {_tonight.Count} done";
 
-    // Join the tonight entries (ordered) to their songs; skip any whose song is momentarily missing.
     // _byId is rebuilt in RefreshAsync, not here: Rows() runs per render, and building a dictionary over the
     // whole library each time cost O(library) to serve a handful of set rows.
     private Dictionary<Guid, SongListItem> _byId = [];
@@ -278,9 +267,6 @@ else
         await TonightStore.ClearAsync();
     }
 
-    // Check a tonight song off (or undo it). Checking off logs a performance via the shared "log performance" prompt —
-    // honoring the Rate-each-performance toggle — and flips the entry's completed flag. Undo clears the flag and
-    // removes the performance this check-off logged.
     private async Task ToggleDoneAsync(TonightEntry entry, SongListItem song)
     {
         if (_toggling == entry.SongId)
@@ -327,7 +313,7 @@ else
 
     // ---- Rating prompt (shared component) -----------------------------------------------------
 
-    // The prompt committed (Save / Skip / swipe): append the performance, mark the song sung, then check the row off.
+    // Fires on Save, Skip AND swipe-away — all three commit; only ✕ / backdrop cancel.
     private async Task OnRatingCommitAsync((int howItWent, string? note) result)
     {
         var item = _ratingPromptItem;
@@ -392,8 +378,7 @@ else
         _items = await Store.GetAllAsync();
         _byId = _items.ToDictionary(i => i.Id);
         _itemsVersion++;
-        // The detail card's "how it went" star is list-wide (it blends a song's record with the list's average), so
-        // the context is rebuilt with the list rather than per song.
+        // The star blends a song's record with the whole list's average, so the context is list-wide, not per song.
         _ratingContext = RatingScore.BuildContext(_items,
             RatingConfig.Default with { RecencyEnabled = Settings.RecencyWeightedRatings },
             DateTimeOffset.Now);
@@ -411,7 +396,7 @@ else
         TonightStore.Changed -= OnTonightChanged;
         AlbumArt.Changed -= OnArtChanged;
         _backGuard?.Dispose();
-        // The lock is the Sheet component's job now — it re-reads it from the DOM as each sheet unmounts.
+        // No scroll-lock cleanup here: the Sheet component re-reads it from the DOM as each sheet unmounts.
         _selfRef?.Dispose();
     }
 
@@ -444,8 +429,7 @@ else
     }
 
     // ---- Performance history ------------------------------------------------------------------------
-    // The sheet is shared with My Songs; it reports an index into Performances and this applies it. Removing
-    // the last one leaves the song unsung, so — unlike My Songs — the set row stays put and only the sheet closes.
+    // The shared sheet reports an index into Performances and this applies it.
 
     private SongListItem? _historyItem;
     private PerformanceHistorySheet? _historySheetRef;

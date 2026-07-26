@@ -43,7 +43,7 @@ public static partial class SpotifyEmbedParser
         {
             var title = entry.Str("title");
             if (string.IsNullOrWhiteSpace(title))
-                continue;   // skip unnamed / non-track rows defensively
+                continue;   // defensive: the shape is undocumented, so a titleless row isn't a track
 
             var artist = entry.Str("subtitle") ?? string.Empty;
             var trackId = TrackIdFromUri(entry.Str("uri"));
@@ -56,8 +56,8 @@ public static partial class SpotifyEmbedParser
         return new SpotifyPlaylistImport(name, tracks, LikelyTruncated: rawCount >= 100);
     }
 
-    // Depth-first search for the first array-valued property with the given name. Robust to
-    // the exact nesting (props.pageProps.state.data.entity…) shifting between Spotify deploys.
+    // Searched by name, not by path: the nesting (props.pageProps.state.data.entity…) shifts between
+    // Spotify deploys.
     private static bool TryFindArray(JsonElement element, string propertyName, out JsonElement found)
     {
         found = default;
@@ -87,7 +87,6 @@ public static partial class SpotifyEmbedParser
         return false;
     }
 
-    // Best-effort — returns null if the page doesn't expose it.
     private static string? TryFindPlaylistName(JsonElement element)
     {
         switch (element.ValueKind)

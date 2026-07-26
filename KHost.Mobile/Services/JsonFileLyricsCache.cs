@@ -6,12 +6,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KHost.Mobile.Services;
 
-/// <summary>
-/// <see cref="ILyricsCache"/> backed by a single JSON file in the app's private data directory — the same
-/// durable-JSON pattern as <see cref="JsonFileSongListStore"/>. The in-memory dictionary is the source of truth
-/// once loaded; every mutation rewrites the file. A <see cref="SemaphoreSlim"/> guards both against concurrent
-/// UI actions. A corrupt file is treated as an empty cache rather than crashing the app.
-/// </summary>
+/// <inheritdoc />
+/// <remarks>
+/// Backed by a single JSON file in the app's private data directory — the same durable-JSON pattern as
+/// <see cref="JsonFileSongListStore"/>. A corrupt file is quarantined and treated as an empty cache.
+/// </remarks>
 public sealed class JsonFileLyricsCache(IAppDataDirectory paths, ILogger<JsonFileLyricsCache>? logger = null) : ILyricsCache
 {
     private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "lyrics-cache.json");
@@ -111,8 +110,8 @@ public sealed class JsonFileLyricsCache(IAppDataDirectory paths, ILogger<JsonFil
         }
     }
 
-    // Trimmed, case-insensitive title + artist joined by the ASCII unit separator (U+001F). That separator keeps
-    // "AB"+"C" distinct from "A"+"BC", and never appears in a real title/artist. Mirrors the song-list dedupe key.
+    // Trimmed, case-insensitive title + artist joined by the ASCII unit separator (U+001F): it keeps "AB"+"C"
+    // distinct from "A"+"BC" and never appears in a real title/artist.
     private static string KeyFor(string title, string artist)
         => $"{title.Trim().ToLowerInvariant()}{artist.Trim().ToLowerInvariant()}";
 
@@ -146,8 +145,7 @@ public sealed class JsonFileLyricsCache(IAppDataDirectory paths, ILogger<JsonFil
         }
         catch (JsonException ex)
         {
-            // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app. (Lyrics
-            // re-download on next view, so this is the most disposable cache — but stay consistent with the stores.)
+            // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app.
             _log.LogWarning(ex, "Lyrics cache file at {Path} is corrupt; quarantining it and starting empty", _filePath);
             if (!AtomicFile.Quarantine(_filePath))
                 _log.LogWarning("Corrupt {Path} could not be quarantined; the next save will overwrite it", _filePath);

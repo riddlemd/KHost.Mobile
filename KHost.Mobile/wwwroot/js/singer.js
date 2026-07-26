@@ -1,8 +1,6 @@
-// Tints the whole app chrome to the active singer's accent color, so a glance tells you whose phone this is.
-// It overrides the brand design tokens (--kh-primary / --kh-primary-strong / --kh-primary-contrast) on <html>,
-// which the header gradient, active tab, and primary buttons all read. White text stays legible on every palette
-// color, so the contrast token is pinned white in both light and dark themes. Called from the SingerChip whenever
-// the active singer (or their color) changes; pass a falsy value to clear the override and fall back to the brand.
+// Re-tints the app chrome to the active singer by overriding the brand tokens (--kh-primary*) on <html>.
+// The contrast token is pinned white because every color in the singer palette is dark enough for white text.
+// Pass a falsy value to clear the override and fall back to the brand accent.
 window.khSinger = (function () {
     function clampByte(n) { return Math.max(0, Math.min(255, Math.round(n))); }
 

@@ -1,8 +1,8 @@
 namespace KHost.Mobile.Clients.YouTubeMusic;
 
 /// <summary>
-/// One track from a public YouTube Music playlist. Unlike a plain-YouTube video, a YT Music catalog entry
-/// carries title and artist as separate fields (the artist byline), so this maps cleanly to the song model.
+/// One track from a public YouTube Music playlist. A YT Music catalog entry carries title and artist as
+/// separate fields, unlike a plain-YouTube video whose title is one blob.
 /// </summary>
 /// <param name="Title">Song title.</param>
 /// <param name="Artist">The artist byline.</param>

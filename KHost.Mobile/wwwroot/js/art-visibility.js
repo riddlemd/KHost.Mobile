@@ -1,14 +1,10 @@
 // Tells .NET which songs' covers are actually on screen — rendered is not visible; My Songs keeps every
-// scrolled-past card in the DOM (see DEVELOPMENT.md → Design notes).
+// scrolled-past card in the DOM (see DEVELOPMENT.md → Design notes). One observer covers every surface:
+// any element painting a cover carries data-art-song="<song id>".
 //
-// One observer covers every surface: any element painting a cover carries data-art-song="<song id>".
-// rootMargin pre-loads a screen's worth either side, so covers are ready before a card scrolls in.
-//
-// Intersecting ELEMENTS are what's tracked, not song ids, and the id is read at report time. A surface can
-// swap the song under a live element — the roll sheet does exactly that on every reroll — and that element
-// neither moves nor re-enters the DOM, so the observer has no reason to fire again. Keyed by id, the new
-// song would never be reported visible and its cover would never be fetched. Reading the id late also means
-// two surfaces showing the same song can't clobber each other: it's visible if ANY of its elements is.
+// Track intersecting ELEMENTS, not song ids, and read the id at report time: a surface can swap the song under a
+// live element (the roll sheet does on every reroll) without it moving or re-entering the DOM, so the observer
+// never fires again and an id-keyed entry would strand the new song as "not visible", cover never fetched.
 window.khArtVisibility = {
     _observer: null,
     _ref: null,
@@ -16,8 +12,7 @@ window.khArtVisibility = {
     _visibleEls: new Set(),
     _timer: null,
 
-    // Idempotent: safe to call on every render. The first call wires the observer; later calls pick up elements
-    // added since (a grown page, a sheet that just opened).
+    // Idempotent: safe to call on every render — later calls pick up elements added since.
     register(dotNetRef, options) {
         this._ref = dotNetRef;
         this._method = options?.method ?? 'VisibleArtChanged';
@@ -41,8 +36,8 @@ window.khArtVisibility = {
         this._flush();
     },
 
-    // The song ids on screen right now. An element that went away (page change, closed sheet) never gets an
-    // "off screen" callback, so drop the disconnected ones here rather than trusting the observer for it.
+    // An element that went away (page change, closed sheet) never gets an "off screen" callback, so drop the
+    // disconnected ones here rather than trusting the observer for it.
     _ids() {
         const ids = new Set();
         for (const el of [...this._visibleEls]) {
