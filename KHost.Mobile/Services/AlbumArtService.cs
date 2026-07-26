@@ -246,6 +246,20 @@ public sealed class AlbumArtService(
             while (_pending.Count > 0)
             {
                 var song = _pending.Dequeue();
+
+                // Scrolled out of view before its turn came. Drop it rather than spend a paced lookup on
+                // something nobody is looking at: the queue is sequential, so without this a fast scroll
+                // back and forth buries the songs actually on screen behind everything they scrolled past,
+                // and those sit on a loading placeholder for as long as the backlog takes. Clearing _queued
+                // lets it re-enqueue from ViewFor/SetVisibleAsync if it comes back.
+                if (!_visible.Contains(song.Id))
+                {
+                    _queued.Remove(song.Id);
+                    if (_fetching.Remove(song.Id))
+                        RaiseChanged();
+                    continue;
+                }
+
                 try
                 {
                     await PopulateAsync(song);

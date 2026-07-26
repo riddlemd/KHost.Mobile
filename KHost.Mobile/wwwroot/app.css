@@ -744,8 +744,12 @@ button { text-transform: none; color: inherit; }
 .song-card--roll { cursor: default; }
 /* The hero height only earns its keep when there's a cover to show: the text is pushed low so it sits in the
    scrim's darkest band. Without art that same rule just leaves a dead gap above the title, so a coverless
-   pick stays a normal, content-sized card. */
-.song-card--roll.song-card--art {
+   pick stays a normal, content-sized card.
+   The loading state shares that geometry — kh-art-loading here means a cover is known to be coming, so the
+   card already takes the shape it will fill. Otherwise the shimmer was a thin strip behind the title and the
+   card jumped to full height the moment the image landed. */
+.song-card--roll.song-card--art,
+.song-card--roll.kh-art-loading {
     min-height: 11rem;
     display: flex;
     flex-direction: column;
