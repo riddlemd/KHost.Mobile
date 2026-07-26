@@ -547,51 +547,15 @@ else
     </div>
 }
 
-@if (_historyItem is not null)
-{
-    <div class="sheet-backdrop sheet-backdrop--history" @onclick="CloseHistory"></div>
-    <div class="sheet sheet--history" role="dialog" aria-modal="true" @ref="_historySheet">
-        <button type="button" class="sheet__close" @onclick="CloseHistory" aria-label="Close">✕</button>
-        <div class="sheet__title">Sung history</div>
-        <div class="sheet__subtitle">
-            @_historyItem.Title
-            @if (BayesStar(_historyItem) is { } score)
-            {
-                <text> · @score.ToString("0.0")★ over @_historyItem.Performances.Count sing@(_historyItem.Performances.Count == 1 ? "" : "s")</text>
-            }
-        </div>
-
-        <div class="history">
-            @foreach (var (perf, index) in _historyItem.Performances
-                .Select((p, i) => (p, i))
-                .OrderByDescending(x => x.p.Date))
-            {
-                <div class="history__item">
-                    <div class="history__top">
-                        <span class="history__date">@perf.Date.ToString("MMM d, yyyy · h:mm tt")</span>
-                        <StarRating Value="perf.HowItWent" Tone="hot" Sung="true" ValueChanged="v => UpdatePerformanceRatingAsync(index, v)" />
-                        <button class="history__remove" @onclick="() => ArmRemoveSungDate(index)" aria-label="Remove this performance">✕</button>
-                    </div>
-                    <input class="input input--sm history__note" placeholder="Add a note…"
-                           value="@perf.Note" @onchange="e => UpdatePerformanceNoteAsync(index, e.Value?.ToString())" />
-                </div>
-            }
-        </div>
-    </div>
-}
-
-@if (_historyItem is not null && _historyConfirmIndex is { } confirmIndex && confirmIndex < _historyItem.Performances.Count)
-{
-    <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelRemoveSungDate"></div>
-    <div class="confirm-pop" role="alertdialog" aria-modal="true">
-        <div class="confirm-pop__title">Remove this performance?</div>
-        <div class="confirm-pop__date">@_historyItem.Performances[confirmIndex].Date.ToString("MMM d, yyyy · h:mm tt")</div>
-        <div class="confirm-pop__actions">
-            <button class="btn btn-secondary" @onclick="CancelRemoveSungDate">Cancel</button>
-            <button class="btn confirm-pop__delete" @onclick="() => RemoveSungDateAsync(confirmIndex)">Remove</button>
-        </div>
-    </div>
-}
+<SungHistorySheet Item="_historyItem"
+                  BayesScore="@(_historyItem is null ? null : BayesStar(_historyItem))"
+                  OnRatingChanged="e => UpdatePerformanceRatingAsync(e.Index, e.Value)"
+                  OnNoteChanged="e => UpdatePerformanceNoteAsync(e.Index, e.Note)"
+                  OnDateChanged="e => UpdatePerformanceDateAsync(e.Index, e.Date)"
+                  OnRemove="RemoveSungDateAsync"
+                  OnRestore="e => RestoreSungDateAsync(e.Index, e.Performance)"
+                  OnClose="CloseHistory"
+                  @ref="_historySheetRef" />
 
 @code {
     private IReadOnlyList<SongListItem> _items = [];
@@ -665,8 +629,7 @@ else
     private string _artSurfaceSig = "";   // what the art observer was last wired against
     private string _artObservedSig = "";
 
-    private ElementReference _historySheet;
-    private bool _historySheetBound;
+    private SungHistorySheet? _historySheetRef;
     private ElementReference _lyricsSheet;
     private bool _lyricsSheetBound;
     private bool _pageLocked;   // mirrors body.kh-sheet-open; reconciled from sheet state each render
@@ -992,8 +955,8 @@ else
     // undo-toast window (so a round button doesn't poke out behind the toast). Mirrors TryCloseTopOverlay's set.
     private bool AnyOverlayOpen =>
         _addOpen || _filterSheetOpen || _detailItem is not null || _historyItem is not null
-        || _lyricsItem is not null || _ratingPromptItem is not null || _historyConfirmIndex is not null
-        || _undoItem is not null || _surpriseSheetOpen || _rollPick is not null;
+        || _lyricsItem is not null || _ratingPromptItem is not null || _undoItem is not null
+        || _surpriseSheetOpen || _rollPick is not null || _historySheetRef?.HasOverlayOpen == true;
 
     // ---- Multi-select filter helpers ----
     private void SetGenreFilter(string genre, bool on) { if (on) _filterGenres.Add(genre); else _filterGenres.Remove(genre); }
@@ -1190,20 +1153,7 @@ else
             _infiniteBound = false;
         }
 
-        // History sheet: same pull-down-to-dismiss, but it has an inner scrolling list — khSheet's scroller
-        // detection only lets the drag take over at the list's top, and a bigger threshold means it takes a
-        // deliberate, stronger swipe to close (so a normal scroll-flick doesn't dismiss it).
-        if (_historyItem is not null && !_historySheetBound)
-        {
-            _swipeRef ??= DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("khSheet.register", _historySheet, _swipeRef,
-                new { closeMethod = "CloseHistoryFromSwipe", closePx = 150 });
-            _historySheetBound = true;
-        }
-        else if (_historyItem is null)
-        {
-            _historySheetBound = false;
-        }
+
 
         // Lyrics sheet: pull down to dismiss; it scrolls, so the same scroll-aware, stronger swipe as history.
         if (_lyricsItem is not null && !_lyricsSheetBound)
@@ -1556,7 +1506,7 @@ else
     // sub-sheets > the base detail sheet). Returns false when nothing is open (let navigation proceed).
     private bool TryCloseTopOverlay()
     {
-        if (_historyConfirmIndex is not null) { CancelRemoveSungDate(); return true; }
+        if (_historySheetRef?.TryCloseTopOverlay() == true) return true;
         if (_ratingPromptItem is not null) { CloseRatingPrompt(); return true; }
         if (_historyItem is not null) { CloseHistory(); return true; }
         if (_lyricsItem is not null) { CloseLyrics(); return true; }
@@ -1690,50 +1640,48 @@ else
     // ---- Sung history sheet ------------------------------------------------------------------
 
     private SongListItem? _historyItem;
-    private int? _historyConfirmIndex;   // index (into Performances) whose X is armed for confirm; null = none
 
     private void OpenHistory()
     {
         _historyItem = _detailItem;
-        _historyConfirmIndex = null;
     }
 
     private void CloseHistory()
     {
         _historyItem = null;
-        _historyConfirmIndex = null;
     }
 
-    // Pull-down-to-dismiss from khSheet (history sheet already animated off-screen). No teardown here — the
-    // detail sheet is still open behind it, so the page-scroll lock must stay until that closes.
-    [JSInvokable]
-    public void CloseHistoryFromSwipe()
+    // The sheet reports an index into Performances; applying and persisting stays here, with every other
+    // mutation of the song.
+    private async Task UpdatePerformanceDateAsync(int index, DateTimeOffset date)
     {
-        CloseHistory();
-        StateHasChanged();
+        if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
+            return;
+
+        _historyItem.Performances[index].Date = date;
+        await Store.UpdateAsync(_historyItem);
     }
 
-    private void ArmRemoveSungDate(int index) => _historyConfirmIndex = index;
-
-    private void CancelRemoveSungDate() => _historyConfirmIndex = null;
-
+    // The sheet has already offered an undo by the time this runs, so it doesn't close on the last removal —
+    // closing would take the undo with it. An empty history just shows its empty state until dismissed.
     private async Task RemoveSungDateAsync(int index)
     {
         if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
             return;
 
         _historyItem.Performances.RemoveAt(index);
-        _historyConfirmIndex = null;
-
         if (_historyItem.Performances.Count == 0)
-        {
-            // Last performance gone — the song reverts to unsung: back on the wishlist.
-            _historyItem.Status = SongListItemStatus.WantToSing;
-            await Store.UpdateAsync(_historyItem);
-            CloseHistory();
-            return;
-        }
+            _historyItem.Status = SongListItemStatus.WantToSing;   // last sing gone — back on the wishlist
+        await Store.UpdateAsync(_historyItem);
+    }
 
+    private async Task RestoreSungDateAsync(int index, Performance performance)
+    {
+        if (_historyItem is null)
+            return;
+
+        _historyItem.Performances.Insert(Math.Clamp(index, 0, _historyItem.Performances.Count), performance);
+        _historyItem.Status = SongListItemStatus.Sang;
         await Store.UpdateAsync(_historyItem);
     }
 

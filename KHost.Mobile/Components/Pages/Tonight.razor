@@ -78,17 +78,29 @@ else
 
 @* The same card My Songs opens, but informational here: the row's own ✓ / ✕ own the set mechanics, so leaving
    Mark sung and the tonight toggle unwired keeps the card from offering a second, subtly different way to do
-   either (a check-off also completes the row; the card's wouldn't). Lyrics and history stay unwired because their
-   sheets live in My Songs. The card renders a button only for the callbacks it's given, so each just disappears. *@
+   either (a check-off also completes the row; the card's wouldn't). Lyrics stays unwired — that sheet is still
+   My Songs'. The card renders a button only for the callbacks it's given, so each just disappears. *@
 <SongDetailSheet Item="_detailItem" AllowEdit="false"
                  InTonight="true"
                  KaraFunAvailable="@(Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
                  BayesScore="DetailStar"
                  RoundedAverage="@(DetailStar is { } s ? (int)Math.Round(s, MidpointRounding.AwayFromZero) : 0)"
                  OnClose="CloseDetail"
+                 OnOpenHistory="OpenHistory"
                  OnOpenYouTube="OpenYouTubeAsync" OnOpenSpotify="OpenSpotifyAsync"
                  OnOpenKaraFun="OpenKaraFunAsync"
                  OnEnjoymentChanged="UpdateEnjoymentAsync" />
+
+@* The same sheet My Songs uses — a song's history belongs to the song, not to one page. *@
+<SungHistorySheet Item="_historyItem"
+                  BayesScore="@(_historyItem is null ? null : RatingScore.StarFor(_historyItem, _ratingContext))"
+                  OnRatingChanged="e => UpdatePerformanceRatingAsync(e.Index, e.Value)"
+                  OnNoteChanged="e => UpdatePerformanceNoteAsync(e.Index, e.Note)"
+                  OnDateChanged="e => UpdatePerformanceDateAsync(e.Index, e.Date)"
+                  OnRemove="RemovePerformanceAsync"
+                  OnRestore="e => RestorePerformanceAsync(e.Index, e.Performance)"
+                  OnClose="CloseHistory"
+                  @ref="_historySheetRef" />
 
 @if (_removeSong is not null)
 {
@@ -217,6 +229,9 @@ else
         if (_removeSong is not null) { CancelRemove(); return true; }
         if (_confirmEndNight) { CancelEndNight(); return true; }
         if (_ratingPromptItem is not null) { OnRatingCancel(); return true; }
+        // The history sheet's own confirm/date pop-ups sit above it, and it sits above the detail card.
+        if (_historySheetRef?.TryCloseTopOverlay() == true) return true;
+        if (_historyItem is not null) { CloseHistory(); return true; }
         if (_detailItem is not null) { CloseDetail(); return true; }
         return false;
     }
@@ -426,6 +441,67 @@ else
             return;
         _detailItem.Enjoyment = rating;
         await Store.UpdateAsync(_detailItem);
+    }
+
+    // ---- Sung history ------------------------------------------------------------------------
+    // The sheet is shared with My Songs; it reports an index into Performances and this applies it. Removing
+    // the last one leaves the song unsung, so — unlike My Songs — the set row stays put and only the sheet closes.
+
+    private SongListItem? _historyItem;
+    private SungHistorySheet? _historySheetRef;
+
+    private void OpenHistory() => _historyItem = _detailItem;
+
+    private void CloseHistory() => _historyItem = null;
+
+    private async Task UpdatePerformanceRatingAsync(int index, int rating)
+    {
+        if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
+            return;
+
+        _historyItem.Performances[index].HowItWent = Math.Clamp(rating, 0, 5);
+        await Store.UpdateAsync(_historyItem);
+    }
+
+    private async Task UpdatePerformanceNoteAsync(int index, string? note)
+    {
+        if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
+            return;
+
+        _historyItem.Performances[index].Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        await Store.UpdateAsync(_historyItem);
+    }
+
+    private async Task UpdatePerformanceDateAsync(int index, DateTimeOffset date)
+    {
+        if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
+            return;
+
+        _historyItem.Performances[index].Date = date;
+        await Store.UpdateAsync(_historyItem);
+    }
+
+    // The sheet has already offered an undo by the time this runs, so it doesn't close on the last removal —
+    // closing would take the undo with it.
+    private async Task RemovePerformanceAsync(int index)
+    {
+        if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
+            return;
+
+        _historyItem.Performances.RemoveAt(index);
+        if (_historyItem.Performances.Count == 0)
+            _historyItem.Status = SongListItemStatus.WantToSing;   // last sing gone — back to unsung
+        await Store.UpdateAsync(_historyItem);
+    }
+
+    private async Task RestorePerformanceAsync(int index, Performance performance)
+    {
+        if (_historyItem is null)
+            return;
+
+        _historyItem.Performances.Insert(Math.Clamp(index, 0, _historyItem.Performances.Count), performance);
+        _historyItem.Status = SongListItemStatus.Sang;
+        await Store.UpdateAsync(_historyItem);
     }
 
     private Task OpenYouTubeAsync() =>

@@ -13,7 +13,9 @@ window.khSwipe = {
         const opts = options || {};
         const idAttr = opts.idAttr || 'data-song-id';
         const swipingClass = opts.swipingClass || 'song-row--swiping';
-        const tapMethod = opts.tapMethod || 'OpenDetail';
+        // An explicit null opts out of the tap entirely (the sung-history rows have nothing to open); omitting
+        // the key keeps the original song-table default.
+        const tapMethod = Object.hasOwn(opts, 'tapMethod') ? opts.tapMethod : 'OpenDetail';
         const removeMethod = opts.removeMethod || 'RemoveById';
         const holdMethod = opts.holdMethod || null;
         const holdingClass = opts.holdingClass || 'is-holding';
@@ -34,6 +36,20 @@ window.khSwipe = {
             clearTimeout(a.holdTimer);
             a.holdTimer = null;
             a.row.classList.remove(holdingClass);
+        };
+
+        // A completed hold is still followed by a click when the finger lifts. When the hold opened something
+        // under the finger — the sung-history date editor — that click lands on the new overlay's backdrop and
+        // dismisses it instantly. Same guard press-hold.js carries, but on the document, because by then the
+        // click targets whatever is on top rather than the row.
+        //
+        // Armed on release, not when the hold fires: the click follows the lift, and a hold held for a while
+        // would outlive any timeout armed at fire time. The timeout is only so a release that draws no click
+        // can't leave the next genuine click armed to be eaten.
+        const swallowNextClick = () => {
+            const onClick = (e) => { e.preventDefault(); e.stopPropagation(); };
+            document.addEventListener('click', onClick, { capture: true, once: true });
+            setTimeout(() => document.removeEventListener('click', onClick, { capture: true }), 700);
         };
 
         const label = (() => {
@@ -140,11 +156,14 @@ window.khSwipe = {
             cancelHold(a);
             a.row.classList.remove(swipingClass);
 
+            if (a.held)
+                swallowNextClick();
+
             if (!a.dragging) {
                 // Open the detail sheet ONLY on a genuine tap: a stationary pointerup that didn't already become a
                 // hold. A pointercancel means the browser took the gesture over to scroll, and any travel past the
                 // slop is a scroll/swipe — none of those should open the sheet.
-                if (e.type === 'pointerup' && !a.moved && !a.held) {
+                if (e.type === 'pointerup' && !a.moved && !a.held && tapMethod) {
                     dotNetRef.invokeMethodAsync(tapMethod, a.id);
                 }
                 return;
@@ -168,7 +187,11 @@ window.khSwipe = {
             }
         };
 
-        container.addEventListener('pointerup', finish);
-        container.addEventListener('pointercancel', finish);
+        // On the window, not the container: when a hold opens something over the row — the sung-history date
+        // editor and its full-screen backdrop — the release lands on that instead, so a container-bound
+        // listener never fires and `active` is stranded, killing every later gesture on the list. Each
+        // registration's handler ignores pointers it doesn't own, so sharing the window is safe.
+        window.addEventListener('pointerup', finish);
+        window.addEventListener('pointercancel', finish);
     },
 };

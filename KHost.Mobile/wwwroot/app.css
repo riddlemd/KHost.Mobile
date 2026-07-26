@@ -1108,29 +1108,50 @@ body.kh-sheet-open { overflow: hidden; }
 .history__item { padding: 0.65rem 0.25rem; border-bottom: 1px solid var(--kh-border); }
 .history__item:first-child { border-top: 1px solid var(--kh-border); }
 .history__top { display: flex; align-items: center; gap: 0.5rem; }
-.history__date { font-size: 0.9rem; flex: 1 1 auto; min-width: 0; }
-.history__top .stars { font-size: 1rem; }
+/* One line always: the date sits in a flex row beside the stars, and wrapping "Jul 25, 2026 · 11:16 PM" onto
+   a second line made rows different heights. min-width:0 lets it shrink so the ellipsis can do the work. */
+.history__date {
+    font-size: 0.9rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* Sized on the star itself, not the row: .stars__star carries an absolute font-size, so shrinking the
+   container does nothing. These have to be small enough that the full "MMM d, yyyy · h:mm tt" fits beside
+   them — at the default size the stars took 165px of a 367px row and clipped the M off "PM" — and still big
+   enough to hit. The padding does that work rather than the glyph: it's generous vertically, where there's
+   room to spare, and the gap is closed so neighbouring stars touch, leaving no dead pixels between targets. */
+.history__top .stars { gap: 0; }
+.history__top .stars__star { font-size: 1.15rem; padding: 0.45rem 0.25rem; }
 .history__note { margin-top: 0.5rem; }
-/* Reads as a delete control at rest — danger-tinted glyph, field and outline — so it's
-   clearly distinct from the neutral gray sheet-close (✕) button above it. */
-.history__remove {
-    width: 1.9rem;
-    height: 1.9rem;
-    border: 1px solid color-mix(in srgb, var(--kh-danger) 45%, transparent);
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--kh-danger) 14%, transparent);
-    color: var(--kh-danger);
+/* Rows are swiped left to remove, so they need the same background and horizontal-only touch handling the
+   other swipeable lists have: without an opaque background the red strip shows through the row itself, and
+   without pan-y a vertical scroll of the history list would be captured as a swipe. */
+.history__item {
+    background: var(--kh-surface);
+    touch-action: pan-y;
+}
+.history__item--swiping { cursor: grabbing; }
+/* The press-and-hold target. A date that can be edited should look like it, without becoming a button. */
+.history__date { cursor: pointer; }
+.history__date::selection { background: transparent; }   /* a long press must not start a text selection */
+.history__item.is-holding { background: var(--kh-surface-2); }
+.history__empty {
+    margin-top: 1rem;
+    padding: 1.1rem 0;
+    text-align: center;
+    color: var(--kh-text-muted);
     font-size: 0.85rem;
-    font-weight: 700;
-    line-height: 1;
-    cursor: pointer;
-    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
-.history__remove:hover {
-    background: var(--kh-danger, #dc2626);
-    border-color: var(--kh-danger, #dc2626);
-    color: #fff;
+.history__hint {
+    margin-top: 0.6rem;
+    font-size: 0.72rem;
+    color: var(--kh-text-muted);
+    text-align: center;
 }
+.confirm-pop__input { margin: 0.9rem 0 0.2rem; width: 100%; }
 
 /* Delete-confirm popup — a centered modal above the history sheet. In-app dialog
    (not native confirm(), which doesn't fire reliably in the WebView). */
@@ -1164,7 +1185,7 @@ body.kh-sheet-open { overflow: hidden; }
     border: 1px solid var(--kh-border);
 }
 
-/* Destructive action at rest — danger-tinted outline, fills solid red on hover (matches .history__remove).
+/* Destructive action at rest — danger-tinted outline, fills solid red on hover.
    Doubled selector (.btn.btn-danger) so it out-specifies the later base .btn color/background, same trick
    as .btn.confirm-pop__delete above. */
 .btn.btn-danger {

@@ -35,6 +35,14 @@ export const TAP = { force: true };
 // Put the app back on a bare My Songs list: close any sheet a previous script left open and clear the
 // search box. Scripts share one long-lived app process, so without this the first click lands on a backdrop.
 export async function resetToList(page) {
+    // Confirm/editor pop-ups first: they stack above the sheets and have no ✕, so a leftover one (a script that
+    // exited mid-flow) leaves a backdrop that silently eats every later click.
+    for (let i = 0; i < 4; i++) {
+        const cancel = page.locator('.confirm-pop .btn-secondary');
+        if (!(await cancel.count())) break;
+        await cancel.first().click(TAP).catch(() => {});
+        await page.waitForTimeout(400);
+    }
     for (let i = 0; i < 4; i++) {
         const close = page.locator('.sheet__close');
         if (!(await close.count())) break;

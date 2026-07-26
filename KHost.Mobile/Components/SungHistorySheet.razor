@@ -1,0 +1,252 @@
+@inject IJSRuntime JS
+@implements IDisposable
+
+@* Every sing of one song: when, how it went, and a note. Extracted from My Songs so the Tonight tab's detail
+   card can open the same sheet — a song's history is the song's, not one page's.
+
+   Rows carry the app's standard row gestures (swipe.js): swipe left to remove, press and hold to change the
+   date. swipe.js ignores the note field and the stars, so a hold lands on the date, which is what it edits.
+   The component owns the undo and the date editor because both are per-row and neither host has anything
+   useful to add to them; the host only applies and persists the resulting change. *@
+<Sheet Open="Item is not null" Class="sheet--history" BackdropClass="sheet-backdrop--history"
+       AriaLabel="Sung history" ClosePx="150" OnClose="OnClose">
+    @if (Item is { } item)
+    {
+        <div class="sheet__title">Sung history</div>
+        <div class="sheet__subtitle">
+            @item.Title
+            @if (BayesScore is { } score)
+            {
+                <text> · @score.ToString("0.0")★ over @item.Performances.Count sing@(item.Performances.Count == 1 ? "" : "s")</text>
+            }
+        </div>
+
+        @if (item.Performances.Count == 0)
+        {
+            @* Removing the last sing leaves the sheet open rather than closing it, so the undo is still there
+               to take. *@
+            <div class="history__empty">No sings recorded.</div>
+        }
+        <div class="history" @ref="_list">
+            @foreach (var (perf, index) in item.Performances
+                .Select((p, i) => (p, i))
+                .OrderByDescending(x => x.p.Date))
+            {
+                <div class="history__item" data-perf-id="@perf.Id">
+                    <div class="history__top">
+                        <span class="history__date">@perf.Date.ToString("MMM d, yyyy · h:mm tt")</span>
+                        <StarRating Value="perf.HowItWent" Tone="hot" Sung="true"
+                                    ValueChanged="v => OnRatingChanged.InvokeAsync((index, v))" />
+                    </div>
+                    <input class="input input--sm history__note" placeholder="Add a note…"
+                           value="@perf.Note" @onchange="e => OnNoteChanged.InvokeAsync((index, e.Value?.ToString()))" />
+                </div>
+            }
+        </div>
+        @* No assistive-tech gesture maps to swipe or long-press, so both actions are spelled out — the same
+           reason Venues and Singers keep a reachable equivalent for their press-and-hold. *@
+        <div class="history__hint">Swipe a row left to remove it · press and hold a date to change it</div>
+    }
+</Sheet>
+
+@* A swipe removes straight away and offers an undo, the way the song, venue and singer lists do — rather
+   than a confirm, which asks before anything has happened and can't be reconsidered after. Rendered outside
+   the Sheet, and .snackbar outranks it, so it floats above the sheet it belongs to. *@
+@if (_undone is not null)
+{
+    <div class="snackbar" role="status">
+        <span class="snackbar__text">Removed @_undone.Date.ToString("MMM d, yyyy")</span>
+        <button class="snackbar__action" @onclick="UndoRemoveAsync">Undo</button>
+    </div>
+}
+
+@* datetime-local so the platform's own picker does the work. *@
+@if (Item is not null && _editIndex is { } editIndex && editIndex < Item.Performances.Count)
+{
+    <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelEdit"></div>
+    <div class="confirm-pop" role="dialog" aria-modal="true">
+        <div class="confirm-pop__title">When was this sung?</div>
+        <input class="input confirm-pop__input" type="datetime-local" aria-label="Date and time sung"
+               value="@_editDate" @onchange="e => _editDate = e.Value?.ToString() ?? string.Empty" />
+        <div class="confirm-pop__actions">
+            <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+            <button class="btn btn-primary" @onclick="() => SaveDateAsync(editIndex)"
+                    disabled="@string.IsNullOrWhiteSpace(_editDate)">Save</button>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>The song whose history to show. Null hides the sheet.</summary>
+    [Parameter] public SongListItem? Item { get; set; }
+
+    /// <summary>Confidence-weighted star for the subtitle; null omits it.</summary>
+    [Parameter] public double? BayesScore { get; set; }
+
+    /// <summary>A performance's rating changed: (index into Performances, new value).</summary>
+    [Parameter] public EventCallback<(int Index, int Value)> OnRatingChanged { get; set; }
+
+    /// <summary>A performance's note changed: (index into Performances, new text).</summary>
+    [Parameter] public EventCallback<(int Index, string? Note)> OnNoteChanged { get; set; }
+
+    /// <summary>A performance's date changed: (index into Performances, new instant).</summary>
+    [Parameter] public EventCallback<(int Index, DateTimeOffset Date)> OnDateChanged { get; set; }
+
+    /// <summary>A performance was removed: its index into Performances.</summary>
+    [Parameter] public EventCallback<int> OnRemove { get; set; }
+
+    /// <summary>An undo: put the performance back where it was.</summary>
+    [Parameter] public EventCallback<(int Index, Performance Performance)> OnRestore { get; set; }
+
+    /// <summary>Raised by the ✕, the backdrop and a pull-down dismiss.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private ElementReference _list;
+    private DotNetObjectReference<SungHistorySheet>? _selfRef;
+    private bool _bound;              // the list element is rebuilt each open, so this resets on close
+    private Guid? _openFor;
+
+    private const int UndoWindowMs = 5000;
+
+    private int? _editIndex;
+    private string _editDate = string.Empty;
+    private Performance? _undone;       // the removal on offer to undo; null = no snackbar
+    private int _undoneIndex;
+    private CancellationTokenSource? _undoCts;
+
+    protected override void OnParametersSet()
+    {
+        if (Item?.Id != _openFor)
+        {
+            _openFor = Item?.Id;
+            _editIndex = null;
+            ClearUndo();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Item is not null && !_bound)
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            // tapMethod is explicitly null: a history row has nothing to open, and the default would call
+            // OpenDetail with a performance id.
+            await JS.InvokeVoidAsync("khSwipe.register", _list, _selfRef,
+                new
+                {
+                    idAttr = "data-perf-id",
+                    swipingClass = "history__item--swiping",
+                    tapMethod = (string?)null,
+                    removeMethod = nameof(RemoveById),
+                    holdMethod = nameof(EditDateById),
+                });
+            _bound = true;
+        }
+        else if (Item is null)
+        {
+            _bound = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        _undoCts?.Cancel();
+        _undoCts?.Dispose();
+        _selfRef?.Dispose();
+    }
+
+    // The rows are ordered by date, so a gesture reports the performance's own id rather than a position.
+    private int IndexOf(string id) =>
+        Item is not null && Guid.TryParse(id, out var guid)
+            ? Item.Performances.FindIndex(p => p.Id == guid)
+            : -1;
+
+    /// <summary>Swipe-left from swipe.js — removes it and offers an undo.</summary>
+    [JSInvokable]
+    public async Task RemoveById(string id)
+    {
+        var index = IndexOf(id);
+        if (index < 0 || Item is null)
+            return;
+
+        // Held before the host removes it, so an undo can put back the same object — id, rating, note and all.
+        _undone = Item.Performances[index];
+        _undoneIndex = index;
+        _undoCts?.Cancel();
+        _undoCts = new CancellationTokenSource();
+        _ = DismissUndoAfterDelay(_undoCts.Token);
+
+        await OnRemove.InvokeAsync(index);
+        StateHasChanged();
+    }
+
+    private async Task DismissUndoAfterDelay(CancellationToken token)
+    {
+        try { await Task.Delay(UndoWindowMs, token); }
+        catch (TaskCanceledException) { return; }   // superseded by another removal, an undo, or a close
+
+        _undone = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UndoRemoveAsync()
+    {
+        var (perf, index) = (_undone, _undoneIndex);
+        ClearUndo();
+        if (perf is not null)
+            await OnRestore.InvokeAsync((index, perf));
+    }
+
+    private void ClearUndo()
+    {
+        _undoCts?.Cancel();
+        _undoCts = null;
+        _undone = null;
+    }
+
+    /// <summary>Press-and-hold from swipe.js — opens the date editor for that performance.</summary>
+    [JSInvokable]
+    public void EditDateById(string id)
+    {
+        var index = IndexOf(id);
+        if (index < 0 || Item is null)
+            return;
+
+        _editIndex = index;
+        // datetime-local carries no time zone: hand it the local wall-clock reading of the stored instant.
+        _editDate = Item.Performances[index].Date.LocalDateTime.ToString("yyyy-MM-ddTHH:mm");
+        StateHasChanged();
+    }
+
+    /// <summary>Lets a host route the back button into this sheet's own overlays before closing it.</summary>
+    public bool TryCloseTopOverlay()
+    {
+        if (_editIndex is not null) { CancelEdit(); return true; }
+        return false;
+    }
+
+    /// <summary>Whether one of this sheet's own overlays is up, so a host can hide its floating controls.</summary>
+    public bool HasOverlayOpen => _editIndex is not null;
+
+    private void CancelEdit()
+    {
+        _editIndex = null;
+        _editDate = string.Empty;
+    }
+
+    private Task SaveDateAsync(int index)
+    {
+        if (Item is null || index < 0 || index >= Item.Performances.Count
+            || !DateTime.TryParse(_editDate, out var picked))
+        {
+            CancelEdit();
+            return Task.CompletedTask;
+        }
+
+        // Keep the offset the performance was logged with: re-reading the current one would shift an older
+        // entry by an hour across a DST boundary.
+        var offset = Item.Performances[index].Date.Offset;
+        CancelEdit();
+        return OnDateChanged.InvokeAsync((index, new DateTimeOffset(picked, offset)));
+    }
+}
