@@ -29,7 +29,7 @@ public class VenueHistoryTests
     {
         var h = VenueHistory.ForVenue(Library(), VenueA);
 
-        Assert.Equal(4, h.Sings);   // Alpha×2 + Beta(unrated) + Gamma; Beta@B and Delta(untagged) excluded
+        Assert.Equal(4, h.Performances);   // Alpha×2 + Beta(unrated) + Gamma; Beta@B and Delta(untagged) excluded
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class VenueHistoryTests
     {
         var h = VenueHistory.ForVenue(Library(), VenueA);
 
-        Assert.Equal(Day(5), h.LastSung);   // Gamma; Delta (day 6) is untagged
+        Assert.Equal(Day(5), h.LastPerformed);   // Gamma; Delta (day 6) is untagged
     }
 
     [Fact]
@@ -84,9 +84,9 @@ public class VenueHistoryTests
     {
         var h = VenueHistory.ForVenue(Library(), Guid.NewGuid());
 
-        Assert.Equal(0, h.Sings);
+        Assert.Equal(0, h.Performances);
         Assert.Null(h.Average);
-        Assert.Null(h.LastSung);
+        Assert.Null(h.LastPerformed);
         Assert.Empty(h.GoTo);
         Assert.Empty(h.Recent);
     }
@@ -98,7 +98,7 @@ public class VenueHistoryTests
 
         var h = VenueHistory.ForVenue(songs, VenueA);
 
-        Assert.Equal(2, h.Sings);
+        Assert.Equal(2, h.Performances);
         Assert.Null(h.Average);
         Assert.Empty(h.GoTo);   // no rated sing → no go-to
     }

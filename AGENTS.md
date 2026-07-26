@@ -80,10 +80,10 @@ The app ships **offline/local UI only**. All local data sits behind an interface
 **Pages** (`Components/Pages/`): `MySongs.razor` (route `/`), `Tonight.razor` (route `/tonight`), `Venues.razor` (route `/venues`), `Singers.razor` (route `/singers`), `Settings.razor`, `ImportExport.razor`, `About.razor`, `NotFound.razor`.
 
 **My Songs wishlist** — a patron's on-device list of songs to sing.
-- `Models/SongListItem.cs` — mutable, JSON-persisted entity: free-text title/artist, `Genre`/`Year`, per-song `Enjoyment` (1–5), `IsFavorite` (favorites float to top), `Performances` (the sung-history + per-sing "how it went" ratings; `AverageHowItWent`/`LastSungAt` derived from it), `SongListItemStatus` (`WantToSing` → `Sang`), and reserved `LibrarySongId` for future online-library links. Legacy fields (`SungDates`, `Confidence`) are read/migrate-only.
+- `Models/SongListItem.cs` — mutable, JSON-persisted entity: free-text title/artist, `Genre`/`Year`, per-song `Enjoyment` (1–5), `IsFavorite` (favorites float to top), `Performances` (the performance history + per-performance "how it went" ratings; `AverageHowItWent`/`LastSungAt` derived from it), `SongListItemStatus` (`WantToSing` → `Sang`), and reserved `LibrarySongId` for future online-library links. Legacy fields (`SungDates`, `Confidence`) are read/migrate-only.
 - `Services/ISongListStore.cs` + `JsonFileSongListStore.cs` — the wishlist store (UI binds to the interface only).
 
-**Tonight set list** — an on-deck set for the venue, on its own tab (`Tonight.razor`), kept separate from the wishlist so a song sung earlier today stays un-checked until checked off here. Checking a row off logs a performance through the shared `RatingPromptSheet` component (also used by My Songs' "Mark sung"); tapping a row body opens the shared `SongDetailSheet` read-only (no Edit — the row's own ✓/✕ keep the set mechanics); the wishlist cards keep a 🎤 quick-add to line songs up for the set.
+**Tonight set list** — an on-deck set for the venue, on its own tab (`Tonight.razor`), kept separate from the wishlist so a song sung earlier today stays un-checked until checked off here. Checking a row off logs a performance through the shared `RatingPromptSheet` component (also used by My Songs' "Log performance"); tapping a row body opens the shared `SongDetailSheet` read-only (no Edit — the row's own ✓/✕ keep the set mechanics); the wishlist cards keep a 🎤 quick-add to line songs up for the set.
 - `Models/TonightEntry.cs` — references a `SongListItem` by id; owns `Order`, `Completed`/`CompletedAt`, and `CompletedPerformanceId` (so an undo removes exactly the performance the check-off logged, even after restart).
 - `Services/ITonightStore.cs` + `JsonFileTonightStore.cs`.
 
@@ -95,7 +95,7 @@ The app ships **offline/local UI only**. All local data sits behind an interface
 - **Row gestures are one JS module** — `wwwroot/js/swipe.js` owns tap / press-and-hold / swipe-left for the song, venue and singer lists off one pointer state machine; per-list `options` name the `[JSInvokable]` methods and opt in/out of hold and swipe. **Press-and-hold sets the active venue / singer**, confirmed by `IHaptics` (named that, not `IHapticFeedback`, to avoid MAUI Essentials' same-named interface); since no assistive-tech gesture maps to a long press, both pages keep a reachable equivalent in their sheet.
 - **Icon picker is shared** — `Components/IconPicker.razor`, the collapsible color-+-emoji picker; the singer editor uses color + glyph, the venue editor glyph-only.
 
-**Ratings & history** — `Performance` (per-sing "how it went" 1–5 + optional note + date) lives inside `SongListItem.Performances`; editable after the fact from the history sheet. Separate per-song `Enjoyment` rating.
+**Ratings & history** — `Performance` (per-performance "how it went" 1–5 + optional note + date) lives inside `SongListItem.Performances`; editable after the fact from the history sheet. Separate per-song `Enjoyment` rating.
 
 **Lyrics** — `Services/ILyricsCache.cs` + `JsonFileLyricsCache.cs` cache lyrics on device; lookups go through `KHost.Mobile.Clients/Lyrics/` (LRCLIB, keyless).
 

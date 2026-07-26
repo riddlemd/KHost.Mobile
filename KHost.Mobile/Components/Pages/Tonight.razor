@@ -60,7 +60,7 @@ else
                         }
                     </div>
                     <button type="button" class="setrow__check" aria-pressed="@entry.Completed" data-tut="tonight-check"
-                            title="@(entry.Completed ? "Undo — mark not sung" : "Mark sung")"
+                            title="@(entry.Completed ? "Undo performance" : "Log performance")"
                             @onclick="() => ToggleDoneAsync(entry, song)">✓</button>
                     <button type="button" class="setrow__remove" title="Remove from tonight"
                             @onclick="() => ArmRemove(song)">✕</button>
@@ -77,7 +77,7 @@ else
                    OnCommit="OnRatingCommitAsync" OnCancel="OnRatingCancel" />
 
 @* The same card My Songs opens, but informational here: the row's own ✓ / ✕ own the set mechanics, so leaving
-   Mark sung and the tonight toggle unwired keeps the card from offering a second, subtly different way to do
+   Log performance and the tonight toggle unwired keeps the card from offering a second, subtly different way to do
    either (a check-off also completes the row; the card's wouldn't). Lyrics stays unwired — that sheet is still
    My Songs'. The card renders a button only for the callbacks it's given, so each just disappears. *@
 <SongDetailSheet Item="_detailItem" AllowEdit="false"
@@ -92,7 +92,7 @@ else
                  OnEnjoymentChanged="UpdateEnjoymentAsync" />
 
 @* The same sheet My Songs uses — a song's history belongs to the song, not to one page. *@
-<SungHistorySheet Item="_historyItem"
+<PerformanceHistorySheet Item="_historyItem"
                   BayesScore="@(_historyItem is null ? null : RatingScore.StarFor(_historyItem, _ratingContext))"
                   OnRatingChanged="e => UpdatePerformanceRatingAsync(e.Index, e.Value)"
                   OnNoteChanged="e => UpdatePerformanceNoteAsync(e.Index, e.Note)"
@@ -278,7 +278,7 @@ else
         await TonightStore.ClearAsync();
     }
 
-    // Check a tonight song off (or undo it). Checking off logs a performance via the shared "mark sung" prompt —
+    // Check a tonight song off (or undo it). Checking off logs a performance via the shared "log performance" prompt —
     // honoring the Rate-each-performance toggle — and flips the entry's completed flag. Undo clears the flag and
     // removes the performance this check-off logged.
     private async Task ToggleDoneAsync(TonightEntry entry, SongListItem song)
@@ -443,12 +443,12 @@ else
         await Store.UpdateAsync(_detailItem);
     }
 
-    // ---- Sung history ------------------------------------------------------------------------
+    // ---- Performance history ------------------------------------------------------------------------
     // The sheet is shared with My Songs; it reports an index into Performances and this applies it. Removing
     // the last one leaves the song unsung, so — unlike My Songs — the set row stays put and only the sheet closes.
 
     private SongListItem? _historyItem;
-    private SungHistorySheet? _historySheetRef;
+    private PerformanceHistorySheet? _historySheetRef;
 
     private void OpenHistory() => _historyItem = _detailItem;
 
@@ -490,7 +490,7 @@ else
 
         _historyItem.Performances.RemoveAt(index);
         if (_historyItem.Performances.Count == 0)
-            _historyItem.Status = SongListItemStatus.WantToSing;   // last sing gone — back to unsung
+            _historyItem.Status = SongListItemStatus.WantToSing;   // last performance gone — back to unsung
         await Store.UpdateAsync(_historyItem);
     }
 

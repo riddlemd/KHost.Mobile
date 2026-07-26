@@ -374,7 +374,7 @@ else
             <option value="@SortColumn.Artist">Artist</option>
             <option value="@SortColumn.HowItWent">How it went</option>
             <option value="@SortColumn.Enjoyment">Enjoyment</option>
-            <option value="@SortColumn.Sang">Sang</option>
+            <option value="@SortColumn.LastPerformed">Last performance</option>
             <option value="@SortColumn.Added">Added</option>
         </select>
         @* Re-calling SortBy with the current field toggles its direction (same-column branch). *@
@@ -505,7 +505,7 @@ else
                  BayesScore="@(_detailItem is null ? null : BayesStar(_detailItem))"
                  RoundedAverage="@(_detailItem is null ? 0 : RoundedAvg(_detailItem))"
                  UsedTags="UsedTags"
-                 OnClose="CloseDetail" OnMarkSung="() => OpenRatingPrompt(_detailItem!)"
+                 OnClose="CloseDetail" OnLogPerformance="() => OpenRatingPrompt(_detailItem!)"
                  OnToggleTonight="ToggleDetailTonightAsync" OnOpenHistory="OpenHistory"
                  OnOpenYouTube="OpenYouTubeAsync" OnOpenSpotify="OpenSpotifyAsync"
                  OnOpenKaraFun="OpenKaraFunAsync" OnAddToTonightAndOpenKaraFun="AddToTonightAndOpenKaraFunAsync"
@@ -547,13 +547,13 @@ else
     </div>
 }
 
-<SungHistorySheet Item="_historyItem"
+<PerformanceHistorySheet Item="_historyItem"
                   BayesScore="@(_historyItem is null ? null : BayesStar(_historyItem))"
                   OnRatingChanged="e => UpdatePerformanceRatingAsync(e.Index, e.Value)"
                   OnNoteChanged="e => UpdatePerformanceNoteAsync(e.Index, e.Note)"
                   OnDateChanged="e => UpdatePerformanceDateAsync(e.Index, e.Date)"
-                  OnRemove="RemoveSungDateAsync"
-                  OnRestore="e => RestoreSungDateAsync(e.Index, e.Performance)"
+                  OnRemove="RemovePerformanceAsync"
+                  OnRestore="e => RestorePerformanceAsync(e.Index, e.Performance)"
                   OnClose="CloseHistory"
                   @ref="_historySheetRef" />
 
@@ -600,7 +600,7 @@ else
     private bool _yearPickerHigh;   // which bound the open grid is setting: true = latest, false = earliest
 
     // Appended, never reordered: the ordinal is what SaveViewState persists.
-    private enum SortColumn { Added, Title, Artist, HowItWent, Enjoyment, Sang }
+    private enum SortColumn { Added, Title, Artist, HowItWent, Enjoyment, LastPerformed }
     private SortColumn _sort = SortColumn.Title;
     private bool _sortDescending = false;   // default: A→Z by song title
 
@@ -629,7 +629,7 @@ else
     private string _artSurfaceSig = "";   // what the art observer was last wired against
     private string _artObservedSig = "";
 
-    private SungHistorySheet? _historySheetRef;
+    private PerformanceHistorySheet? _historySheetRef;
     private ElementReference _lyricsSheet;
     private bool _lyricsSheetBound;
     private bool _pageLocked;   // mirrors body.kh-sheet-open; reconciled from sheet state each render
@@ -707,7 +707,7 @@ else
         {
             _sort = column;
             // Sensible default direction: dates/rating high-first, text A-Z.
-            _sortDescending = column is SortColumn.Added or SortColumn.HowItWent or SortColumn.Enjoyment or SortColumn.Sang;
+            _sortDescending = column is SortColumn.Added or SortColumn.HowItWent or SortColumn.Enjoyment or SortColumn.LastPerformed;
         }
     }
 
@@ -1033,7 +1033,7 @@ else
             SortColumn.Artist => filtered.OrderBy(i => i.Artist, StringComparer.OrdinalIgnoreCase),
             SortColumn.HowItWent => filtered.OrderBy(AvgSortKey),
             SortColumn.Enjoyment => filtered.OrderBy(i => i.Enjoyment),
-            SortColumn.Sang => filtered.OrderBy(SangSortKey),
+            SortColumn.LastPerformed => filtered.OrderBy(LastPerformedSortKey),
             _ => filtered.OrderBy(i => i.AddedAt),
         };
         var ordered = _sortDescending ? ascending.Reverse() : ascending;
@@ -1637,7 +1637,7 @@ else
         await Store.UpdateAsync(item);
     }
 
-    // ---- Sung history sheet ------------------------------------------------------------------
+    // ---- Performance history sheet ------------------------------------------------------------------
 
     private SongListItem? _historyItem;
 
@@ -1664,18 +1664,18 @@ else
 
     // The sheet has already offered an undo by the time this runs, so it doesn't close on the last removal —
     // closing would take the undo with it. An empty history just shows its empty state until dismissed.
-    private async Task RemoveSungDateAsync(int index)
+    private async Task RemovePerformanceAsync(int index)
     {
         if (_historyItem is null || index < 0 || index >= _historyItem.Performances.Count)
             return;
 
         _historyItem.Performances.RemoveAt(index);
         if (_historyItem.Performances.Count == 0)
-            _historyItem.Status = SongListItemStatus.WantToSing;   // last sing gone — back on the wishlist
+            _historyItem.Status = SongListItemStatus.WantToSing;   // last performance gone — back on the wishlist
         await Store.UpdateAsync(_historyItem);
     }
 
-    private async Task RestoreSungDateAsync(int index, Performance performance)
+    private async Task RestorePerformanceAsync(int index, Performance performance)
     {
         if (_historyItem is null)
             return;
@@ -1904,7 +1904,7 @@ else
 
     // The confidence-weighted "how it went" star (Bayesian shrinkage toward the whole list's average), rebuilt
     // whenever the list reloads. This is what the card star, the sort, and the rating filter buckets all read — so a
-    // song with one lucky 5 doesn't outrank one with a solid ten-sing record. Null until the song's first rated sing.
+    // song with one lucky 5 doesn't outrank one with a solid ten-performance record. Null until the first rated one.
     private RatingContext _ratingContext = new(null, RatingConfig.Default, default);
     private double? BayesStar(SongListItem item) => RatingScore.StarFor(item, _ratingContext);
 
@@ -1917,7 +1917,7 @@ else
 
     // Sort key for "Sang": when the song was last sung. Never-sung songs take the earliest possible date so
     // they land at the bottom in the default (most-recent-first) direction, the way unrated songs do.
-    private static DateTimeOffset SangSortKey(SongListItem item) => item.LastSungAt ?? DateTimeOffset.MinValue;
+    private static DateTimeOffset LastPerformedSortKey(SongListItem item) => item.LastSungAt ?? DateTimeOffset.MinValue;
 
     private void OnArtChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
 

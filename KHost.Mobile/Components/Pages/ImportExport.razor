@@ -25,10 +25,10 @@
         <h1 class="page-title">Import &amp; Export</h1>
     </div>
 
-    @* ---- Singer profile: identity + songs + sung history (not the Tonight set) ---- *@
+    @* ---- Singer profile: identity + songs + performance history (not the Tonight set) ---- *@
     <div class="card">
         <div class="section-title">Singer profile</div>
-        <p class="ie__lead">Move a singer — their songs and sung history — to another device, or keep a backup. Tonight's set stays on this device.</p>
+        <p class="ie__lead">Move a singer — their songs and performance history — to another device, or keep a backup. Tonight's set stays on this device.</p>
         <div class="ie-actions" data-tut="profile">
             <button type="button" class="ie-action" @onclick="ExportProfileAsync" disabled="@_profileBusy">
                 <span class="ie-action__icon" aria-hidden="true">📤</span>
@@ -106,7 +106,7 @@
         <button type="button" class="sheet__close" @onclick="CancelProfileImport" aria-label="Close">✕</button>
         <div class="sheet__title">Import @profile.Singer.Name's profile</div>
         <div class="sheet__subtitle">
-            @profile.Songs.Count song@(profile.Songs.Count == 1 ? "" : "s")@(ProfilePerformanceCount(profile) is var p && p > 0 ? $" · {p} sung performance{(p == 1 ? "" : "s")}" : "") · exported @profile.ExportedAt.LocalDateTime.ToString("MMM d")
+            @profile.Songs.Count song@(profile.Songs.Count == 1 ? "" : "s")@(ProfilePerformanceCount(profile) is var p && p > 0 ? $" · {p} performance{(p == 1 ? "" : "s")}" : "") · exported @profile.ExportedAt.LocalDateTime.ToString("MMM d")
         </div>
 
         <button type="button" class="ie-choice ie-choice--primary" @onclick="() => AddProfileAsNewSingerAsync(profile)" disabled="@_profileImportBusy">
@@ -503,7 +503,7 @@
     }
 
     // Merge-songs-only: copy the profile's songs into the CURRENT singer's list as fresh wishlist entries (new
-    // ids, no history), deduped by title+artist. Identity and sung history are left behind.
+    // ids, no history), deduped by title+artist. Identity and performance history are left behind.
     private async Task MergeProfileIntoCurrentAsync(SingerProfile profile)
     {
         if (_profileImportBusy)

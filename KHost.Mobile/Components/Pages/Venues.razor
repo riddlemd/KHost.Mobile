@@ -29,7 +29,7 @@
         <div class="empty-state">
             <div class="empty-state__icon">📍</div>
             <div class="empty-state__title">No venues yet</div>
-            <div>Add the places you sing — then the active one tags your sings and opens its KaraFun catalog. You can scan a venue's KaraFun QR code while adding.</div>
+            <div>Add the places you sing — then the active one tags your performances and opens its KaraFun catalog. You can scan a venue's KaraFun QR code while adding.</div>
             <button class="btn btn-primary venues__cta" @onclick="OpenAdd">Add your first venue</button>
         </div>
     }
@@ -129,16 +129,16 @@
         @{ var h = History(d); }
         <div class="venue-detail__history" data-tut="venue-history">
             <div class="venue-detail__history-title">Your history here</div>
-            @if (h.Sings == 0)
+            @if (h.Performances == 0)
             {
-                <div class="venue-detail__empty">You haven't logged a sing here yet.</div>
+                <div class="venue-detail__empty">You haven't logged a performance here yet.</div>
             }
             else
             {
                 <div class="venue-stats">
-                    <div class="venue-stat"><span class="venue-stat__num">@h.Sings</span><span class="venue-stat__lbl">sing@(h.Sings == 1 ? "" : "s")</span></div>
+                    <div class="venue-stat"><span class="venue-stat__num">@h.Performances</span><span class="venue-stat__lbl">performance@(h.Performances == 1 ? "" : "s")</span></div>
                     <div class="venue-stat"><span class="venue-stat__num">@(h.Average?.ToString("0.0") ?? "—")</span><span class="venue-stat__lbl">avg here</span></div>
-                    <div class="venue-stat"><span class="venue-stat__num">@(h.LastSung?.LocalDateTime.ToString("MMM d") ?? "—")</span><span class="venue-stat__lbl">last sung</span></div>
+                    <div class="venue-stat"><span class="venue-stat__num">@(h.LastPerformed?.LocalDateTime.ToString("MMM d") ?? "—")</span><span class="venue-stat__lbl">last performance</span></div>
                 </div>
 
                 @if (h.GoTo.Count > 0)
@@ -147,12 +147,12 @@
                     <ul class="venue-songlist">
                         @foreach (var g in h.GoTo)
                         {
-                            <li><span class="venue-songlist__title">@g.Title</span><span class="venue-songlist__meta">@g.Average.ToString("0.0")★ · @g.Count sing@(g.Count == 1 ? "" : "s")</span></li>
+                            <li><span class="venue-songlist__title">@g.Title</span><span class="venue-songlist__meta">@g.Average.ToString("0.0")★ · @g.Count performance@(g.Count == 1 ? "" : "s")</span></li>
                         }
                     </ul>
                 }
 
-                <div class="venue-detail__subhead">Recent sings here</div>
+                <div class="venue-detail__subhead">Recent performances here</div>
                 <ul class="venue-songlist">
                     @foreach (var r in h.Recent)
                     {
@@ -185,7 +185,7 @@
     <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelDelete"></div>
     <div class="confirm-pop" role="alertdialog" aria-modal="true">
         <div class="confirm-pop__title">Delete “@del.Name”?</div>
-        <div class="confirm-pop__date">This removes the venue. Your sung history stays — those sings just lose the venue tag.</div>
+        <div class="confirm-pop__date">This removes the venue. Your performance history stays — those performances just lose the venue tag.</div>
         <div class="confirm-pop__actions">
             <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
             <button class="btn confirm-pop__delete" @onclick="() => ConfirmDeleteAsync(del)">Delete</button>
@@ -266,7 +266,7 @@
     private string SubLine(Venue v)
     {
         var count = _songs.SelectMany(s => s.Performances).Count(p => p.VenueId == v.Id);
-        return count == 0 ? "" : $"Sang {count} song{(count == 1 ? "" : "s")} here";
+        return count == 0 ? "" : $"{count} performance{(count == 1 ? "" : "s")} here";
     }
 
     private void OnChanged(object? sender, EventArgs e) => _ = ReloadOnUiAsync();

@@ -6,6 +6,7 @@
    so the host must offer another route to the options — My Songs uses the result sheet's "Options" action. *@
 <button type="button" @ref="_el"
         class="mysongs-fab mysongs-fab--surprise @(NoNav ? "mysongs-fab--no-nav" : "") @(Hidden ? "is-hidden" : "")"
+        data-tut="surprise"
         aria-label="Surprise me — pick a song at random. Press and hold for options."
         aria-haspopup="dialog">
     <span class="mysongs-fab__dice" aria-hidden="true">🎲</span>

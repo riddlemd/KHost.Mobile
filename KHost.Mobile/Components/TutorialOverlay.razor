@@ -61,10 +61,11 @@
     // One tour step. Chapter groups steps into a skippable section ("" = the chapter-less Welcome/outro). IsIntro
     // marks a chapter's opening card. Route is the target page ("" = My Songs); Anchor is the data-tut value to
     // spotlight (null = a centered explain card, also the graceful fallback when a target isn't on-screen). VenueDetail
-    // steps want the Venues detail sheet open (driven via the session signal). NeedsTonight/NeedsTags steps drop out
-    // entirely when that feature is off.
+    // steps want the Venues detail sheet open (driven via the session signal). NeedsTonight/NeedsTags/NeedsSurprise
+    // steps drop out entirely when that feature is off.
     private sealed record Step(string Chapter, string Route, string? Anchor, string Badge, string Title, string Body,
-        bool IsIntro = false, bool NeedsTonight = false, bool NeedsTags = false, bool VenueDetail = false);
+        bool IsIntro = false, bool NeedsTonight = false, bool NeedsTags = false, bool NeedsSurprise = false,
+        bool VenueDetail = false);
 
     private static readonly Step[] AllSteps =
     [
@@ -76,18 +77,20 @@
             "Every song you'd love to sing, in one list. Here's how it works.", IsIntro: true),
         new("My Songs", "", "add", "➕", "Build your list",
             "Tap the + button to add a song — the year and genre fill in automatically."),
+        new("My Songs", "", null, "⚠️", "Typos get caught",
+            "Typed a near-miss of a song's real name? A ⚠ appears beside it. Open the song and tap the ⚠ for a one-tap “Did you mean …?” fix — or wave it off and it won't ask again."),
         new("My Songs", "", "search", "🔍", "Find it fast",
             "Type a title or an artist — one search box finds both, and it stays pinned at the top so you can search from anywhere in the list."),
         new("My Songs", "", "filter", "⛃", "Filter your list",
             "Narrow the list by genre, rating, year or tags. Each active filter rides along in the search bar as a chip — tap it to clear it."),
         new("My Songs", "", "sort", "↕️", "Sort your way",
-            "Sort by song, artist, how it went, enjoyment, or when you added it."),
+            "Sort by song, artist, how it went, enjoyment, when you added a song — or when you last sang it."),
         new("My Songs", "", null, "⭐", "Star your favorites",
             "Tap a song's star to favorite it — favorites stay at the top of your list."),
         new("My Songs", "", null, "💿", "Covers, automatically",
             "Each song's album art is found automatically and becomes its card background. Prefer plain cards? Turn it off in Settings."),
-        new("My Songs", "", null, "🎲", "Can't decide?",
-            "Tap the 🎲 above the + for a random pick. Press and hold it to choose how it picks — skip today's songs, favour the ones you sing well, and more."),
+        new("My Songs", "", "surprise", "🎲", "Can't decide?",
+            "Tap the 🎲 for a random pick. Press and hold it to choose how it picks — skip today's songs, favour the ones you sing well, and more.", NeedsSurprise: true),
         new("My Songs", "", null, "👈", "Swipe to remove",
             "Swipe a song left to remove it — works for venues too. Changed your mind? Tap Undo before it fades."),
 
@@ -95,9 +98,11 @@
         new("Song Details", "", null, "🎶", "Song Details",
             "Tap any song to open it — there's a lot more than the card shows.", IsIntro: true),
         new("Song Details", "", null, "🎤", "Rate & remember",
-            "Mark a song sung, rate how it went, and look back over every time you've performed it."),
+            "Log a performance, rate how it went, and look back over every time you've performed it."),
         new("Song Details", "", null, "💙", "Two kinds of rating",
             "“How it went” rates each performance — a song's star blends its whole record, so a steady streak beats one lucky night. Enjoyment rates how much you love the song itself."),
+        new("Song Details", "", null, "📜", "Every performance, remembered",
+            "“Performance history” opens each song's full record in its own sheet. Swipe an entry left to remove it — press and hold its date to change it."),
         new("Song Details", "", null, "📖", "Lyrics on tap",
             "Pull up a song's lyrics right inside the app — no account needed."),
         new("Song Details", "", null, "🔗", "Find it anywhere",
@@ -111,7 +116,7 @@
         new("Tonight", "", "tonight-quick", "🎤", "Queue it for tonight",
             "Tap this button on any song to add it to tonight's set — no need to open the song first.", NeedsTonight: true),
         new("Tonight", "tonight", "tonight-set", "🌙", "Tonight's set",
-            "Your set for the night, in order, with a progress bar that fills as you sing.", NeedsTonight: true),
+            "Your set for the night, in order, with a progress bar that fills as you sing. Tap any row to peek at the song's details.", NeedsTonight: true),
         new("Tonight", "tonight", "tonight-reorder", "🔀", "Reorder on the fly",
             "Drag the ⠿ handle to reorder the set whenever plans change.", NeedsTonight: true),
         new("Tonight", "tonight", "tonight-check", "☑️", "Check them off",
@@ -172,7 +177,8 @@
     ];
 
     private List<Step> Steps => AllSteps
-        .Where(s => (!s.NeedsTonight || Settings.TonightEnabled) && (!s.NeedsTags || Settings.TagsEnabled))
+        .Where(s => (!s.NeedsTonight || Settings.TonightEnabled) && (!s.NeedsTags || Settings.TagsEnabled)
+                    && (!s.NeedsSurprise || Settings.SurpriseEnabled))
         .ToList();
 
     // ---- Chapter helpers (grouping, per-chapter dots + numbering, skip-a-chapter) ----

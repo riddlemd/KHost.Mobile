@@ -858,7 +858,12 @@ body.kh-sheet-open { overflow: hidden; }
     padding: 0.6rem 0;
     border-bottom: 1px solid var(--kh-border);
 }
-.sheet__key { flex: 0 0 5.5rem; color: var(--kh-text-muted); font-size: 0.85rem; font-weight: 600; }
+/* Keys must never wrap — a wrapped label makes its row taller than the rest. min-width holds the value column
+   aligned across rows; auto + nowrap lets a label that outgrows it push its own row instead of breaking. */
+.sheet__key {
+    flex: 0 0 auto; min-width: 6.5rem; white-space: nowrap;
+    color: var(--kh-text-muted); font-size: 0.85rem; font-weight: 600;
+}
 .sheet__val { flex: 1; min-width: 0; word-break: break-word; }
 
 .sheet__actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-top: 0.5rem; }
@@ -1080,7 +1085,7 @@ body.kh-sheet-open { overflow: hidden; }
 /* "Sang today" — full-width secondary action directly above the YouTube button. Padding/radius
    inherit from the `.btn` base so it matches the YouTube button's height; the compound selector
    beats the later `.btn` base (which resets background:none + transparent border). */
-.btn.sheet__sang-btn {
+.btn.sheet__log-btn {
     width: 100%;
     margin-bottom: 0.6rem;
     font-weight: 600;
@@ -1089,12 +1094,12 @@ body.kh-sheet-open { overflow: hidden; }
     border: 1px solid var(--kh-border);
     transition: background 0.12s ease, border-color 0.12s ease;
 }
-.btn.sheet__sang-btn:hover {
+.btn.sheet__log-btn:hover {
     background: var(--kh-primary);
     border-color: var(--kh-primary);
     color: #fff;
 }
-.btn.sheet__sang-btn:active { transform: scale(0.98); }
+.btn.sheet__log-btn:active { transform: scale(0.98); }
 
 /* "Last sung" link → opens the sung-history sheet. Inline so it sits on the value row. */
 .sheet__history-link { display: inline-flex; align-items: baseline; gap: 0.35rem; text-align: left; }

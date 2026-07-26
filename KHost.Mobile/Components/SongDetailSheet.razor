@@ -111,7 +111,7 @@
                         }
                         else
                         {
-                            <span class="sheet__muted">sung, not rated</span>
+                            <span class="sheet__muted">not rated</span>
                         }
                     </span>
                 </div>
@@ -126,7 +126,7 @@
                     <span class="sheet__val">@(string.IsNullOrWhiteSpace(Item.Notes) ? "—" : Item.Notes)</span>
                 </div>
                 <div class="sheet__row">
-                    <span class="sheet__key">Last sung</span>
+                    <span class="sheet__key">Last</span>
                     <span class="sheet__val">
                         @if (Item.LastSungAt.HasValue && OnOpenHistory.HasDelegate)
                         {
@@ -154,10 +154,10 @@
             {
                 <div class="suggest-match">@AutoFilledNote</div>
             }
-            @if (OnMarkSung.HasDelegate)
+            @if (OnLogPerformance.HasDelegate)
             {
-                <button class="btn btn-secondary sheet__sang-btn" @onclick="OnMarkSung">
-                    @(Item.Performances.Count > 0 ? "Sang it again" : "Mark sung")
+                <button class="btn btn-secondary sheet__log-btn" @onclick="OnLogPerformance">
+                    @(Item.Performances.Count > 0 ? "Log another performance" : "Log performance")
                 </button>
             }
             @if (Settings.TonightEnabled && OnToggleTonight.HasDelegate)
@@ -283,7 +283,7 @@
     /// <summary>Whether to offer KaraFun: the host resolves the setting AND the active venue's KaraFun ID.</summary>
     [Parameter] public bool KaraFunAvailable { get; set; }
 
-    /// <summary>Confidence-weighted star for "how it went"; null renders "sung, not rated".</summary>
+    /// <summary>Confidence-weighted star for "how it went"; null renders "not rated".</summary>
     [Parameter] public double? BayesScore { get; set; }
 
     /// <summary>Whole-star value the "how it went" rating draws, paired with <see cref="BayesScore"/>.</summary>
@@ -298,13 +298,13 @@
     /// <summary>Raised on ✕, the backdrop, or a pull-down dismiss. The host clears <see cref="Item"/>.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
-    /// <summary>Raised by "Mark sung" / "Sang it again" — the host runs its rating prompt.</summary>
-    [Parameter] public EventCallback OnMarkSung { get; set; }
+    /// <summary>Raised by "Log performance" / "Log another performance" — the host runs its rating prompt.</summary>
+    [Parameter] public EventCallback OnLogPerformance { get; set; }
 
     /// <summary>Raised by the Tonight button; the host adds or removes the song.</summary>
     [Parameter] public EventCallback OnToggleTonight { get; set; }
 
-    /// <summary>Raised by the "last sung" link; the host opens its history sheet.</summary>
+    /// <summary>Raised by the "Last" date link; the host opens its history sheet.</summary>
     [Parameter] public EventCallback OnOpenHistory { get; set; }
 
     /// <summary>Quick-link taps. The host owns the URL building and the launch.</summary>

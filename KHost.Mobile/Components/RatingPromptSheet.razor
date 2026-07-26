@@ -3,7 +3,7 @@
    rates how it went (or skips → unrated). Presentational only: it owns the star value + note and its own
    pull-down-to-dismiss, and raises OnCommit (Save / Skip / swipe-away) or OnCancel (✕ / backdrop, no log). The
    host owns the @Item state, decides what "commit" means (log a performance, and — from Tonight — check the row
-   off), and reconciles the page-scroll lock. Reused by My Songs ("Mark sung") and the Tonight tab (check-off). *@
+   off), and reconciles the page-scroll lock. Reused by My Songs ("Log performance") and the Tonight tab (check-off). *@
 @* A pull-down dismiss here LOGS the sing unrated (same as Skip) rather than discarding it, so it takes the
    OnSwipeDismiss path instead of OnClose. *@
 <Sheet Open="Item is not null" Class="sheet--history rating-prompt" BackdropClass="sheet-backdrop--history"
@@ -30,7 +30,7 @@
 </Sheet>
 
 @code {
-    /// <summary>The song being marked sung. Null hides the sheet; setting it (re)opens the prompt reset to blank.</summary>
+    /// <summary>The song a performance is being logged for. Null hides the sheet; setting it (re)opens the prompt reset to blank.</summary>
     [Parameter] public SongListItem? Item { get; set; }
 
     /// <summary>When true, show the "how it went" stars + Skip; when false, the prompt only collects an optional note.</summary>

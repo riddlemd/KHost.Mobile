@@ -1,10 +1,12 @@
 namespace KHost.Mobile.Models;
 
-/// <summary>One song's tally at a venue: how many times sung there and the average "how it went" of the rated sings.</summary>
+/// <summary>
+/// One song's tally at a venue: how many times sung there and the average "how it went" of the rated performances.
+/// </summary>
 public sealed record VenueSongStat(string Title, int Count, double Average);
 
-/// <summary>A single sing logged at a venue — the song, its "how it went" (0 = unrated), and when.</summary>
-public sealed record VenueSing(string Title, int Rating, DateTimeOffset Date);
+/// <summary>A single performance logged at a venue — the song, its "how it went" (0 = unrated), and when.</summary>
+public sealed record VenuePerformance(string Title, int Rating, DateTimeOffset Date);
 
 /// <summary>
 /// A venue's derived history — everything the venue detail shows, computed purely from the performances tagged with
@@ -12,20 +14,20 @@ public sealed record VenueSing(string Title, int Rating, DateTimeOffset Date);
 /// so the aggregation is unit-testable.
 /// </summary>
 public sealed record VenueHistory(
-    int Sings,
+    int Performances,
     double? Average,
-    DateTimeOffset? LastSung,
+    DateTimeOffset? LastPerformed,
     IReadOnlyList<VenueSongStat> GoTo,
-    IReadOnlyList<VenueSing> Recent)
+    IReadOnlyList<VenuePerformance> Recent)
 {
-    /// <summary>An empty history — no sings logged at the venue yet.</summary>
+    /// <summary>An empty history — no performances logged at the venue yet.</summary>
     public static VenueHistory Empty { get; } = new(0, null, null, [], []);
 
     /// <summary>
-    /// Roll up every performance tagged with <paramref name="venueId"/> across <paramref name="songs"/>:
-    /// total sings, the average rating there (over rated sings only, null when none are rated), the last-sung date,
+    /// Roll up every performance tagged with <paramref name="venueId"/> across <paramref name="songs"/>: the total,
+    /// the average rating there (over rated performances only, null when none are rated), the last-performed date,
     /// the top <paramref name="topGoTo"/> go-to songs (by average rating then play count, rated songs only), and the
-    /// most recent <paramref name="recent"/> sings (newest first).
+    /// most recent <paramref name="recent"/> performances (newest first).
     /// </summary>
     public static VenueHistory ForVenue(IEnumerable<SongListItem> songs, Guid venueId, int topGoTo = 3, int recent = 5)
     {
@@ -46,15 +48,15 @@ public sealed record VenueHistory(
                 g.Key.Title,
                 g.Count(),
                 g.Where(x => x.Perf.HowItWent >= 1).Select(x => x.Perf.HowItWent).DefaultIfEmpty(0).Average()))
-            .Where(x => x.Average >= 1)   // a song with no rated sing here isn't a "go-to"
+            .Where(x => x.Average >= 1)   // a song with no rated performance here isn't a "go-to"
             .OrderByDescending(x => x.Average).ThenByDescending(x => x.Count)
             .Take(topGoTo)
             .ToList();
 
-        var recentSings = here
+        var recentPerformances = here
             .OrderByDescending(x => x.Perf.Date)
             .Take(recent)
-            .Select(x => new VenueSing(x.Song.Title, x.Perf.HowItWent, x.Perf.Date))
+            .Select(x => new VenuePerformance(x.Song.Title, x.Perf.HowItWent, x.Perf.Date))
             .ToList();
 
         return new VenueHistory(
@@ -62,6 +64,6 @@ public sealed record VenueHistory(
             rated.Count > 0 ? rated.Average() : null,
             here.Max(x => x.Perf.Date),
             goTo,
-            recentSings);
+            recentPerformances);
     }
 }

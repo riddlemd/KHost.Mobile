@@ -1,7 +1,7 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-@* Every sing of one song: when, how it went, and a note. Extracted from My Songs so the Tonight tab's detail
+@* Every performance of one song: when, how it went, and a note. Extracted from My Songs so the Tonight tab's detail
    card can open the same sheet — a song's history is the song's, not one page's.
 
    Rows carry the app's standard row gestures (swipe.js): swipe left to remove, press and hold to change the
@@ -9,23 +9,23 @@
    The component owns the undo and the date editor because both are per-row and neither host has anything
    useful to add to them; the host only applies and persists the resulting change. *@
 <Sheet Open="Item is not null" Class="sheet--history" BackdropClass="sheet-backdrop--history"
-       AriaLabel="Sung history" ClosePx="150" OnClose="OnClose">
+       AriaLabel="Performance history" ClosePx="150" OnClose="OnClose">
     @if (Item is { } item)
     {
-        <div class="sheet__title">Sung history</div>
+        <div class="sheet__title">Performance history</div>
         <div class="sheet__subtitle">
             @item.Title
             @if (BayesScore is { } score)
             {
-                <text> · @score.ToString("0.0")★ over @item.Performances.Count sing@(item.Performances.Count == 1 ? "" : "s")</text>
+                <text> · @score.ToString("0.0")★ over @item.Performances.Count performance@(item.Performances.Count == 1 ? "" : "s")</text>
             }
         </div>
 
         @if (item.Performances.Count == 0)
         {
-            @* Removing the last sing leaves the sheet open rather than closing it, so the undo is still there
-               to take. *@
-            <div class="history__empty">No sings recorded.</div>
+            @* Removing the last performance leaves the sheet open rather than closing it, so the undo is still
+               there to take. *@
+            <div class="history__empty">No performances recorded.</div>
         }
         <div class="history" @ref="_list">
             @foreach (var (perf, index) in item.Performances
@@ -102,7 +102,7 @@
     [Parameter] public EventCallback OnClose { get; set; }
 
     private ElementReference _list;
-    private DotNetObjectReference<SungHistorySheet>? _selfRef;
+    private DotNetObjectReference<PerformanceHistorySheet>? _selfRef;
     private bool _bound;              // the list element is rebuilt each open, so this resets on close
     private Guid? _openFor;
 
