@@ -1,0 +1,13 @@
+@* Back/previous chevron. A vector, not a text glyph: U+2190 and friends are drawn on the math axis, so they
+   render visibly high in a centered box by an amount that shifts with whichever font the head falls back to. *@
+<svg viewBox="0 0 24 24" width="@Size" height="@Size" fill="none" stroke="currentColor"
+     stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    @* Spans x 8.5–15.5, y 5–19 — symmetric about the viewBox centre, so the ink centres in a round button
+       with no nudge. The common "M15 5l-7 7 7 7" form sits half a unit left. *@
+    <path d="M15.5 5l-7 7 7 7" />
+</svg>
+
+@code {
+    /// <summary>Width/height as a CSS length. Defaults to <c>em</c> so the icon tracks the surrounding font size.</summary>
+    [Parameter] public string Size { get; set; } = "1em";
+}

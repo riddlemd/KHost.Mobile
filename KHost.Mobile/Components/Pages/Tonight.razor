@@ -380,7 +380,12 @@ else
         _itemsVersion++;
         // The star blends a song's record with the whole list's average, so the context is list-wide, not per song.
         _ratingContext = RatingScore.BuildContext(_items,
-            RatingConfig.Default with { RecencyEnabled = Settings.RecencyWeightedRatings },
+            RatingConfig.Default with
+            {
+                RecencyEnabled = Settings.RecencyWeightedRatings,
+                PriorWeight = Settings.RatingPriorWeight,
+                HalfLifeDays = Settings.RecencyHalfLifeDays,
+            },
             DateTimeOffset.Now);
         await RefreshActiveVenueKaraFunAsync();
         await TonightStore.PruneAsync(_items.Select(i => i.Id).ToList());

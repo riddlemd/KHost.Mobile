@@ -21,7 +21,7 @@
 
 <section class="ie">
     <div class="page-head">
-        <NavLink class="page-back" href="" aria-label="Back to my songs">←</NavLink>
+        <NavLink class="page-back" href="" aria-label="Back to my songs"><ChevronLeftIcon Size="1.15em" /></NavLink>
         <h1 class="page-title">Import &amp; Export</h1>
     </div>
 
@@ -792,7 +792,7 @@
 
     // One song at a time, spaced out to stay under the lookup rate limit. Fire-and-forget from
     // ImportSelectedAsync; cancelled if the sheet closes, a new import starts, or we navigate away.
-    private const int ReviewThrottleMs = 3000;   // ~20/min
+    private int ReviewThrottleMs => Settings.ImportLookupDelayMs;   // default 3000 = ~20/min
 
     private async Task StartReviewEnrichmentAsync()
     {

@@ -14,7 +14,7 @@
 
 <section class="settings">
     <div class="page-head">
-        <NavLink class="page-back" href="" aria-label="Back to my songs">←</NavLink>
+        <NavLink class="page-back" href="" aria-label="Back to my songs"><ChevronLeftIcon Size="1.15em" /></NavLink>
         <h1 class="page-title">Settings</h1>
     </div>
 
@@ -27,12 +27,9 @@
         {
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">“Tonight” tab</span>
+                <span class="setting__title">Enable “Tonight” Tab</span>
                 <span class="setting__desc">
-                    Show the Tonight tab in the bottom bar — an on-deck set you build from your list, reorder, and
-                    check off as you sing. Turn off to hide the tab; with only My Songs left there's nothing to tab
-                    between, so the whole bottom bar goes too. Your saved set is kept and comes back when you
-                    re-enable it.
+                    An on-deck set you build, reorder and check off. Off hides the tab; your set is kept.
                 </span>
             </span>
             <span class="switch">
@@ -52,11 +49,8 @@
         {
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">Auto-fill year &amp; genre</span>
-                <span class="setting__desc">
-                    Look up a song's year and genre from iTunes and fill any blanks — when you add or open a
-                    song, and after importing a list. Turn off to skip all iTunes lookups.
-                </span>
+                <span class="setting__title">Enable Auto-fill Year &amp; Genre</span>
+                <span class="setting__desc">Attempt to lookup year and genre when you add, open, or import songs.</span>
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.AutoFillMetadata" />
@@ -64,14 +58,10 @@
             </span>
         </label>
 
-        @* Only the show/hide flag lives here — how the picker draws is set by pressing and holding the 🎲 itself. *@
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">“Surprise me” button</span>
-                <span class="setting__desc">
-                    Show the 🎲 button on My Songs. Tap it to pick a song at random; press and hold it to choose
-                    how it picks.
-                </span>
+                <span class="setting__title">Enable “Surprise me” Button</span>
+                <span class="setting__desc">Tap the 🎲 on My Songs to pick a song at random.</span>
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseEnabled" />
@@ -79,12 +69,99 @@
             </span>
         </label>
 
+        @* Mirrored from the 🎲's press-and-hold sheet: a long press has no assistive-tech equivalent, so these
+           would otherwise be unreachable for anyone who can't perform one. *@
+        @if (Prefs.SurpriseEnabled)
+        {
+            <label class="setting setting--sub">
+                <span class="setting__text">
+                    <span class="setting__title">Skip songs I've sung today</span>
+                    <span class="setting__desc">If that rules out everything, it picks from the whole list anyway.</span>
+                </span>
+                <span class="switch">
+                    <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseSkipSungToday" />
+                    <span class="switch__track"><span class="switch__thumb"></span></span>
+                </span>
+            </label>
+
+            <label class="setting setting--sub">
+                <span class="setting__text">
+                    <span class="setting__title">Favour songs I sing well</span>
+                </span>
+                <span class="switch">
+                    <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseFavourWellSung" />
+                    <span class="switch__track"><span class="switch__thumb"></span></span>
+                </span>
+            </label>
+
+            <label class="setting setting--sub">
+                <span class="setting__text">
+                    <span class="setting__title">Only songs I've never sung</span>
+                </span>
+                <span class="switch">
+                    <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseNeverSungOnly" />
+                    <span class="switch__track"><span class="switch__thumb"></span></span>
+                </span>
+            </label>
+
+            <label class="setting setting--sub">
+                <span class="setting__text">
+                    <span class="setting__title">Only favourites</span>
+                </span>
+                <span class="switch">
+                    <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseFavoritesOnly" />
+                    <span class="switch__track"><span class="switch__thumb"></span></span>
+                </span>
+            </label>
+
+            <label class="setting setting--sub">
+                <span class="setting__text">
+                    <span class="setting__title">Draw only from filtered songs</span>
+                </span>
+                <span class="switch">
+                    <input class="switch__input" type="checkbox" @bind="Prefs.SurpriseRespectFilters" />
+                    <span class="switch__track"><span class="switch__thumb"></span></span>
+                </span>
+            </label>
+        }
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Float favorites to the top</span>
+                <span class="setting__desc">Keep favorites above the rest, whatever the sort.</span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.FloatFavoritesToTop" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Confirm before deleting a song</span>
+                <span class="setting__desc">Ask before a swipe removes a song. Off leaves Undo as the only way back.</span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.ConfirmSongDelete" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Enable Song Spelling Assistant</span>
+                <span class="setting__desc">Flag a name that's one slip from the provider's spelling.</span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="SpellingAssistantEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
         <label class="setting">
             <span class="setting__text">
                 <span class="setting__title">Scroll to song when favorited</span>
-                <span class="setting__desc">
-                    Tapping a song's star scrolls the list to reveal its new position (favorites move to the top).
-                </span>
+                <span class="setting__desc">Starring a song scrolls the list to its new position.</span>
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.ScrollToFavorited" />
@@ -94,12 +171,8 @@
 
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">Show album art on cards</span>
-                <span class="setting__desc">
-                    Use each song's cover (looked up from iTunes) as its card background, with a dark fade behind
-                    the text. Covers are downloaded once and cached on this device — clear them from the Danger
-                    zone below. Songs get a cover as you add or open them.
-                </span>
+                <span class="setting__title">Show album art on song cards</span>
+                <span class="setting__desc">Use each song's cover as its card background. Covers are cached on this device.</span>
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.AlbumArtEnabled" />
@@ -111,9 +184,7 @@
             <span class="setting__text">
                 <span class="setting__title">Show song tags</span>
                 <span class="setting__desc">
-                    Add your own labels to a song — “duet”, “closer”, “needs practice” — shown as chips on its card
-                    and detail sheet, with a Tags filter on your list. Turn off to hide tags everywhere; any tags
-                    you've added are kept and come back when you re-enable it.
+                    Your own labels — “duet”, “closer” — as chips on a song, filterable. Off hides them; they're kept.
                 </span>
             </span>
             <span class="switch">
@@ -133,10 +204,8 @@
         {
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">“Find on YouTube” button</span>
-                <span class="setting__desc">
-                    Show a button on a song's detail sheet that opens a YouTube search in your browser or the YouTube app.
-                </span>
+                <span class="setting__title">Enable “Find on YouTube” Button</span>
+                <span class="setting__desc">Opens a YouTube search from a song's detail sheet.</span>
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.YouTubeSearchEnabled" />
@@ -146,10 +215,8 @@
 
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">“Find on Spotify” button</span>
-                <span class="setting__desc">
-                    Show a button on a song's detail sheet that opens a Spotify search in your browser or the Spotify app.
-                </span>
+                <span class="setting__title">Enable “Find on Spotify” Button</span>
+                <span class="setting__desc">Opens a Spotify search from a song's detail sheet.</span>
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.SpotifySearchEnabled" />
@@ -159,10 +226,8 @@
 
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">“Lyrics” button</span>
-                <span class="setting__desc">
-                    Show a button on a song's detail sheet that looks up its lyrics from LRCLIB and shows them in the app.
-                </span>
+                <span class="setting__title">Enable “Lyrics” Button</span>
+                <span class="setting__desc">Look a song's lyrics up from LRCLIB and read them in the app.</span>
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.LyricsEnabled" />
@@ -172,11 +237,8 @@
 
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">Cache lyrics on this device</span>
-                <span class="setting__desc">
-                    Save looked-up lyrics so re-opening a song shows them instantly, without going back online.
-                    Turn off to always fetch fresh. Clear the saved copies from the Danger zone below.
-                </span>
+                <span class="setting__title">Enable Lyrics Caching</span>
+                <span class="setting__desc">Keep looked-up lyrics so they reopen instantly offline.</span>
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.LyricsCacheEnabled" />
@@ -195,10 +257,9 @@
         {
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">“Find on KaraFun” button</span>
+                <span class="setting__title">Enable “Find on KaraFun” Button</span>
                 <span class="setting__desc">
-                    Show a button on a song's detail sheet that opens the active venue's KaraFun search. Set a KaraFun
-                    ID on a venue (Venues → edit a venue) for it to appear.
+                    Search the active venue's KaraFun catalogue. Needs a KaraFun ID on that venue.
                 </span>
             </span>
             <span class="switch">
@@ -218,13 +279,9 @@
         {
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">Auto-detect venue by location</span>
+                <span class="setting__title">Enable Venue Auto-detect</span>
                 <span class="setting__desc">
-                    Use your location to set the active venue automatically — it switches to the nearest saved venue
-                    as you move between them, re-checking on the interval below. On by default. It only kicks in — and
-                    only asks for location permission — once you've saved a location on at least one venue, so it stays
-                    quiet until you do. Foreground only — it won't track you in your pocket. Picking a venue by hand
-                    pins it until you resume auto-detect.
+                    Switch to the nearest saved venue as you move. Foreground only.
                 </span>
             </span>
             <span class="switch">
@@ -235,10 +292,10 @@
 
         @if (Prefs.LocationAutoDetect)
         {
-            <label class="setting">
+            <label class="setting setting--stack">
                 <span class="setting__text">
                     <span class="setting__title">Re-check location every</span>
-                    <span class="setting__desc">How often to re-check your venue while the app is open.</span>
+                    <span class="setting__desc">How often to look again while the app is open.</span>
                 </span>
                 <select class="input venue-recheck" @bind="Prefs.VenueRecheckMinutes">
                     <option value="2">2 min</option>
@@ -248,7 +305,42 @@
                     <option value="30">30 min</option>
                 </select>
             </label>
+
+            <label class="setting setting--stack">
+                <span class="setting__text">
+                    <span class="setting__title">Default Venue Radius</span>
+                    <span class="setting__desc">Wider for a big room with a car park; tighter on a busy street.</span>
+                </span>
+                <select class="input setting-select" @bind="Prefs.VenueDetectionMeters">
+                    @foreach (var (metres, feet) in VenueRadiusChoices)
+                    {
+                        <option value="@metres">@(Prefs.ShowDistanceInFeet ? feet : $"{metres} m")</option>
+                    }
+                </select>
+            </label>
+
+            <label class="setting setting--sub">
+                <span class="setting__text">
+                    <span class="setting__title">Show distances in feet</span>
+                </span>
+                <span class="switch">
+                    <input class="switch__input" type="checkbox" @bind="Prefs.ShowDistanceInFeet" />
+                    <span class="switch__track"><span class="switch__thumb"></span></span>
+                </span>
+            </label>
         }
+
+        <label class="setting setting--stack">
+            <span class="setting__text">
+                <span class="setting__title">Venue history length</span>
+                <span class="setting__desc">Go-to songs and recent performances listed per venue.</span>
+            </span>
+            <select class="input setting-select" @bind="Prefs.VenueHistoryEntries">
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="10">10</option>
+            </select>
+        </label>
         }
     </div>
 
@@ -261,11 +353,9 @@
         {
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">Rate each performance</span>
+                <span class="setting__title">Enable Performance Rating</span>
                 <span class="setting__desc">
-                    Ask “how did it go?” with a star rating whenever you log a performance — from My Songs
-                    (“Log performance”) and from the Tonight tab (checking a song off). Turn off if you'd rather just log it (and jot a
-                    note) without judging the performance.
+                    Ask “how did it go?” when you log one. Off still logs it, and takes a note.
                 </span>
             </span>
             <span class="switch">
@@ -276,18 +366,43 @@
 
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">Weight recent performances more</span>
+                <span class="setting__title">Favour recent form</span>
                 <span class="setting__desc">
-                    A song's how-it-went star normally blends its whole record and leans toward your list average
-                    until you've sung it a few times (so one lucky 5 doesn't outrank a solid ten-performance streak).
-                    Turn this on to also fade older performances, so what you're crushing lately leads. Only changes the star and
-                    the list order — your logged performances are never altered.
+                    Fade older performances so current form leads the star. Your logged ratings are untouched.
                 </span>
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.RecencyWeightedRatings" />
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
+        </label>
+
+        @if (Prefs.RecencyWeightedRatings)
+        {
+            <label class="setting setting--sub setting--stack">
+                <span class="setting__text">
+                    <span class="setting__title">“Recent” means</span>
+                    <span class="setting__desc">How far back still counts as current form.</span>
+                </span>
+                <select class="input setting-select" @bind="Prefs.RecencyHalfLifeDays">
+                    <option value="30">1 month</option>
+                    <option value="90">3 months</option>
+                    <option value="180">6 months</option>
+                    <option value="365">1 year</option>
+                </select>
+            </label>
+        }
+
+        <label class="setting setting--stack">
+            <span class="setting__text">
+                <span class="setting__title">Trust a rating after</span>
+                <span class="setting__desc">Until then its star leans on your list average.</span>
+            </span>
+            <select class="input setting-select" @bind="Prefs.RatingPriorWeight">
+                <option value="1">1 performance</option>
+                <option value="3">3 performances</option>
+                <option value="8">8 performances</option>
+            </select>
         </label>
         }
     </div>
@@ -301,16 +416,95 @@
         {
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">Notify me about new versions</span>
-                <span class="setting__desc">
-                    Check GitHub once at startup and show a banner when a newer version of KHost Cue is
-                    available, with a link to download it. Turn off to never check.
-                </span>
+                <span class="setting__title">Enable Update Notifications</span>
+                <span class="setting__desc">Show a banner at startup when a newer release is out.</span>
             </span>
             <span class="switch">
                 <input class="switch__input" type="checkbox" @bind="Prefs.UpdateCheckEnabled" />
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Enable Haptic Feedback</span>
+                <span class="setting__desc">A short buzz confirms a press-and-hold.</span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.HapticsEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
+                <span class="setting__title">Enable 24-hour Time</span>
+                <span class="setting__desc">Show 21:30 rather than 9:30 PM.</span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.Use24HourTime" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting setting--stack">
+            <span class="setting__text">
+                <span class="setting__title">Undo window</span>
+                <span class="setting__desc">How long Undo stays after you remove something.</span>
+            </span>
+            <select class="input setting-select" @bind="Prefs.UndoWindowSeconds">
+                <option value="5">5 seconds</option>
+                <option value="10">10 seconds</option>
+                <option value="30">30 seconds</option>
+            </select>
+        </label>
+
+        <label class="setting setting--stack">
+            <span class="setting__text">
+                <span class="setting__title">Launch Tab</span>
+                <span class="setting__desc">“Whatever's queued” opens Tonight only when a set is waiting.</span>
+            </span>
+            <select class="input setting-select" @bind="Prefs.LaunchDestination">
+                <option value="smart">Whatever's queued</option>
+                <option value="songs">My Songs</option>
+                <option value="tonight">Tonight</option>
+            </select>
+        </label>
+
+        <label class="setting setting--stack">
+            <span class="setting__text">
+                <span class="setting__title">Music catalogue region</span>
+                <span class="setting__desc">Which country's catalogue auto-fill searches. Affects new lookups only.</span>
+            </span>
+            <select class="input setting-select" @bind="Prefs.CatalogueRegion">
+                <option value="US">United States</option>
+                <option value="GB">United Kingdom</option>
+                <option value="CA">Canada</option>
+                <option value="AU">Australia</option>
+                <option value="IE">Ireland</option>
+                <option value="NZ">New Zealand</option>
+                <option value="DE">Germany</option>
+                <option value="FR">France</option>
+                <option value="ES">Spain</option>
+                <option value="IT">Italy</option>
+                <option value="NL">Netherlands</option>
+                <option value="SE">Sweden</option>
+                <option value="MX">Mexico</option>
+                <option value="BR">Brazil</option>
+                <option value="JP">Japan</option>
+            </select>
+        </label>
+
+        <label class="setting setting--stack">
+            <span class="setting__text">
+                <span class="setting__title">Import lookup speed</span>
+                <span class="setting__desc">Faster finishes sooner, but risks the provider refusing requests.</span>
+            </span>
+            <select class="input setting-select" @bind="Prefs.ImportLookupDelayMs">
+                <option value="5000">Gentle</option>
+                <option value="3000">Normal</option>
+                <option value="1000">Fast</option>
+            </select>
         </label>
         }
     </div>
@@ -326,8 +520,7 @@
             <span class="setting__text">
                 <span class="setting__title">Replay the tutorial</span>
                 <span class="setting__desc">
-                    Show the first-run walkthrough again — the guided tour of adding songs, tonight's set,
-                    importing a playlist, and these settings.
+                    Walk through the guided tour again.
                 </span>
             </span>
             <button type="button" class="btn btn-secondary" @onclick="ReplayTutorial">Replay</button>
@@ -385,6 +578,20 @@
     private int _lyricsCacheCount;
     private int _albumArtCount;
     private bool _confirmClear;
+
+    // Stored as an int so a future "eager" tier needs no migration; until that exists it's a plain on/off switch.
+    private bool SpellingAssistantEnabled
+    {
+        get => Prefs.SpellingSuggestionLevel > 0;
+        set => Prefs.SpellingSuggestionLevel = value ? 1 : 0;
+    }
+
+    // Radii are stored in metres; the feet labels are the round numbers a US singer expects, not exact conversions
+    // (250 ft is 76.2 m), so the pairs are spelled out rather than computed.
+    private static readonly (int Metres, string Feet)[] VenueRadiusChoices =
+    [
+        (15, "50 ft"), (30, "100 ft"), (75, "250 ft"), (150, "500 ft"), (300, "1000 ft"),
+    ];
 
     // Collapsible sections: default to all expanded, so nothing is hidden on first visit.
     private readonly HashSet<string> _collapsed = [];

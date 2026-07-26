@@ -481,6 +481,19 @@ else
     </div>
 }
 
+@if (_confirmRemove is not null)
+{
+    <div class="sheet-backdrop sheet-backdrop--confirm" @onclick="CancelRemove"></div>
+    <div class="confirm-pop" role="alertdialog" aria-modal="true">
+        <div class="confirm-pop__title">Remove this song?</div>
+        <div class="confirm-pop__date">“@_confirmRemove.Title” drops off your song list, along with its history.</div>
+        <div class="confirm-pop__actions">
+            <button class="btn btn-secondary" @onclick="CancelRemove">Cancel</button>
+            <button class="btn confirm-pop__delete" @onclick="ConfirmRemoveAsync">Remove</button>
+        </div>
+    </div>
+}
+
 <SongDetailSheet Item="_detailItem"
                  SuggestionLoading="_suggestionLoading" AutoFilledNote="@_autoFilledNote"
                  InTonight="IsInTonight(_detailItem)"
@@ -628,8 +641,9 @@ else
     private CancellationTokenSource? _lyricsCts;
 
     // Undo-after-swipe-remove: the last removed item + a timer to expire the offer.
-    private const int UndoWindowMs = 5000;
+    private int UndoWindowMs => Settings.UndoWindowSeconds * 1000;
     private SongListItem? _undoItem;
+    private SongListItem? _confirmRemove;   // the song whose remove confirm is armed (ConfirmSongDelete only)
     private CancellationTokenSource? _undoCts;
     private bool _rangeBound;   // anti-cross clamp bound to the current year-slider inputs
     private string? _scrollToSongId;   // set on favorite-toggle; the next render scrolls this card into view
@@ -1014,9 +1028,9 @@ else
             _ => filtered.OrderBy(i => i.AddedAt),
         };
         var ordered = _sortDescending ? ascending.Reverse() : ascending;
-        // Favorites always float to the top, whatever the active sort/direction is.
+        // Optionally float favorites above everything, whatever the active sort/direction is.
         // OrderBy is a stable sort, so the chosen order is preserved within each group.
-        return ordered.OrderBy(i => i.IsFavorite ? 0 : 1);
+        return Settings.FloatFavoritesToTop ? ordered.OrderBy(i => i.IsFavorite ? 0 : 1) : ordered;
     }
 
     protected override async Task OnInitializedAsync()
@@ -1041,12 +1055,18 @@ else
         var startedAt = Environment.TickCount64;
         await RefreshAsync();
 
-        // Smart landing, once per launch: a queued set opens onto the Tonight tab instead. Every later navigation
-        // is left alone, so tapping "My Songs" never bounces away.
+        // Landing, once per launch: "smart" opens onto Tonight only when a set is queued, "tonight" always does,
+        // "songs" never. Every later navigation is left alone, so tapping "My Songs" never bounces away.
         if (!Session.LandingResolved)
         {
             Session.LandingResolved = true;
-            if (Settings.TonightEnabled && _tonight.Count > 0)
+            var landOnTonight = Settings.LaunchDestination switch
+            {
+                "songs" => false,
+                "tonight" => true,
+                _ => _tonight.Count > 0,
+            };
+            if (Settings.TonightEnabled && landOnTonight)
             {
                 Nav.NavigateTo("tonight", replace: true);
                 return;   // we're leaving this page; skip the loader-reveal below
@@ -1207,9 +1227,32 @@ else
             return;
 
         var removed = _items.FirstOrDefault(i => i.Id == guid);
+        if (Settings.ConfirmSongDelete)
+        {
+            _confirmRemove = removed;
+            StateHasChanged();   // [JSInvokable] — off the render path, so ask for one
+            return;
+        }
+
         await Store.RemoveAsync(guid);
         if (removed is not null)
             ShowUndo(removed);
+    }
+
+    private void CancelRemove()
+    {
+        _confirmRemove = null;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmRemoveAsync()
+    {
+        if (_confirmRemove is not { } item)
+            return;
+
+        _confirmRemove = null;
+        await Store.RemoveAsync(item.Id);
+        ShowUndo(item);
     }
 
     private void ShowUndo(SongListItem item)
@@ -1393,8 +1436,9 @@ else
         // iTunes offers its near-miss from the call already made; Deezer costs an extra one, so it's asked only
         // when iTunes had nothing AND the exact-title cover search came up empty — a cover found by exact
         // title+artist proves the spelling is already right.
-        var suggestion = lookup.Suggestion;
-        if (suggestion is null && meta is null && artUrl is null)
+        // Level 0 drops the suggestion without skipping the lookup: auto-fill still wants the year/genre/art.
+        var suggestion = Settings.SpellingSuggestionLevel == 0 ? null : lookup.Suggestion;
+        if (Settings.SpellingSuggestionLevel > 0 && suggestion is null && meta is null && artUrl is null)
         {
             suggestion = await Spelling.SuggestAsync(item.Title, item.Artist, token);
             if (token.IsCancellationRequested)
@@ -1469,6 +1513,7 @@ else
     // sub-sheets > the base detail sheet). Returns false when nothing is open (let navigation proceed).
     private bool TryCloseTopOverlay()
     {
+        if (_confirmRemove is not null) { CancelRemove(); return true; }
         if (_historySheetRef?.TryCloseTopOverlay() == true) return true;
         if (_ratingPromptItem is not null) { CloseRatingPrompt(); return true; }
         if (_historyItem is not null) { CloseHistory(); return true; }
@@ -1915,7 +1960,12 @@ else
         _usedTagsCache = null;
         // The prior is list-wide, so the context is rebuilt once per load, never per song.
         _ratingContext = RatingScore.BuildContext(_items,
-            RatingConfig.Default with { RecencyEnabled = Settings.RecencyWeightedRatings },
+            RatingConfig.Default with
+            {
+                RecencyEnabled = Settings.RecencyWeightedRatings,
+                PriorWeight = Settings.RatingPriorWeight,
+                HalfLifeDays = Settings.RecencyHalfLifeDays,
+            },
             DateTimeOffset.Now);
         RecomputeYearBounds();
         await Tonight.PruneAsync(_items.Select(i => i.Id).ToList());

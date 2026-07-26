@@ -15,11 +15,6 @@ public sealed class MauiVenueLocator(
     IAppSettings settings,
     ILogger<MauiVenueLocator> logger) : IVenueLocator
 {
-    // Treat the singer as "at" a venue within this radius of its saved point. Kept tight — a venue footprint plus
-    // typical medium-accuracy GPS wobble — because venues often cluster on one block and a wider radius would flag
-    // one you're merely walking past.
-    private const double AtVenueMeters = 75;
-
     public async Task ResolveActiveAsync(CancellationToken cancellationToken = default)
     {
         if (!settings.LocationAutoDetect || session.ActiveVenuePinned)
@@ -35,7 +30,8 @@ public sealed class MauiVenueLocator(
         if (here is null)
             return;
 
-        var nearest = VenueProximity.Nearest(here, saved, AtVenueMeters);
+        // Read per-resolve, not cached: the setting can change between re-checks while the app stays open.
+        var nearest = VenueProximity.Nearest(here, saved, settings.VenueDetectionMeters);
         if (nearest is not null && session.ActiveVenueId != nearest.Id)
         {
             logger.LogDebug("Auto-selected venue {Venue} from current location", nearest.Name);

@@ -35,6 +35,20 @@ public sealed class MauiAppSettings : IAppSettings
     private const string TutorialCompletedKey = "settings.tutorial_completed";
     private const string TutorialSeededTonightIdsKey = "settings.tutorial_seeded_tonight_ids";
     private const string LastActiveSingerIdKey = "settings.last_active_singer_id";
+    private const string HapticsKey = "settings.haptics";
+    private const string Use24HourTimeKey = "settings.use_24h_time";
+    private const string FloatFavoritesKey = "settings.float_favorites";
+    private const string ConfirmSongDeleteKey = "settings.confirm_song_delete";
+    private const string UndoWindowSecondsKey = "settings.undo_window_seconds";
+    private const string LaunchDestinationKey = "settings.launch_destination";
+    private const string RecencyHalfLifeDaysKey = "settings.recency_half_life_days";
+    private const string VenueDetectionMetersKey = "settings.venue_detection_meters";
+    private const string ShowDistanceInFeetKey = "settings.show_distance_in_feet";
+    private const string RatingPriorWeightKey = "settings.rating_prior_weight";
+    private const string VenueHistoryEntriesKey = "settings.venue_history_entries";
+    private const string SpellingSuggestionLevelKey = "settings.spelling_suggestion_level";
+    private const string CatalogueRegionKey = "settings.catalogue_region";
+    private const string ImportLookupDelayMsKey = "settings.import_lookup_delay_ms";
 
     public bool AutoFillMetadata
     {
@@ -196,5 +210,91 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(TutorialSeededTonightIdsKey, string.Empty);
         set => Preferences.Default.Set(TutorialSeededTonightIdsKey, value);
+    }
+
+    public bool HapticsEnabled
+    {
+        get => Preferences.Default.Get(HapticsKey, true);
+        set => Preferences.Default.Set(HapticsKey, value);
+    }
+
+    public bool Use24HourTime
+    {
+        get => Preferences.Default.Get(Use24HourTimeKey, false);
+        set => Preferences.Default.Set(Use24HourTimeKey, value);
+    }
+
+    public bool FloatFavoritesToTop
+    {
+        get => Preferences.Default.Get(FloatFavoritesKey, true);
+        set => Preferences.Default.Set(FloatFavoritesKey, value);
+    }
+
+    // Defaults to false: removal has always been swipe-then-undo, and the undo window is the safety net.
+    public bool ConfirmSongDelete
+    {
+        get => Preferences.Default.Get(ConfirmSongDeleteKey, false);
+        set => Preferences.Default.Set(ConfirmSongDeleteKey, value);
+    }
+
+    public int UndoWindowSeconds
+    {
+        get => Preferences.Default.Get(UndoWindowSecondsKey, 5);
+        set => Preferences.Default.Set(UndoWindowSecondsKey, value);
+    }
+
+    public string LaunchDestination
+    {
+        get => Preferences.Default.Get(LaunchDestinationKey, "smart");
+        set => Preferences.Default.Set(LaunchDestinationKey, value);
+    }
+
+    public int RecencyHalfLifeDays
+    {
+        get => Preferences.Default.Get(RecencyHalfLifeDaysKey, 180);
+        set => Preferences.Default.Set(RecencyHalfLifeDaysKey, value);
+    }
+
+    public int VenueDetectionMeters
+    {
+        get => Preferences.Default.Get(VenueDetectionMetersKey, 75);
+        set => Preferences.Default.Set(VenueDetectionMetersKey, value);
+    }
+
+    public bool ShowDistanceInFeet
+    {
+        get => Preferences.Default.Get(ShowDistanceInFeetKey, true);
+        set => Preferences.Default.Set(ShowDistanceInFeetKey, value);
+    }
+
+    public int RatingPriorWeight
+    {
+        get => Preferences.Default.Get(RatingPriorWeightKey, 3);
+        set => Preferences.Default.Set(RatingPriorWeightKey, value);
+    }
+
+    public int VenueHistoryEntries
+    {
+        get => Preferences.Default.Get(VenueHistoryEntriesKey, 5);
+        set => Preferences.Default.Set(VenueHistoryEntriesKey, value);
+    }
+
+    // 1 = cautious, the thresholds the matcher shipped with.
+    public int SpellingSuggestionLevel
+    {
+        get => Preferences.Default.Get(SpellingSuggestionLevelKey, 1);
+        set => Preferences.Default.Set(SpellingSuggestionLevelKey, value);
+    }
+
+    public string CatalogueRegion
+    {
+        get => Preferences.Default.Get(CatalogueRegionKey, "US");
+        set => Preferences.Default.Set(CatalogueRegionKey, value);
+    }
+
+    public int ImportLookupDelayMs
+    {
+        get => Preferences.Default.Get(ImportLookupDelayMsKey, 3000);
+        set => Preferences.Default.Set(ImportLookupDelayMsKey, value);
     }
 }

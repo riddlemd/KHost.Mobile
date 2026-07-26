@@ -359,7 +359,7 @@ button { text-transform: none; color: inherit; }
     height: 2.1rem;
     flex-shrink: 0;
     border-radius: 50%;
-    font-size: 1.2rem;
+    font-size: 1.2rem;   /* no text in here — this is what ChevronLeftIcon's em Size scales against. */
     color: var(--kh-text);
     text-decoration: none;
     -webkit-tap-highlight-color: transparent;
@@ -2575,7 +2575,14 @@ body.kh-sheet-open { overflow: hidden; }
 .venue-loc__capture { width: auto; }
 
 /* Settings — venue re-check interval select */
-.venue-recheck { flex: 0 0 auto; width: auto; padding-top: 0.4rem; padding-bottom: 0.4rem; }
+/* Dropdown sitting on a .setting row — shrink-wrapped so the label keeps the rest of the width. */
+.venue-recheck, .setting-select { flex: 0 0 auto; width: auto; padding-top: 0.4rem; padding-bottom: 0.4rem; }
+/* A dropdown squeezed against its own description reads as clutter, so stack it under the text instead of
+   competing for the row. Toggles stay inline — a switch is narrow enough not to crowd anything. */
+.setting--stack { flex-direction: column; align-items: stretch; gap: 0.45rem; }
+.setting--stack .setting-select, .setting--stack .venue-recheck { align-self: flex-end; }
+/* Sub-options indented under the toggle that switches their feature on. */
+.setting--sub { padding-left: 1.1rem; border-left: 2px solid var(--kh-border); margin-left: 0.2rem; }
 
 /* ============================================================================
    Singers — the active-singer avatar + "Who's singing?" switcher in the header,

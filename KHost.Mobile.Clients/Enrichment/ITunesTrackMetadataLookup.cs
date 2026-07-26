@@ -9,8 +9,10 @@ namespace KHost.Mobile.Clients.Enrichment;
 /// so callers should sanity-check <see cref="TrackMetadata.MatchedArtist"/> before trusting the result,
 /// and it's rate-limited (~20 req/min) — enrich on demand, not in a big parallel burst.
 /// </remarks>
-public sealed class ITunesTrackMetadataLookup(HttpClient httpClient) : ITrackMetadataLookup
+public sealed class ITunesTrackMetadataLookup(HttpClient httpClient, ILookupOptions? options = null) : ITrackMetadataLookup
 {
+    private readonly ILookupOptions _options = options ?? new DefaultLookupOptions();
+
     public async Task<TrackLookupResult> LookupAsync(string title, string artist, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(title))
@@ -20,7 +22,10 @@ public sealed class ITunesTrackMetadataLookup(HttpClient httpClient) : ITrackMet
             ? SearchText(title)
             : $"{SearchText(artist)} {SearchText(title)}";
         // limit=25, not the top hit: iTunes ranks by popularity, so a cover often outranks the real recording.
-        var url = $"https://itunes.apple.com/search?term={Uri.EscapeDataString(term)}&entity=song&limit=25&country=US";
+        // country decides which catalogue answers at all — a local-language artist is simply absent from another.
+        var region = string.IsNullOrWhiteSpace(_options.CatalogueRegion) ? "US" : _options.CatalogueRegion;
+        var url = $"https://itunes.apple.com/search?term={Uri.EscapeDataString(term)}&entity=song&limit=25"
+                  + $"&country={Uri.EscapeDataString(region)}";
 
         HttpResponseMessage response;
         try

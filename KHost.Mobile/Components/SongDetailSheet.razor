@@ -129,13 +129,13 @@
                         @if (Item.LastSungAt.HasValue && OnOpenHistory.HasDelegate)
                         {
                             <button class="btn-link sheet__history-link" @onclick="OnOpenHistory">
-                                @Item.LastSungAt.Value.ToString("MMM d, yyyy · h:mm tt")
+                                @Item.LastSungAt.Value.ToString(TimeFormat.DateTimePattern(Settings.Use24HourTime))
                                 <span class="sheet__history-count">(@Item.Performances.Count)</span>
                             </button>
                         }
                         else if (Item.LastSungAt.HasValue)
                         {
-                            @Item.LastSungAt.Value.ToString("MMM d, yyyy · h:mm tt")
+                            @Item.LastSungAt.Value.ToString(TimeFormat.DateTimePattern(Settings.Use24HourTime))
                         }
                         else
                         {
@@ -145,7 +145,7 @@
                 </div>
                 <div class="sheet__row">
                     <span class="sheet__key">Added</span>
-                    <span class="sheet__val">@Item.AddedAt.ToString("MMM d, yyyy")</span>
+                    <span class="sheet__val">@Item.AddedAt.ToString(TimeFormat.Date)</span>
                 </div>
             </div>
             @if (AutoFilledNote is not null)

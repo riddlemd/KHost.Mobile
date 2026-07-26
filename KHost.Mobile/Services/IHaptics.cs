@@ -12,7 +12,8 @@ public interface IHaptics
 {
     /// <summary>
     /// Ticks the device's long-press haptic. Best-effort: silently does nothing where the platform has no
-    /// haptics, the hardware is absent, or the user has switched them off system-wide.
+    /// haptics, the hardware is absent, the user has switched them off system-wide, or
+    /// <see cref="IAppSettings.HapticsEnabled"/> is off.
     /// </summary>
     void LongPress();
 }

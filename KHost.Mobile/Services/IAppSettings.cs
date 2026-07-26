@@ -142,4 +142,81 @@ public interface IAppSettings
     /// no tour seeding is outstanding.
     /// </summary>
     string TutorialSeededTonightIds { get; set; }
+
+    /// <summary>
+    /// When true, gestures that change state (press-and-hold to switch venue/singer, the 🎲 hold) confirm with a
+    /// short vibration. When false no haptic fires anywhere.
+    /// </summary>
+    bool HapticsEnabled { get; set; }
+
+    /// <summary>When true, times render as 24-hour (21:30). When false, as 12-hour with AM/PM.</summary>
+    bool Use24HourTime { get; set; }
+
+    /// <summary>
+    /// When true, favorited songs are pinned above every other song in My Songs regardless of the chosen sort. When
+    /// false, favorites sort with everything else and only the chosen column decides the order.
+    /// </summary>
+    bool FloatFavoritesToTop { get; set; }
+
+    /// <summary>
+    /// When true, removing a song asks for confirmation first. When false, the swipe removes immediately and the
+    /// undo snackbar is the only way back.
+    /// </summary>
+    bool ConfirmSongDelete { get; set; }
+
+    /// <summary>
+    /// How long an undo snackbar (removed song, venue, or performance) stays on offer, in seconds.
+    /// </summary>
+    int UndoWindowSeconds { get; set; }
+
+    /// <summary>
+    /// Which page a launch lands on: <c>"songs"</c> and <c>"tonight"</c> always open that tab; <c>"smart"</c> opens
+    /// Tonight only when a set is already queued, else My Songs.
+    /// </summary>
+    string LaunchDestination { get; set; }
+
+    /// <summary>
+    /// The half-life, in days, used when <see cref="RecencyWeightedRatings"/> is on — how quickly an older
+    /// performance's influence on the derived star decays. Ignored entirely when recency weighting is off.
+    /// </summary>
+    int RecencyHalfLifeDays { get; set; }
+
+    /// <summary>
+    /// How close, in metres, the device must be to a venue's saved location to count as being there. Only consulted
+    /// when <see cref="LocationAutoDetect"/> is on. Stored metric whatever <see cref="ShowDistanceInFeet"/> displays.
+    /// </summary>
+    int VenueDetectionMeters { get; set; }
+
+    /// <summary>
+    /// When true (the default), distances are shown in feet. Presentation only — distances are always stored and
+    /// compared in metres.
+    /// </summary>
+    bool ShowDistanceInFeet { get; set; }
+
+    /// <summary>
+    /// How many performances a song needs before its derived star trusts its own average rather than leaning on the
+    /// list-wide mean. Lower trusts a thin record sooner; higher demands a longer one.
+    /// </summary>
+    int RatingPriorWeight { get; set; }
+
+    /// <summary>How many go-to songs and recent performances a venue's history lists.</summary>
+    int VenueHistoryEntries { get; set; }
+
+    /// <summary>
+    /// How readily a near-miss title/artist earns a "Did you mean …?" suggestion: <c>0</c> off, <c>1</c> cautious,
+    /// <c>2</c> eager (tolerates more typos, at the cost of offering corrections to deliberate spellings).
+    /// </summary>
+    int SpellingSuggestionLevel { get; set; }
+
+    /// <summary>
+    /// Two-letter store region for catalogue lookups (year, genre, cover art). Picks which country's catalogue and
+    /// genre names a lookup returns.
+    /// </summary>
+    string CatalogueRegion { get; set; }
+
+    /// <summary>
+    /// Delay in milliseconds between the per-song lookups an import's review step makes. Lower finishes sooner but
+    /// risks the catalogue rate-limiting the batch.
+    /// </summary>
+    int ImportLookupDelayMs { get; set; }
 }

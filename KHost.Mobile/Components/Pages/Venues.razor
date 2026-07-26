@@ -10,6 +10,7 @@
 @inject IJSRuntime JS
 @inject IBackButtonService BackButton
 @inject IHaptics Haptics
+@inject IAppSettings Settings
 @implements IDisposable
 
 @* The active venue is a session pointer, not persisted here; performances logged while it's active are tagged with
@@ -17,7 +18,7 @@
    can reach, since the press-and-hold gesture has none. *@
 <section class="venues">
     <div class="page-head">
-        <NavLink class="page-back" href="" aria-label="Back to my songs">←</NavLink>
+        <NavLink class="page-back" href="" aria-label="Back to my songs"><ChevronLeftIcon Size="1.15em" /></NavLink>
         <h1 class="page-title">Venues</h1>
         <button type="button" class="btn btn-secondary page-head__add" data-tut="venue-add" @onclick="OpenAdd">＋ Add</button>
     </div>
@@ -136,7 +137,7 @@
                 <div class="venue-stats">
                     <div class="venue-stat"><span class="venue-stat__num">@h.Performances</span><span class="venue-stat__lbl">performance@(h.Performances == 1 ? "" : "s")</span></div>
                     <div class="venue-stat"><span class="venue-stat__num">@(h.Average?.ToString("0.0") ?? "—")</span><span class="venue-stat__lbl">avg here</span></div>
-                    <div class="venue-stat"><span class="venue-stat__num">@(h.LastPerformed?.LocalDateTime.ToString("MMM d") ?? "—")</span><span class="venue-stat__lbl">last performance</span></div>
+                    <div class="venue-stat"><span class="venue-stat__num">@(h.LastPerformed?.LocalDateTime.ToString(TimeFormat.ShortDate) ?? "—")</span><span class="venue-stat__lbl">last performance</span></div>
                 </div>
 
                 @if (h.GoTo.Count > 0)
@@ -154,7 +155,7 @@
                 <ul class="venue-songlist">
                     @foreach (var r in h.Recent)
                     {
-                        <li><span class="venue-songlist__title">@r.Title</span><span class="venue-songlist__meta">@(r.Rating >= 1 ? $"{r.Rating}★ · " : "")@r.Date.LocalDateTime.ToString("MMM d")</span></li>
+                        <li><span class="venue-songlist__title">@r.Title</span><span class="venue-songlist__meta">@(r.Rating >= 1 ? $"{r.Rating}★ · " : "")@r.Date.LocalDateTime.ToString(TimeFormat.ShortDate)</span></li>
                     }
                 </ul>
             }
@@ -207,7 +208,7 @@
     private bool _swipeBound;
 
     // Undo-after-swipe-remove: the last removed venue (+ whether it was active, to restore that too) and a timer.
-    private const int UndoWindowMs = 5000;
+    private int UndoWindowMs => Settings.UndoWindowSeconds * 1000;
     private Venue? _undoVenue;
     private bool _undoWasActive;
     private CancellationTokenSource? _undoCts;
@@ -478,7 +479,9 @@
         return false;
     }
 
-    private VenueHistory History(Venue v) => VenueHistory.ForVenue(_songs, v.Id);
+    // One setting sizes both lists — the sheet shows them as a pair, so a split count would just read as a bug.
+    private VenueHistory History(Venue v) =>
+        VenueHistory.ForVenue(_songs, v.Id, Settings.VenueHistoryEntries, Settings.VenueHistoryEntries);
 
     public void Dispose()
     {

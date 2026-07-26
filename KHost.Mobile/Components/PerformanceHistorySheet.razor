@@ -1,4 +1,5 @@
 @inject IJSRuntime JS
+@inject IAppSettings Settings
 @implements IDisposable
 
 @* Every performance of one song: when, how it went, and a note. Rows carry the standard row gestures (swipe.js):
@@ -30,7 +31,7 @@
             {
                 <div class="history__item" data-perf-id="@perf.Id">
                     <div class="history__top">
-                        <span class="history__date">@perf.Date.ToString("MMM d, yyyy · h:mm tt")</span>
+                        <span class="history__date">@perf.Date.ToString(TimeFormat.DateTimePattern(Settings.Use24HourTime))</span>
                         <StarRating Value="perf.HowItWent" Tone="hot" Sung="true"
                                     ValueChanged="v => OnRatingChanged.InvokeAsync((index, v))" />
                     </div>
@@ -49,7 +50,7 @@
 @if (_undone is not null)
 {
     <div class="snackbar" role="status">
-        <span class="snackbar__text">Removed @_undone.Date.ToString("MMM d, yyyy")</span>
+        <span class="snackbar__text">Removed @_undone.Date.ToString(TimeFormat.Date)</span>
         <button class="snackbar__action" @onclick="UndoRemoveAsync">Undo</button>
     </div>
 }

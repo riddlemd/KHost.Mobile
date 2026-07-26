@@ -106,6 +106,9 @@ public static class MauiProgram
         builder.Services.AddHttpClient<ISpotifyImportService, SpotifyImportService>()
             .AddHttpMessageHandler<LoggingHttpMessageHandler>();
 
+        // Supplies the settings-backed catalogue region to the Clients library, which can't read IAppSettings itself.
+        builder.Services.AddSingleton<ILookupOptions, AppLookupOptions>();
+
         // Keyless release-year + genre + cover-art-URL lookup (iTunes Search API). Re-lookup is avoided per-song
         // via the SongListItem.MetadataLookedUp / ArtworkLookedUp flags, so no separate cache layer is needed.
         builder.Services.AddHttpClient<ITrackMetadataLookup, ITunesTrackMetadataLookup>()
