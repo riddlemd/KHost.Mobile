@@ -174,7 +174,9 @@ else
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Pick up the art elements this render added, so only the covers actually on screen get fetched.
-        var artSig = $"{_itemsVersion}:{_tonight.Count}:{_detailItem?.Id}";
+        // _loading belongs in here: the rows live behind it, so a render while still loading has a row count
+        // but no elements for the observer to find.
+        var artSig = $"{_itemsVersion}:{_tonight.Count}:{_loading}:{_detailItem?.Id}";
         if (artSig != _artObservedSig)
         {
             _artObservedSig = artSig;

@@ -328,9 +328,10 @@
     if (listSig != _lastListSig) { _renderCount = PageSize; _lastListSig = listSig; _pagingReset = true; }
     var page = visible.Take(_renderCount).ToList();
     _listRendered = !_loading && visible.Count > 0;
-    // The art observer only needs re-wiring when the set of art-bearing elements can have changed — new cards,
-    // a different list, or a sheet showing a different song — not on every repaint (see OnAfterRenderAsync).
-    _artSurfaceSig = $"{_itemsVersion}:{page.Count}:{listSig}:{_detailItem?.Id}:{_rollPick?.Id}";
+    // The art observer only needs re-wiring when the set of art-bearing elements can have changed — not on
+    // every repaint (see OnAfterRenderAsync). _listRendered has to be in here: the cards live behind it, so a
+    // render while still loading has a page count but no card elements for the observer to find.
+    _artSurfaceSig = $"{_itemsVersion}:{page.Count}:{_listRendered}:{listSig}:{_detailItem?.Id}:{_rollPick?.Id}";
 }
 
 @if (!_loading)
@@ -2089,8 +2090,8 @@ else
         _bgFillCts.Cancel();
         _bgFillCts.Dispose();
         AlbumArt.Changed -= OnArtChanged;
-        // Through the service, not khAlbumArt.revokeAll directly: revoking behind its back left it holding URLs
-        // that no longer resolve, so the next request returned a dead blob: instead of re-fetching.
-        _ = AlbumArt.ClearAsync();
+        // Covers deliberately survive this page: the art service outlives it, the same songs are still the
+        // singer's, and eviction already bounds what's held. Clearing here made every tab switch re-download
+        // the list. A singer switch still clears (ResetViewBuffers) — that's when the ids stop being ours.
     }
 }

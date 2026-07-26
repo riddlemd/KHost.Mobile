@@ -203,9 +203,11 @@ public sealed class AlbumArtService(
     /// <inheritdoc />
     public async Task ClearAsync()
     {
-        // A singer switch lands here — persist the outgoing singer's discovery results while the store may
-        // still be keyed to them. (After a re-key the batch just skips ids it can't find.)
-        await FlushUnsavedAsync();
+        // Every clear happens BEFORE the first await. Awaiting first would let a caller that's already
+        // rebuilding — a page remounting after a tab switch — register visibility and queue fetches that this
+        // then wipes, leaving covers blank until a scroll re-reports them.
+        var unflushed = _unsaved.ToList();
+        _unsaved.Clear();
         _uris.Clear();
         _queued.Clear();
         _fetching.Clear();
@@ -213,6 +215,15 @@ public sealed class AlbumArtService(
         _wanted.Clear();
         _leftView.Clear();
         _visible.Clear();   // the observer re-reports what's on screen on its next pass
+
+        // A singer switch lands here — persist the outgoing singer's discovery results while the store may
+        // still be keyed to them. (After a re-key the batch just skips ids it can't find.)
+        if (unflushed.Count > 0)
+        {
+            try { await store.UpdateRangeAsync(unflushed); }
+            catch (Exception ex) { _log.LogWarning(ex, "Persisting {Count} artwork lookup result(s) failed", unflushed.Count); }
+        }
+
         try { await js.InvokeVoidAsync("khAlbumArt.revokeAll"); }
         catch (JSException ex) { _log.LogWarning(ex, "Revoking album-art blob URLs failed"); }
         Changed?.Invoke(this, EventArgs.Empty);
