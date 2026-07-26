@@ -32,6 +32,7 @@ window.khTonight = {
             const rect = row.getBoundingClientRect();
             drag = {
                 row,
+                list,   // captured once — the row set can't change mid-drag, and pointermove runs per frame
                 pointerId: e.pointerId,
                 startY: e.clientY,
                 index: list.indexOf(row),
@@ -48,7 +49,7 @@ window.khTonight = {
             const dy = e.clientY - drag.startY;
             drag.row.style.transform = `translateY(${dy}px)`;
 
-            const list = rows();
+            const list = drag.list;
             let target = drag.index + Math.round(dy / drag.rowH);
             target = Math.max(0, Math.min(list.length - 1, target));
             drag.targetIndex = target;

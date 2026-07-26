@@ -166,10 +166,20 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
+    // What the art observer was last wired against — rows, list identity, and the open detail song. Re-wiring
+    // scans the whole DOM, so it only happens when this changes (mirrors MySongs).
+    private int _itemsVersion;
+    private string _artObservedSig = "";
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Pick up the art elements this render added, so only the covers actually on screen get fetched.
-        await AlbumArt.ObserveAsync();
+        var artSig = $"{_itemsVersion}:{_tonight.Count}:{_detailItem?.Id}";
+        if (artSig != _artObservedSig)
+        {
+            _artObservedSig = artSig;
+            await AlbumArt.ObserveAsync();
+        }
 
         // Attaching the listener only AFTER restoring is deliberate: on a tab change the incoming page fires a
         // mount-time scroll-to-0, and a listener attached earlier would record that 0 (during the loading delay)
@@ -221,11 +231,13 @@ else
         : $"{Done} of {_tonight.Count} done";
 
     // Join the tonight entries (ordered) to their songs; skip any whose song is momentarily missing.
+    // _byId is rebuilt in RefreshAsync, not here: Rows() runs per render, and building a dictionary over the
+    // whole library each time cost O(library) to serve a handful of set rows.
+    private Dictionary<Guid, SongListItem> _byId = [];
     private IEnumerable<(TonightEntry entry, SongListItem song)> Rows()
     {
-        var byId = _items.ToDictionary(i => i.Id);
         foreach (var entry in _tonight.OrderBy(e => e.Order))
-            if (byId.TryGetValue(entry.SongId, out var song))
+            if (_byId.TryGetValue(entry.SongId, out var song))
                 yield return (entry, song);
     }
 
@@ -361,6 +373,8 @@ else
     private async Task RefreshAsync()
     {
         _items = await Store.GetAllAsync();
+        _byId = _items.ToDictionary(i => i.Id);
+        _itemsVersion++;
         // The detail card's "how it went" star is list-wide (it blends a song's record with the list's average), so
         // the context is rebuilt with the list rather than per song.
         _ratingContext = RatingScore.BuildContext(_items,

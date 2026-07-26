@@ -39,6 +39,16 @@ public sealed class AlbumArtService(
     /// </summary>
     private const int OffScreenCovers = 40;
 
+    /// <summary>
+    /// How many discovery results to hold before persisting them as one batch. Each flush rewrites the whole
+    /// song-list file, so per-song writes made a cold sweep O(library²) in disk I/O; batching bounds what a
+    /// crash can lose to this many re-lookups.
+    /// </summary>
+    private const int FlushEvery = 12;
+
+    /// <summary>Trailing delay that folds a burst of cover arrivals into one repaint.</summary>
+    private static readonly TimeSpan ChangeCoalesce = TimeSpan.FromMilliseconds(50);
+
     private readonly Dictionary<Guid, string> _uris = [];
     private readonly HashSet<Guid> _queued = [];      // queued or already attempted this session
     private readonly HashSet<Guid> _fetching = [];    // still to finish — drives the loading placeholder
@@ -46,11 +56,30 @@ public sealed class AlbumArtService(
     private readonly HashSet<Guid> _visible = [];     // reported by the viewport observer
     private readonly Dictionary<Guid, long> _leftView = [];   // when each cover last went off screen, for eviction
     private readonly Queue<SongListItem> _pending = new();
+    private readonly List<SongListItem> _unsaved = [];   // discovery results awaiting a batched persist
     private long _tick;
     private bool _draining;
+    private bool _raisePending;
 
     /// <inheritdoc />
     public event EventHandler? Changed;
+
+    // Every raise goes through here: a burst of covers landing one at a time would otherwise re-render (and
+    // re-sort) the whole page once per cover. Trailing-edge, so the last cover in a burst still paints.
+    private void RaiseChanged()
+    {
+        if (_raisePending)
+            return;
+        _raisePending = true;
+        _ = RaiseSoonAsync();
+    }
+
+    private async Task RaiseSoonAsync()
+    {
+        await Task.Delay(ChangeCoalesce);
+        _raisePending = false;
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
 
     // The cached cover, or null — and, when null, what queues the fetch. Surfaces go through ViewFor.
     private string? UriFor(SongListItem song)
@@ -117,7 +146,7 @@ public sealed class AlbumArtService(
         }
 
         if (started)
-            Changed?.Invoke(this, EventArgs.Empty);   // paint the placeholders for what just started
+            RaiseChanged();   // paint the placeholders for what just started
         return EvictOffScreenAsync();
     }
 
@@ -174,6 +203,9 @@ public sealed class AlbumArtService(
     /// <inheritdoc />
     public async Task ClearAsync()
     {
+        // A singer switch lands here — persist the outgoing singer's discovery results while the store may
+        // still be keyed to them. (After a re-key the batch just skips ids it can't find.)
+        await FlushUnsavedAsync();
         _uris.Clear();
         _queued.Clear();
         _fetching.Clear();
@@ -216,13 +248,14 @@ public sealed class AlbumArtService(
                 {
                     // Done one way or another — the placeholder must come down.
                     if (_fetching.Remove(song.Id))
-                        Changed?.Invoke(this, EventArgs.Empty);
+                        RaiseChanged();
                 }
             }
         }
         finally
         {
             _draining = false;
+            await FlushUnsavedAsync();   // the burst is over — persist whatever discovery learned
         }
     }
 
@@ -240,7 +273,7 @@ public sealed class AlbumArtService(
             if (song.ArtworkUrl is null)
                 return;
             // A cover is now known to be coming — repaint so the placeholder shows during the download.
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
         }
 
         var stream = await cache.OpenArtStreamAsync(song.ArtworkUrl);
@@ -262,7 +295,7 @@ public sealed class AlbumArtService(
 
         _uris[song.Id] = objectUrl;
         _log.LogDebug("Album art ready for “{Title}” — “{Artist}”", song.Title, song.Artist);
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
     }
 
     // iTunes first; Deezer only when iTunes has no cover. The attempt is recorded hit or miss, so a coverless
@@ -301,7 +334,30 @@ public sealed class AlbumArtService(
         if (art is not null)
             song.ArtworkUrl = art;
         song.ArtworkLookedUp = true;   // record the attempt, hit or miss, so we never re-spend on it
-        await store.UpdateAsync(song);
+
+        // NOT persisted per song: each store write rewrites the whole song-list file and fires Changed (a full
+        // page refresh), so a cold sweep used to cost one full-file write per undiscovered song. The flags are
+        // already live in memory on the shared item; the batch is only for the next launch.
+        _unsaved.Add(song);
+        if (_unsaved.Count >= FlushEvery)
+            await FlushUnsavedAsync();
+    }
+
+    // Losing a flush is affordable — the flags re-derive from a re-lookup — so a failed write just retries at
+    // the next flush point rather than surfacing.
+    private async Task FlushUnsavedAsync()
+    {
+        if (_unsaved.Count == 0)
+            return;
+        try
+        {
+            await store.UpdateRangeAsync(_unsaved);
+            _unsaved.Clear();
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Persisting {Count} artwork lookup result(s) failed; will retry at the next flush", _unsaved.Count);
+        }
     }
 
     // Visible covers are untouchable — a cap that evicts what's still rendered thrashes, because the next
@@ -322,7 +378,7 @@ public sealed class AlbumArtService(
             _leftView.Remove(id);
             await RevokeAsync(id);
         }
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
     }
 
     private async Task RevokeAsync(Guid songId)

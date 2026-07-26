@@ -312,14 +312,25 @@
 }
 
 @{
-    var visible = Sorted().ToList();
+    // Re-sorting 500+ songs on every repaint made a burst of cover arrivals O(covers × library); the sort only
+    // needs to re-run when the filters/sort changed or the list itself was reloaded (a new _items reference).
+    var listSig = FilterSortSignature();
+    if (_sortedCache is null || !ReferenceEquals(_sortedFor, _items) || _sortedSig != listSig)
+    {
+        _sortedCache = Sorted().ToList();
+        _sortedFor = _items;
+        _sortedSig = listSig;
+    }
+    var visible = _sortedCache;
     _visibleCount = visible.Count;
     // Any filter/sort change (a new signature) rewinds the infinite list to the first page. Favoriting / removing a
     // song doesn't change the signature, so paging holds its place. Done here (not in each handler) so it's automatic.
-    var listSig = FilterSortSignature();
     if (listSig != _lastListSig) { _renderCount = PageSize; _lastListSig = listSig; _pagingReset = true; }
     var page = visible.Take(_renderCount).ToList();
     _listRendered = !_loading && visible.Count > 0;
+    // The art observer only needs re-wiring when the set of art-bearing elements can have changed — new cards,
+    // a different list, or a sheet showing a different song — not on every repaint (see OnAfterRenderAsync).
+    _artSurfaceSig = $"{_itemsVersion}:{page.Count}:{listSig}:{_detailItem?.Id}:{_rollPick?.Id}";
 }
 
 @if (!_loading)
@@ -372,19 +383,20 @@ else
         @foreach (var item in page)
         {
             var art = AlbumArt.ViewFor(item);
+            var inTonight = IsInTonight(item);
             <div class="song-card @(art.HasArt ? "song-card--art" : "") @(art.Loading ? "kh-art-loading" : "")"
                  @key="item.Id" data-song-id="@item.Id" data-art-song="@item.Id" style="@art.Style">
                 @if (Settings.TonightEnabled)
                 {
                     @* data-tut is on every card's button; the tour's querySelector spotlights the first one. *@
-                    <button type="button" class="tonight-add-btn song-card__tonight @(IsInTonight(item) ? "is-on" : "")"
+                    <button type="button" class="tonight-add-btn song-card__tonight @(inTonight ? "is-on" : "")"
                             data-tut="tonight-quick"
-                            title="@(IsInTonight(item) ? "In tonight's set — tap to remove" : "Add to tonight")"
-                            aria-pressed="@IsInTonight(item)"
+                            title="@(inTonight ? "In tonight's set — tap to remove" : "Add to tonight")"
+                            aria-pressed="@inTonight"
                             @onclick="() => QuickToggleTonightAsync(item)">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M3 6h12M3 10h12M3 14h7" />
-                            @if (IsInTonight(item))
+                            @if (inTonight)
                             {
                                 <path d="M14 17.2l2.2 2.2L20.5 15" />
                             }
@@ -438,9 +450,10 @@ else
                 <div class="song-card__ratings-row">
                     <span class="song-card__ratings">
                         <span class="rating-grp">
+                            @* One StarFor walk per card — RoundedAvg(item) would silently do the whole walk again. *@
                             @if (BayesStar(item) is { } score)
                             {
-                                <StarRating Value="RoundedAvg(item)" Tone="hot" Sung="true" ReadOnly="true" />
+                                <StarRating Value="(int)Math.Round(score, MidpointRounding.AwayFromZero)" Tone="hot" Sung="true" ReadOnly="true" />
                                 <span class="rating-num">@score.ToString("0.0")</span>
                             }
                             else
@@ -640,6 +653,14 @@ else
     private ElementReference _sentinel;
     private bool _infiniteBound;
     private bool _pagingReset;   // set when a filter/sort change rewound paging → OnAfterRender scrolls back to top
+
+    // The memoized filter+sort result and what it was computed from (see the render block).
+    private List<SongListItem>? _sortedCache;
+    private IReadOnlyList<SongListItem>? _sortedFor;
+    private string? _sortedSig;
+    private int _itemsVersion;            // bumped on every RefreshAsync so caches can't survive a reload
+    private string _artSurfaceSig = "";   // what the art observer was last wired against
+    private string _artObservedSig = "";
 
     private ElementReference _historySheet;
     private bool _historySheetBound;
@@ -979,7 +1000,10 @@ else
 
     // Every tag in use across the list (distinct, case-insensitive, alphabetized). Doubles as the Tags filter's
     // options and the reuse-suggestions for the add/edit tag inputs — no separate tag catalogue is kept.
-    private IReadOnlyList<string> UsedTags => _items
+    // Memoized: this is a parameter of the always-rendered detail sheet, so as a plain property it walked every
+    // song's tags on every repaint. Invalidated when _items reloads (RefreshAsync).
+    private IReadOnlyList<string>? _usedTagsCache;
+    private IReadOnlyList<string> UsedTags => _usedTagsCache ??= _items
         .SelectMany(i => i.Tags)
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
@@ -1095,8 +1119,13 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Pick up the art elements this render added, so only the covers actually on screen get fetched.
-        await AlbumArt.ObserveAsync();
+        // Pick up the art elements this render added, so only the covers actually on screen get fetched. Gated
+        // on the surface signature: re-wiring scans the whole DOM, and most repaints change no art elements.
+        if (_artSurfaceSig != _artObservedSig)
+        {
+            _artObservedSig = _artSurfaceSig;
+            await AlbumArt.ObserveAsync();
+        }
 
         // Attaching the listener only AFTER restoring is deliberate: on a tab change the incoming page fires a
         // mount-time scroll-to-0, and a listener attached earlier would record that 0 (during the loading delay)
@@ -1980,6 +2009,8 @@ else
         }
 
         _items = await Store.GetAllAsync();
+        _itemsVersion++;         // invalidate the sorted cache and re-wire the art observer
+        _usedTagsCache = null;
         // Rebuild the shared rating context (the list-wide prior) once per load; the recency toggle picks the config.
         _ratingContext = RatingScore.BuildContext(_items,
             RatingConfig.Default with { RecencyEnabled = Settings.RecencyWeightedRatings },
@@ -1987,6 +2018,7 @@ else
         RecomputeYearBounds();
         await Tonight.PruneAsync(_items.Select(i => i.Id).ToList());
         _tonight = await Tonight.GetAllAsync();
+        _tonightIds = [.. _tonight.Select(e => e.SongId)];
         await InvokeAsync(StateHasChanged);
     }
 
@@ -2000,6 +2032,7 @@ else
             await InvokeAsync(async () =>
             {
                 _tonight = await Tonight.GetAllAsync();
+                _tonightIds = [.. _tonight.Select(e => e.SongId)];
                 StateHasChanged();
             });
         }
@@ -2013,7 +2046,9 @@ else
     // ---- Tonight quick-add (from the wishlist) -----------------------------------------------
     // The set itself lives on the Tonight tab; here each card / the detail sheet just toggle a song in or out.
 
-    private bool IsInTonight(SongListItem? item) => item is not null && _tonight.Any(e => e.SongId == item.Id);
+    // A set, not a scan of _tonight: this runs several times per card per render.
+    private HashSet<Guid> _tonightIds = [];
+    private bool IsInTonight(SongListItem? item) => item is not null && _tonightIds.Contains(item.Id);
 
     // Card quick-add: a direct toggle (like the favorite star) — no confirm, since it's a one-tap action and
     // re-adding is just as quick. Deliberate removals-with-confirm live on the Tonight tab's set-list ✕.
