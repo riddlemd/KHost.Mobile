@@ -154,14 +154,14 @@
             }
             @if (OnLogPerformance.HasDelegate)
             {
-                <button class="btn btn-secondary sheet__log-btn" @onclick="OnLogPerformance">
+                <button class="btn sheet__log-btn" @onclick="OnLogPerformance">
                     @(Item.Performances.Count > 0 ? "Log another performance" : "Log performance")
                 </button>
             }
             @if (Settings.TonightEnabled && OnToggleTonight.HasDelegate)
             {
                 <button class="btn sheet__tonight @(InTonight ? "is-on" : "")" @onclick="OnToggleTonight">
-                    @(InTonight ? "🎤 In tonight ✓" : "🎤 Add to tonight")
+                    @(InTonight ? "In Tonight ✓" : "Add to Tonight")
                 </button>
             }
             @if (Settings.YouTubeSearchEnabled && OnOpenYouTube.HasDelegate)
@@ -184,9 +184,9 @@
                     <SplitButton Class="kh-split--karafun" PrimaryLabel="🎙 Find on KaraFun"
                                  OnPrimary="OnOpenKaraFun" Direction="SplitDirection.Up"
                                  ToggleAriaLabel="More KaraFun options">
-                        <SplitButtonItem Icon="🎤" Description="Queue it for tonight, then open KaraFun"
+                        <SplitButtonItem Description="Add to Tonight Queue &amp; then search KaraFun"
                                          OnClick="OnAddToTonightAndOpenKaraFun">
-                            Add to tonight &amp; open
+                            Add to Tonight &amp; Find
                         </SplitButtonItem>
                     </SplitButton>
                 }
@@ -197,7 +197,7 @@
             }
             @if (Settings.LyricsEnabled && OnOpenLyrics.HasDelegate)
             {
-                <button class="btn sheet__lyrics" @onclick="OnOpenLyrics">📖 Lyrics</button>
+                <button class="btn sheet__lyrics" @onclick="OnOpenLyrics">View Lyrics</button>
             }
             @if (AllowEdit)
             {

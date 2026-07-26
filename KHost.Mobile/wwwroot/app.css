@@ -1082,22 +1082,20 @@ body.kh-sheet-open { overflow: hidden; }
 .btn.sheet__tonight:hover { background: var(--kh-primary-strong); box-shadow: 0 2px 10px color-mix(in srgb, var(--kh-primary) 35%, transparent); }
 .btn.sheet__tonight.is-on { background: transparent; color: var(--kh-primary); border: 1px solid var(--kh-primary); }
 
-/* "Sang today" — full-width secondary action directly above the YouTube button. Padding/radius
-   inherit from the `.btn` base so it matches the YouTube button's height; the compound selector
+/* "Log performance" — accent-filled to match the Tonight button above it. The compound selector
    beats the later `.btn` base (which resets background:none + transparent border). */
 .btn.sheet__log-btn {
     width: 100%;
     margin-bottom: 0.6rem;
     font-weight: 600;
-    background: var(--kh-surface-2);
-    color: var(--kh-text);
-    border: 1px solid var(--kh-border);
-    transition: background 0.12s ease, border-color 0.12s ease;
+    background: var(--kh-primary);
+    color: #fff;
+    border: none;
+    transition: background 0.12s ease, box-shadow 0.12s ease;
 }
 .btn.sheet__log-btn:hover {
-    background: var(--kh-primary);
-    border-color: var(--kh-primary);
-    color: #fff;
+    background: var(--kh-primary-strong);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--kh-primary) 35%, transparent);
 }
 .btn.sheet__log-btn:active { transform: scale(0.98); }
 
