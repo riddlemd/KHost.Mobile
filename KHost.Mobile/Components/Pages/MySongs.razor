@@ -374,6 +374,7 @@ else
             <option value="@SortColumn.Artist">Artist</option>
             <option value="@SortColumn.HowItWent">How it went</option>
             <option value="@SortColumn.Enjoyment">Enjoyment</option>
+            <option value="@SortColumn.Sang">Sang</option>
             <option value="@SortColumn.Added">Added</option>
         </select>
         @* Re-calling SortBy with the current field toggles its direction (same-column branch). *@
@@ -634,7 +635,8 @@ else
     private bool _yearPickerOpen;
     private bool _yearPickerHigh;   // which bound the open grid is setting: true = latest, false = earliest
 
-    private enum SortColumn { Added, Title, Artist, HowItWent, Enjoyment }
+    // Appended, never reordered: the ordinal is what SaveViewState persists.
+    private enum SortColumn { Added, Title, Artist, HowItWent, Enjoyment, Sang }
     private SortColumn _sort = SortColumn.Title;
     private bool _sortDescending = false;   // default: A→Z by song title
 
@@ -742,7 +744,7 @@ else
         {
             _sort = column;
             // Sensible default direction: dates/rating high-first, text A-Z.
-            _sortDescending = column is SortColumn.Added or SortColumn.HowItWent or SortColumn.Enjoyment;
+            _sortDescending = column is SortColumn.Added or SortColumn.HowItWent or SortColumn.Enjoyment or SortColumn.Sang;
         }
     }
 
@@ -1068,6 +1070,7 @@ else
             SortColumn.Artist => filtered.OrderBy(i => i.Artist, StringComparer.OrdinalIgnoreCase),
             SortColumn.HowItWent => filtered.OrderBy(AvgSortKey),
             SortColumn.Enjoyment => filtered.OrderBy(i => i.Enjoyment),
+            SortColumn.Sang => filtered.OrderBy(SangSortKey),
             _ => filtered.OrderBy(i => i.AddedAt),
         };
         var ordered = _sortDescending ? ascending.Reverse() : ascending;
@@ -1963,6 +1966,10 @@ else
 
     // Sort key for "how it went": the Bayesian star; unrated/unsung songs sort below every rated one.
     private double AvgSortKey(SongListItem item) => BayesStar(item) ?? -1;
+
+    // Sort key for "Sang": when the song was last sung. Never-sung songs take the earliest possible date so
+    // they land at the bottom in the default (most-recent-first) direction, the way unrated songs do.
+    private static DateTimeOffset SangSortKey(SongListItem item) => item.LastSungAt ?? DateTimeOffset.MinValue;
 
     private void OnArtChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
 
