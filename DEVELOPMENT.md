@@ -107,7 +107,11 @@ Neither suite touches the UI; gesture- and sheet-shaped changes are verified by 
 
 ## 📸 Screenshots
 
-**Screenshot / mobile-preview target size:** **786 × 1704 px** — a **393 × 852** (iPhone 15/16) viewport at **2× device-pixel-ratio**. Capture screenshots and size the mobile preview to this so everything lines up with the screenshot grid.
+**The README grid is captured from a physical device** by `playwright/device/shoot_docs.mjs` (plus `shoot_spelling.mjs`, which needs a song with a pending suggestion and so adds and removes a misspelled one). Attach as `playwright/README.md` describes, then `node device/shoot_docs.mjs [name …]`. Shots land at the device's native size — **1080 × 2400** from a Pixel 8, Android status and nav bars included — so re-shoot the whole set from one device rather than mixing sources.
+
+Capture goes through `adb exec-out screencap`, **not** `page.screenshot`: CDP capture hangs on this WebView, on a current device head as well as the emulator's older one. Only navigation runs over CDP. Two traps the script encodes, both of which silently photograph the wrong screen: sheets **stack** (detail → history), so close the *last* `.sheet__close`, not the first; and the venue/singer chip popovers are **not** sheets, so they survive a sheet close and then eat the next click. Every shot asserts what's on screen before the shutter, because a wrong-screen capture is otherwise invisible until you look at the PNG.
+
+**Mobile-preview target size:** **786 × 1704 px** — a **393 × 852** (iPhone 15/16) viewport at **2× device-pixel-ratio**. This is what `App.PinToMobilePreviewViewport` pins the Catalyst window to; the docs grid no longer uses it.
 
 ## 🎨 Design notes
 

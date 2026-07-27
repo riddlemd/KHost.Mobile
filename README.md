@@ -20,9 +20,15 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
   <img src="docs/screenshots/lyrics.png" width="200" alt="Lyrics — looked up in-app from LRCLIB" />
   <img src="docs/screenshots/venues.png" width="200" alt="Venue detail — each place you sing builds its own history (performances, average, go-to songs), with a one-tap KaraFun catalog and Active / Favorite toggles" />
   <br />
-  <img src="docs/screenshots/venue-switcher.png" width="200" alt="Venue switcher — tap the header chip to jump between your venues, set the active one, and choose auto-detect or a pinned pick" />
+  <img src="docs/screenshots/venue-switcher.png" width="200" alt="Venue switcher — tap the header chip to jump between your venues, set the active one, or mark yourself as not at a venue" />
   <img src="docs/screenshots/singer-switcher.png" width="200" alt="Who's singing? — tap the header avatar to switch between everyone sharing the device; each singer keeps their own songs and the app re-tints to their color" />
+  <br />
+  <img src="docs/screenshots/surprise-me.png" width="200" alt="Surprise me — tap the 🎲 and it picks a song for you, with Add to Tonight, Open song and Reroll right there" />
+  <img src="docs/screenshots/performance-history.png" width="200" alt="Performance history — every time you sang a song, each with its own rating and note; swipe a row to remove it or press and hold a date to change it" />
+  <img src="docs/screenshots/spelling-suggestion.png" width="200" alt="Spelling check — a ⚠ beside a song's name unfolds the catalogue's own spelling: “Did you mean Bohemian Rhapsody — Queen?”, with Use this or Not a typo" />
+  <br />
   <img src="docs/screenshots/settings.png" width="200" alt="Settings — feature toggles grouped by what they affect, in collapsible sections" />
+  <img src="docs/screenshots/settings-dials.png" width="200" alt="Settings dials — past the on/off switches sit the app's tunables: undo window, which tab opens on launch, music catalogue region and import lookup speed" />
   <img src="docs/screenshots/import-export.png" width="200" alt="Import & Export — move a singer's profile between devices, export/import venues, or pull songs from a Spotify or YouTube Music playlist" />
 </p>
 
@@ -44,7 +50,7 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 - **Album art** — each song's cover is used as its card background — and behind the title on the song's detail sheet — with a dark fade behind the text for legibility. Covers are looked up from iTunes, with Deezer as a fallback for songs iTunes can't find (e.g. album deep cuts), and cached on-device; clear them from the Danger zone, or switch the whole thing off in Settings → *Show album art on cards*.
 - **Update alerts** — tells you when a newer version is available (from the app's GitHub Releases) with a one-tap link to grab it.
 - **Guided tour** — a first-run walkthrough spotlights every feature one step at a time, chapter by chapter, with real sample data to point at. Skip any card or the whole thing; replay it anytime from Settings.
-- **Made to feel at home** — mobile-first layout, light & dark themes, and a tidy Settings screen where every extra behavior can be toggled off.
+- **Made to feel at home** — mobile-first layout, light & dark themes, haptic feedback, and a 12- or 24-hour clock. Settings is grouped into collapsible sections where every extra behavior can be switched off — and past the on/off switches it holds the app's **dials**: how long an undo stays open, which tab opens on launch, how near a venue counts as *here* (and whether distances read in miles or feet), how far back a venue's history runs, how much your recent form sways a song's star, which music catalogue region to search, and how fast an import may look songs up. Every default matches how the app already behaved, so there's nothing to set up.
 
 ## 🚀 Getting started
 
