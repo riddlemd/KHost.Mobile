@@ -103,4 +103,74 @@ public class TrackSuggestionFinderTests
 
         Assert.Null(suggestion);
     }
+
+    [Fact]
+    public void A_source_that_accepts_an_artist_variant_does_not_get_it_offered_back_as_a_typo()
+    {
+        // The whole reason artistMatches is injected: "Queens" is one edit off, so a source without its own
+        // notion of an acceptable variant would call the artist misspelled and offer to "fix" a correct name.
+        var candidates = new (string? Title, string? Artist)[] { ("Bohemian Rhapsody", "Queens") };
+
+        var strict = TrackSuggestionFinder.Best(candidates, WantTitle, WantArtist, ArtistIsQueen);
+        var lenient = TrackSuggestionFinder.Best(candidates, WantTitle, WantArtist, a => TrackTextNormalizer.Normalize(a).StartsWith("queen"));
+
+        Assert.Equal("Queens", strict!.Artist);
+        Assert.Null(lenient);
+    }
+
+    [Fact]
+    public void An_accepted_variant_still_anchors_a_title_typo()
+    {
+        // "Queen & David Bowie" normalizes to "queen david bowie" — nowhere near "queen", so only the source's
+        // own rule can vouch for it. Once it does, the title's slip is the correction on offer.
+        var candidates = new (string? Title, string? Artist)[] { ("Bohemian Rapsody", "Queen & David Bowie") };
+
+        var suggestion = TrackSuggestionFinder.Best(candidates, WantTitle, WantArtist, a => TrackTextNormalizer.Normalize(a).StartsWith("queen"));
+
+        Assert.Equal("Bohemian Rapsody", suggestion!.Title);
+        Assert.Equal("Queen & David Bowie", suggestion.Artist);
+    }
+
+    [Fact]
+    public void A_version_suffix_is_not_a_misspelling()
+    {
+        // Normalize drops "(Remastered 2011)", so this is the song the user already has — offering it as a
+        // correction would put a bogus ⚠ on a correctly-spelled entry.
+        var candidates = new (string? Title, string? Artist)[] { ("Bohemian Rhapsody (Remastered 2011)", "Queen") };
+
+        Assert.Null(TrackSuggestionFinder.Best(candidates, WantTitle, WantArtist, ArtistIsQueen));
+    }
+
+    [Fact]
+    public void The_closest_candidate_wins_across_both_anchors()
+    {
+        var titleTypo = ("Bohemian Rhapsodyyy", "Queen");   // title anchored on the artist, 2 edits
+        var artistTypo = ("Bohemian Rhapsody", "Qeen");     // artist anchored on the title, 1 edit
+
+        var suggestion = TrackSuggestionFinder.Best([titleTypo, artistTypo], WantTitle, WantArtist, ArtistIsQueen);
+
+        Assert.Equal("Qeen", suggestion!.Artist);
+    }
+
+    [Fact]
+    public void A_slip_past_the_edit_ceiling_is_not_offered()
+    {
+        var candidates = new (string? Title, string? Artist)[] { ("Bohemian Rhapsodyyyy", "Queen") };
+
+        Assert.Null(TrackSuggestionFinder.Best(candidates, WantTitle, WantArtist, ArtistIsQueen));
+    }
+
+    [Fact]
+    public void An_empty_result_set_yields_nothing()
+        => Assert.Null(TrackSuggestionFinder.Best([], WantTitle, WantArtist, ArtistIsQueen));
+
+    [Fact]
+    public void The_artist_is_stripped_of_asides_too()
+    {
+        var candidates = new (string? Title, string? Artist)[] { ("Bohemian Rapsody", "Queen (Live)") };
+
+        var suggestion = TrackSuggestionFinder.Best(candidates, WantTitle, WantArtist, ArtistIsQueen);
+
+        Assert.Equal("Queen", suggestion!.Artist);
+    }
 }
