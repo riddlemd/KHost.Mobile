@@ -45,9 +45,12 @@ PID=$(adb shell pidof khost.mobile)
 adb forward tcp:9333 localabstract:webview_devtools_remote_$PID
 ```
 
-Override the port with `CDP_PORT`, and target a specific device with `KH_SERIAL` (the emulator
-scripts default to `emulator-5554`). The Windows head works too — launch it with
-`--remote-debugging-port=9333` and skip the `adb` steps.
+Override the port with `CDP_PORT`, and target a specific device with `ANDROID_SERIAL` (or `KH_SERIAL`,
+which wins if both are set; the emulator scripts default to `emulator-5554`). With exactly one transport
+attached you can omit it — with more, `shot()` fails listing the candidates and a ready-to-paste command.
+Setting `ANDROID_SERIAL` also covers any `adb` your own script shells out to, since adb honours it
+natively. The Windows head works too — launch it with `--remote-debugging-port=9333` and skip the `adb`
+steps.
 
 ## Run
 
@@ -95,6 +98,14 @@ close();
 
 ### Gotchas (learned on-device)
 
+- **Never use `adb shell monkey` to launch or foreground the app — it changes the phone's settings.**
+  It reads like a convenient launcher (`monkey -p khost.mobile -c android.intent.category.LAUNCHER 1`)
+  but it is a random *input fuzzer*: its event mix includes rotation events, and delivering one can
+  switch the device's **auto-rotate** preference on. On someone's real phone that is theirs to set, not
+  ours to change. Call `foreground()` from `khdrive.mjs` instead — it resolves the launchable activity
+  from the device (the MAUI `crc64….MainActivity` name is a hash that moves when a namespace does) and
+  runs `am start`, which touches nothing else. You need this whenever Android suspends a backgrounded
+  WebView and `attach()` starts timing out on the devtools port.
 - **`tap`/`swipeDown` over a DOM `.click()`** (emulator) — they dispatch real
   `Input.dispatchTouchEvent` touch points, so gestures wired through `swipe.js` (tap vs. hold vs.
   swipe) and `khSheet` (pull-down-to-dismiss) actually fire; a `.click()` reaches Blazor's `@onclick`

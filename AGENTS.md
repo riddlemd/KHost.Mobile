@@ -73,6 +73,8 @@ dotnet build KHost.Mobile.Clients/KHost.Mobile.Clients.csproj
 
 To drive the running app's WebView (walk the tour, exercise a flow, screenshot), use the tools in `playwright/` rather than hand-rolling a client — `device/` (full Playwright) for a physical device, `emulator/` (raw CDP with real-touch `tap`/`swipeDown`) for the emulator, whose older WebView rejects Playwright's connect. **`playwright/README.md` is the canonical how-to** — attach flow, examples, and the on-device gotchas.
 
+- **A physical device is someone's actual phone: read from it, drive the app on it, and change nothing else about it.** Concretely — **never `adb shell monkey`**, which looks like a launcher but is a random input fuzzer whose event mix can flip the device's **auto-rotate** setting; use `foreground()` from `device/khdrive.mjs` (it runs `am start`). Same principle for any `adb shell settings put`, orientation, or developer-option change: don't, unless the request was explicitly about that. And **back up device data before every deploy** — see the device-deploy rules above.
+
 ## Local features
 
 All local data sits behind an interface with a device-backed JSON implementation; UI code depends only on the interfaces (the store pattern itself is under Conventions). **The full feature/file map — every page, store, model and client with its role — is the wiki's [Architecture](https://github.com/riddlemd/KHost.Mobile/wiki/Architecture), [Data storage](https://github.com/riddlemd/KHost.Mobile/wiki/Data-Storage) and [External services](https://github.com/riddlemd/KHost.Mobile/wiki/Clients-Library) pages; look the inventory up there.** What follows are the per-feature invariants that aren't visible from the code you happen to have open:

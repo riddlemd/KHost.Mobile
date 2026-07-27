@@ -66,14 +66,67 @@ export async function menuTo(page, label) {
         .first().click(TAP);
 }
 
+// Which device adb should talk to, resolved once. KH_SERIAL wins, then ANDROID_SERIAL (which adb honors
+// natively, and which the docs use) — otherwise ask adb, and accept the answer only when it's
+// unambiguous. Naming the candidates beats letting adb fail per-call with "more than one
+// device/emulator" on stderr and an unexplained "Command failed" on the throw.
+let _serial;
+function deviceArgs() {
+    if (_serial === undefined) {
+        _serial = process.env.KH_SERIAL || process.env.ANDROID_SERIAL || null;
+        if (!_serial) {
+            const attached = execFileSync('adb', ['devices'], { encoding: 'utf8' })
+                .split('\n').slice(1)
+                .map(l => l.trim().split(/\s+/))
+                .filter(p => p[1] === 'device')
+                .map(p => p[0]);
+            if (attached.length === 1) _serial = attached[0];
+            else if (attached.length === 0) throw new Error('No device attached — check `adb devices`.');
+            else throw new Error(
+                `${attached.length} adb transports attached; pick one explicitly:\n` +
+                attached.map(s => `  ANDROID_SERIAL=${s} node device/<script>.mjs`).join('\n'));
+        }
+    }
+    return ['-s', _serial];
+}
+
+/** The device these helpers are driving — handy for a script that also shells out to adb itself. */
+export function serial() {
+    return deviceArgs()[1];
+}
+
+/**
+ * Bring the app to the foreground, e.g. after Android suspended a backgrounded WebView and `attach()`
+ * started timing out on the devtools port.
+ *
+ * NEVER reach for `adb shell monkey` to do this. It looks like a convenient launcher, but it is a random
+ * INPUT FUZZER: its event mix includes rotation events, and delivering those can switch the device's
+ * auto-rotate setting on. Leave a phone's rotation preference exactly as its owner set it — `am start`
+ * does the one thing wanted and touches nothing else.
+ *
+ * The launchable component is resolved from the device rather than hard-coded, because MAUI derives the
+ * activity name (`crc64….MainActivity`) from a hash that moves whenever the namespace or assembly does.
+ */
+export function foreground() {
+    const component = execFileSync('adb', [...deviceArgs(), 'shell', 'cmd', 'package', 'resolve-activity',
+        '--brief', 'khost.mobile'], { encoding: 'utf8' }).trim().split('\n').pop().trim();
+    if (!component.includes('/')) throw new Error(`could not resolve a launchable activity: "${component}"`);
+    execFileSync('adb', [...deviceArgs(), 'shell', 'am', 'start', '-n', component], { encoding: 'utf8' });
+    return component;
+}
+
 // Save a screenshot under playwright/shots/. Uses `adb exec-out screencap` rather than Playwright's
 // page.screenshot — CDP capture hangs on the Android WebView ("fonts loaded" then never returns), and
 // the app's WebView is full-screen so the device frame IS the page. `page` is accepted for a uniform
-// signature but unused. Set KH_SERIAL to target a specific device.
+// signature but unused.
 export function shot(_page, name) {
     const out = fileURLToPath(new URL(`../shots/${name}.png`, import.meta.url));
-    const serial = process.env.KH_SERIAL;
-    const args = [...(serial ? ['-s', serial] : []), 'exec-out', 'screencap', '-p'];
-    const png = execFileSync('adb', args, { maxBuffer: 64 * 1024 * 1024 });
+    let png;
+    try {
+        png = execFileSync('adb', [...deviceArgs(), 'exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024 });
+    } catch (e) {
+        // execFileSync's message is just "Command failed"; adb's actual complaint is on stderr.
+        throw new Error(`screencap failed for "${name}": ${String(e.stderr ?? '').trim() || e.message}`);
+    }
     writeFileSync(out, png);
 }
