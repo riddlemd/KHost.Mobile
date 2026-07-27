@@ -2,6 +2,8 @@ using KHost.Mobile.Abstractions.Clients.Updates;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 using KHost.Mobile.Abstractions.Services;
+using KHost.Mobile.Common.Versioning;
+
 namespace KHost.Mobile.UI.Services;
 
 /// <inheritdoc />

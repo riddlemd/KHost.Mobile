@@ -1,19 +1,19 @@
 using Microsoft.Extensions.Logging;
 using KHost.Mobile.Abstractions.Models;
 using KHost.Mobile.Abstractions.Services;
-namespace KHost.Mobile.UI.Services;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <summary>
 /// <see cref="IVenueLocator"/> tying the location fix to the saved venues and the session's active-venue pointer.
 /// The gating (opt-in + manual pin) lives here so callers — launch, the periodic re-check, and the manual
 /// "re-check now" — can all just call <see cref="ResolveActiveAsync"/>.
 /// </summary>
-public sealed class MauiVenueLocator(
+public sealed class VenueLocator(
     ILocationProvider location,
     IVenueStore venues,
     IAppSession session,
     IAppSettings settings,
-    ILogger<MauiVenueLocator> logger) : IVenueLocator
+    ILogger<VenueLocator> logger) : IVenueLocator
 {
     public async Task ResolveActiveAsync(CancellationToken cancellationToken = default)
     {

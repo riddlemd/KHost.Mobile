@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace KHost.Mobile.Abstractions.Clients.Updates;
+namespace KHost.Mobile.Common.Versioning;
 
 /// <summary>
 /// Normalizes a release tag into a <see cref="Version"/>. Pure — no network.

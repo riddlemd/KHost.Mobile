@@ -51,6 +51,11 @@ public static class MauiProgram
         // offset against the ones already on the device.
         builder.Services.AddSingleton(TimeProvider.System);
 
+        // The other source of nondeterminism, injected for the same reason. SurprisePicker is already pure — it
+        // takes the roll as an argument — but the caller reached for Random.Shared, so the draw itself wasn't
+        // reproducible. Registered, a test can substitute new Random(seed) and pin the whole flow.
+        builder.Services.AddSingleton(Random.Shared);
+
         // Singleton so the in-memory cache and Changed event are shared app-wide. The concrete type is registered
         // too, so both it and ISongListStore resolve to the one instance.
         builder.Services.AddSingleton<JsonFileSongListStore>();
@@ -69,7 +74,7 @@ public static class MauiProgram
         // Device location + the venue auto-selector behind it. ILocationProvider wraps MAUI Geolocation (best-effort,
         // permission-gated); IVenueLocator turns a fix into the nearest saved venue and sets it active. Both singleton.
         builder.Services.AddSingleton<ILocationProvider, MauiLocationProvider>();
-        builder.Services.AddSingleton<IVenueLocator, MauiVenueLocator>();
+        builder.Services.AddSingleton<IVenueLocator, VenueLocator>();
 
         // User preferences (feature toggles) persisted via MAUI Preferences. Singleton: one view of the flags app-wide.
         builder.Services.AddSingleton<IAppSettings, MauiAppSettings>();

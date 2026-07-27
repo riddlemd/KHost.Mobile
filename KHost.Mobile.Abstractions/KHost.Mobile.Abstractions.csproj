@@ -1,9 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- The contract layer: interfaces, models, DTOs and exceptions, and nothing that implements them.
-       It references NO other project and NO package on purpose — that is what lets the test projects,
-       and one day a Razor Class Library, depend on the app's shape without dragging in MAUI or a
-       single third-party backend. Adding a reference here is almost always the wrong fix. -->
+  <!-- The contract layer: interfaces, models, DTOs and exceptions. Model *behaviour* belongs here too —
+       Genres.Map, SongTags.Normalize, VenueProximity.Nearest are about the models and would only be
+       fragmented by moving them out. What may NOT live here is a service, any I/O, or anything that knows
+       a vendor: those are the reason this project references NO other project and NO package, which is what
+       lets the test projects — and one day a Razor Class Library — depend on the app's shape without
+       dragging in MAUI or a single backend. Adding a reference here is almost always the wrong fix. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

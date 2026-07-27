@@ -20,6 +20,7 @@
 @inject IJSRuntime JS
 @inject IBackButtonService BackButton
 @inject TimeProvider Clock
+@inject Random Rng
 @implements IDisposable
 
 <button type="button" class="mysongs-fab @(Settings.TonightEnabled ? "" : "mysongs-fab--no-nav") @(AnyOverlayOpen ? "is-hidden" : "")"
@@ -1053,7 +1054,7 @@ else
 
         // Initial load: show the equalizer loader (not the "No songs yet" empty state) while the on-device
         // list deserializes. Hold it for a ~250ms minimum so a fast load doesn't flash it, then reveal the list.
-        var startedAt = Environment.TickCount64;
+        var startedAt = Clock.GetTimestamp();
         await RefreshAsync();
 
         // Landing, once per launch: "smart" opens onto Tonight only when a set is queued, "tonight" always does,
@@ -1074,9 +1075,9 @@ else
             }
         }
 
-        var elapsed = Environment.TickCount64 - startedAt;
-        if (elapsed < 250)
-            await Task.Delay((int)(250 - elapsed));
+        var elapsed = Clock.GetElapsedTime(startedAt);
+        if (elapsed < TimeSpan.FromMilliseconds(250))
+            await Task.Delay(TimeSpan.FromMilliseconds(250) - elapsed);
         _loading = false;
         await InvokeAsync(StateHasChanged);
     }
@@ -1329,7 +1330,7 @@ else
     }
 
     private SongListItem? Roll(IReadOnlyList<SongListItem> candidates) =>
-        SurprisePicker.Pick(candidates, SurpriseOptions, Random.Shared.NextDouble(),
+        SurprisePicker.Pick(candidates, SurpriseOptions, Rng.NextDouble(),
             BayesStar, neutralStar: _ratingContext.PriorMean ?? 3.0);
 
     private Task OpenRolledAsync()

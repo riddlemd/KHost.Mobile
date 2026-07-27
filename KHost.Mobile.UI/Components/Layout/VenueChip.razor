@@ -127,7 +127,7 @@
     // the chip, and management still sees everything); only the dropdown rows honor ShowInSwitcher.
     private IEnumerable<Venue> ListedVenues => _venues.Where(v => v.ShowInSwitcher);
 
-    // MauiVenueLocator short-circuits on this same check, so without it Auto/Pinned would be a choice with no
+    // VenueLocator short-circuits on this same check, so without it Auto/Pinned would be a choice with no
     // effect. Counts hidden venues too — they're still matched on proximity.
     private bool AnyGeolocatedVenue => _venues.Any(v => v.HasLocation);
 
