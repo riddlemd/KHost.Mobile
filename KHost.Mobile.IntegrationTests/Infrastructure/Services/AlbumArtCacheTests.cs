@@ -106,6 +106,22 @@ public sealed class AlbumArtCacheTests : IDisposable
         Assert.Equal(0, await cache.CountAsync());
     }
 
+    [Fact]
+    public async Task A_cached_cover_is_written_atomically_leaving_no_tmp_sibling()
+    {
+        // "Is it cached?" is File.Exists, so a torn write would leave a truncated image counting as a hit forever.
+        // The atomic write means the target only ever appears complete — and its .tmp sibling is renamed away.
+        var cache = NewCache(new StubHandler([1, 2, 3, 4, 5]));
+
+        await using var stream = await cache.OpenArtStreamAsync("https://example.com/cover.jpg");
+
+        Assert.NotNull(stream);
+        var dir = Path.Combine(_dir.AppDataDirectory, "album-art");
+        Assert.Empty(Directory.GetFiles(dir, "*.tmp"));                      // the sibling was renamed, not left
+        var cached = Assert.Single(Directory.GetFiles(dir));
+        Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, await File.ReadAllBytesAsync(cached));   // whole payload landed
+    }
+
     // ---- test doubles --------------------------------------------------------------------------
 
     private sealed class StubHandler(byte[] payload, HttpStatusCode status = HttpStatusCode.OK) : HttpMessageHandler

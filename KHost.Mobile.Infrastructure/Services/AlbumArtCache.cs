@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using KHost.Mobile.Abstractions.Services;
+using KHost.Mobile.Infrastructure.Logic;
 namespace KHost.Mobile.Infrastructure.Services;
 
 /// <inheritdoc />
@@ -42,7 +43,11 @@ public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory ht
                 }
 
                 Directory.CreateDirectory(_dir);
-                await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
+                // Atomic (.tmp + rename) like the JSON stores, and for a sharper reason here: "is it cached?" is
+                // File.Exists, so a torn write would leave a truncated image that counts as a hit FOREVER — the
+                // card renders broken and never re-downloads. A failed atomic write leaves no target file at all.
+                await AtomicFile.WriteAsync(path, stream => stream.WriteAsync(bytes, cancellationToken).AsTask())
+                    .ConfigureAwait(false);
                 wroteNew = true;
                 _log.LogDebug("Album art downloaded + cached ({Bytes} bytes) for {Url}", bytes.Length, url);
             }
@@ -60,7 +65,8 @@ public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory ht
         try
         {
             var stream = File.OpenRead(path);
-            if (stream.Length == 0)   // a leftover 0-byte file from an older/interrupted write
+            // Still worth checking: covers written before the atomic-write fix above could be 0-byte or truncated.
+            if (stream.Length == 0)
             {
                 stream.Dispose();
                 return null;

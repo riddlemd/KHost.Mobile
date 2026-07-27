@@ -1,12 +1,14 @@
+using KHost.Mobile.Infrastructure.Logic;
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
-using KHost.Mobile.Infrastructure.Logic;
-
 namespace KHost.Mobile.IntegrationTests.Infrastructure.Logic;
 
-// Crash-safety of the store writes, exercised through the real song-list store (session-less → the legacy file).
-// AtomicFile is internal, so its behavior is verified via the observable store path rather than directly.
+// Crash-safety of the durable-JSON writes. The first three go through the real song-list store
+// (session-less → the legacy file) to prove the guarantee holds end to end; the last two call AtomicFile
+// directly, because what they assert — an interrupted write, and quarantining a file that isn't there —
+// can't be reached through a store. That is why AtomicFile stays its own type rather than folding into
+// JsonFileStore: you'd need JsonSerializer to throw partway through writing a real payload.
 public sealed class AtomicWriteTests : IDisposable
 {
     private readonly TempAppDataDirectory _dir = new();
@@ -52,8 +54,8 @@ public sealed class AtomicWriteTests : IDisposable
         Assert.Equal("Africa", Assert.Single(reread).Title);
     }
 
-    // AtomicFile itself is internal, but its source is compiled directly into this test assembly (see the
-    // KHost.Mobile.IntegrationTests.csproj Compile/Link items), so it's callable here without InternalsVisibleTo.
+    // AtomicFile is internal to KHost.Mobile.Infrastructure; this assembly reaches it through the
+    // InternalsVisibleTo in that project's csproj.
     [Fact]
     public async Task An_interrupted_write_leaves_the_previous_good_file_intact()
     {
