@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using KHost.Mobile.Models;
 
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Serialization;
 
 /// <summary>
 /// System.Text.Json source-generation context for the persisted venue list — keeps (de)serialization trimming-/

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using KHost.Mobile.Clients.Lyrics;
 using KHost.Mobile.Models;
+using KHost.Mobile.Serialization;
 using KHost.Mobile.Services;
 using Xunit;
 

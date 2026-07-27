@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Search;
 
 /// <summary>Builds a Spotify search URL for a song. Pure and host-agnostic so it's trivially testable.</summary>
 public static class SpotifySearch

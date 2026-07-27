@@ -1,7 +1,7 @@
-using KHost.Mobile.Services;
+using KHost.Mobile.Search;
 using Xunit;
 
-namespace KHost.Mobile.UnitTests.Infrastructure.Services;
+namespace KHost.Mobile.UnitTests.Infrastructure.Search;
 
 public class KaraFunSearchTests
 {

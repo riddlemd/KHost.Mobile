@@ -1,6 +1,7 @@
 using System.Text.Json;
 using KHost.Mobile.Clients.Lyrics;
 using KHost.Mobile.Models;
+using KHost.Mobile.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 

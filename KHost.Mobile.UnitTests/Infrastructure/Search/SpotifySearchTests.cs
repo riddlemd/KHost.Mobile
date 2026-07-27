@@ -1,7 +1,7 @@
-using KHost.Mobile.Services;
+using KHost.Mobile.Search;
 using Xunit;
 
-namespace KHost.Mobile.UnitTests.Infrastructure.Services;
+namespace KHost.Mobile.UnitTests.Infrastructure.Search;
 
 // The Spotify quick-link URL builder. Pure string logic. Unlike YouTubeSearch it joins title + artist with a
 // plain space, never " - ", because a leading dash is Spotify's NOT operator and would exclude the artist.
