@@ -34,8 +34,15 @@ async function home() {
     const tab = page.locator('.app-nav__tab', { hasText: /My Songs/i });
     if (await tab.count()) await tab.first().click(TAP).catch(() => {});
     await page.waitForSelector('.mysongs-fab', { timeout: 10000 });
+    // Clearing the box focuses it, which raises the soft keyboard over half the screen — so only touch it
+    // when it actually has text, and always blur afterwards to let the IME retract before the shutter.
     const search = page.locator('input[placeholder*="Search" i]');
-    if (await search.count()) await search.first().fill('');
+    if (await search.count() && await search.first().inputValue()) {
+        await search.first().fill('');
+        await pause(300);
+    }
+    await page.evaluate(`document.activeElement && document.activeElement.blur()`);
+    await pause(900);
     await page.evaluate(`window.scrollTo(0, 0); document.scrollingElement.scrollTop = 0;`);
     await pause(500);
 }
@@ -74,6 +81,14 @@ async function scrollTo(selector, text) {
 
 /** Capture only once the screen proves it is what we think — a wrong-screen shot is silent otherwise. */
 async function take(name, assert) {
+    // The soft keyboard covers half the frame and is invisible to every DOM assert — but visualViewport
+    // shrinks while the IME is up, which is the one signal the page can see.
+    const ime = await page.evaluate(`(() => {
+        const vv = window.visualViewport;
+        return vv ? vv.height < window.innerHeight * 0.85 : false;
+    })()`);
+    if (ime) { console.log(`  ✗ ${name} — soft keyboard is covering the screen`); return; }
+
     // A stray popover is invisible to a text assert but very visible in the PNG.
     if (!name.endsWith('-switcher')) {
         const stray = await page.evaluate(`!!document.querySelector('.venue-switcher, .singer-switcher')`);
@@ -133,7 +148,8 @@ if (want('performance-history')) {
     await home();
     // Deepest history in this library is 2 performances; the default first card has only 1.
     await page.locator('input[placeholder*="Search" i]').first().fill('favor house');
-    await pause(1200);
+    await page.evaluate(`document.activeElement && document.activeElement.blur()`);
+    await pause(1400);
     await page.locator('.song-card').first().click(TAP);
     await page.waitForSelector('.sheet', { timeout: 10000 });
     await pause(1000);
