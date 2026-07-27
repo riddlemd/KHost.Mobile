@@ -1,6 +1,6 @@
 #if !ANDROID && !IOS
 using KHost.Mobile.Abstractions.Services;
-namespace KHost.Mobile.UI.Services;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <inheritdoc />
 /// <remarks>

@@ -1,5 +1,5 @@
 using KHost.Mobile.Abstractions.Services;
-namespace KHost.Mobile.UI.Services;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <summary>
 /// Routes the Android hardware/gesture back button to dismiss an open in-page overlay (sheet, confirm pop-up, menu)

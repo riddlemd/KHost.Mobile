@@ -1,7 +1,9 @@
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
-namespace KHost.Mobile.IntegrationTests.Infrastructure.Services;
+using KHost.Mobile.Infrastructure.Logic;
+
+namespace KHost.Mobile.IntegrationTests.Infrastructure.Logic;
 
 // Crash-safety of the store writes, exercised through the real song-list store (session-less → the legacy file).
 // AtomicFile is internal, so its behavior is verified via the observable store path rather than directly.

@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Infrastructure.Services;
+namespace KHost.Mobile.Infrastructure.Logic;
 
 /// <summary>
 /// Crash-safe file writes for the JSON stores. Serializes to a sibling <c>.tmp</c> file, then atomically renames

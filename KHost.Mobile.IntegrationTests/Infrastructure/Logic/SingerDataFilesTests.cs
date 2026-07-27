@@ -1,7 +1,9 @@
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
-namespace KHost.Mobile.IntegrationTests.Infrastructure.Services;
+using KHost.Mobile.Infrastructure.Logic;
+
+namespace KHost.Mobile.IntegrationTests.Infrastructure.Logic;
 
 // Pins the per-singer file-naming contract directly. The store tests assert against these names via repeated
 // string literals; this is the one place the convention itself is the subject, so a drift in SingerDataFiles

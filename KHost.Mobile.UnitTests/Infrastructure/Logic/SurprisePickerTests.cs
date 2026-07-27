@@ -3,7 +3,9 @@ using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
 using KHost.Mobile.Abstractions.Models;
-namespace KHost.Mobile.UnitTests.Infrastructure.Services;
+using KHost.Mobile.Infrastructure.Logic;
+
+namespace KHost.Mobile.UnitTests.Infrastructure.Logic;
 
 public class SurprisePickerTests
 {

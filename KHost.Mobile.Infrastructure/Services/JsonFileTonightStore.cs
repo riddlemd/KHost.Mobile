@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using KHost.Mobile.Abstractions.Models;
 using KHost.Mobile.Abstractions.Services;
+using KHost.Mobile.Infrastructure.Logic;
+
 namespace KHost.Mobile.Infrastructure.Services;
 
 /// <inheritdoc />

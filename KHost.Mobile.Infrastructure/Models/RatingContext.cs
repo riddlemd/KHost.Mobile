@@ -1,3 +1,4 @@
+
 namespace KHost.Mobile.Infrastructure.Models;
 
 /// <summary>
