@@ -1,5 +1,6 @@
 using System.Net;
-using KHost.Mobile.Clients.Enrichment;
+using KHost.Mobile.Clients.Apple;
+using KHost.Mobile.Clients.Metadata;
 using Xunit;
 
 namespace KHost.Mobile.UnitTests;

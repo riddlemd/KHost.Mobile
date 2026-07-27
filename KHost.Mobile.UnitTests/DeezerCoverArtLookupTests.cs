@@ -1,4 +1,5 @@
 using System.Net;
+using KHost.Mobile.Clients.CoverArt;
 using KHost.Mobile.Clients.Deezer;
 using Xunit;
 
@@ -42,11 +43,11 @@ public class DeezerCoverArtLookupTests
     [Fact]
     public async Task Maps_rate_limiting_and_server_errors_to_domain_exceptions()
     {
-        var rateLimited = await Assert.ThrowsAsync<DeezerCoverArtException>(
+        var rateLimited = await Assert.ThrowsAsync<CoverArtLookupException>(
             () => Lookup(new StubHandler((HttpStatusCode)429)).FindCoverArtUrlAsync("Africa", "Toto"));
         Assert.Contains("rate-limited", rateLimited.Message);
 
-        var serverError = await Assert.ThrowsAsync<DeezerCoverArtException>(
+        var serverError = await Assert.ThrowsAsync<CoverArtLookupException>(
             () => Lookup(new StubHandler(HttpStatusCode.InternalServerError)).FindCoverArtUrlAsync("Africa", "Toto"));
         Assert.Contains("500", serverError.Message);
     }
@@ -54,10 +55,10 @@ public class DeezerCoverArtLookupTests
     [Fact]
     public async Task Wraps_a_transport_failure_and_a_request_timeout_as_domain_exceptions()
     {
-        await Assert.ThrowsAsync<DeezerCoverArtException>(
+        await Assert.ThrowsAsync<CoverArtLookupException>(
             () => Lookup(new ThrowingHandler(new HttpRequestException("down"))).FindCoverArtUrlAsync("Africa", "Toto"));
 
-        await Assert.ThrowsAsync<DeezerCoverArtException>(
+        await Assert.ThrowsAsync<CoverArtLookupException>(
             () => Lookup(new ThrowingHandler(new TaskCanceledException())).FindCoverArtUrlAsync("Africa", "Toto"));
     }
 

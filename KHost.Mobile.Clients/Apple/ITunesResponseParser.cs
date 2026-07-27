@@ -1,8 +1,9 @@
 using System.Text.Json;
 using KHost.Mobile.Clients.Json;
 using KHost.Mobile.Clients.Matching;
+using KHost.Mobile.Clients.Metadata;
 
-namespace KHost.Mobile.Clients.Enrichment;
+namespace KHost.Mobile.Clients.Apple;
 
 /// <summary>
 /// Parses an iTunes Search API response into a <see cref="TrackLookupResult"/>. Pure — no network. The API

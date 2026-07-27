@@ -1,6 +1,10 @@
+using KHost.Mobile.Clients.Apple;
+using KHost.Mobile.Clients.CoverArt;
 using KHost.Mobile.Clients.Deezer;
-using KHost.Mobile.Clients.Enrichment;
+using KHost.Mobile.Clients.GitHub;
+using KHost.Mobile.Clients.LrcLib;
 using KHost.Mobile.Clients.Lyrics;
+using KHost.Mobile.Clients.Metadata;
 using KHost.Mobile.Clients.Spotify;
 using KHost.Mobile.Clients.Updates;
 using KHost.Mobile.Clients.YouTubeMusic;
@@ -133,7 +137,7 @@ public static class MauiProgram
 
         // Keyless lyrics lookup (LRCLIB). Base address + the descriptive User-Agent LRCLIB's fair-use policy
         // asks for are set here (the client library stays MAUI-free, so the app version is injected at this seam).
-        builder.Services.AddHttpClient<ILyricsClient, LrcLibLyricsClient>(http =>
+        builder.Services.AddHttpClient<ILyricsLookup, LrcLibLyricsClient>(http =>
         {
             http.BaseAddress = new Uri("https://lrclib.net/");
             http.DefaultRequestHeaders.UserAgent.ParseAdd(
@@ -142,7 +146,7 @@ public static class MauiProgram
 
         // "Update available" check — reads this repo's GitHub Releases feed. GitHub's REST API rejects a request
         // with no User-Agent; the Accept header pins the v3 media type.
-        builder.Services.AddHttpClient<IUpdateClient, GitHubReleaseClient>(http =>
+        builder.Services.AddHttpClient<IUpdateLookup, GitHubReleaseClient>(http =>
         {
             http.BaseAddress = new Uri("https://api.github.com/");
             http.DefaultRequestHeaders.UserAgent.ParseAdd(

@@ -1,7 +1,8 @@
 using System.Text.Json;
 using KHost.Mobile.Clients.Json;
+using KHost.Mobile.Clients.Updates;
 
-namespace KHost.Mobile.Clients.Updates;
+namespace KHost.Mobile.Clients.GitHub;
 
 /// <summary>
 /// Parses a GitHub <c>/releases</c> response (a JSON array of release objects) and returns the newest

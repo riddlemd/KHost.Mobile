@@ -1,4 +1,5 @@
 using System.Net;
+using KHost.Mobile.Clients.LrcLib;
 using KHost.Mobile.Clients.Lyrics;
 using Xunit;
 

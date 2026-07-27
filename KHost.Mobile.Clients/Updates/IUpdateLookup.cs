@@ -1,11 +1,10 @@
 namespace KHost.Mobile.Clients.Updates;
 
 /// <summary>
-/// Reads the app's GitHub Releases feed to find the newest published version. Keyless (anonymous GitHub
-/// REST API). The check is a best-effort nicety: it returns <c>null</c> on any network/HTTP failure rather
-/// than throwing.
+/// Finds the newest published version of the app. Keyless. The check is a best-effort nicety: it returns
+/// <c>null</c> on any network/HTTP failure rather than throwing.
 /// </summary>
-public interface IUpdateClient
+public interface IUpdateLookup
 {
     /// <summary>
     /// Fetch the newest published release (highest version, pre-releases included since all current builds

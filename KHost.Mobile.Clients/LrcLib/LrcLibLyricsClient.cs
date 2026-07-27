@@ -1,6 +1,7 @@
 using System.Net;
+using KHost.Mobile.Clients.Lyrics;
 
-namespace KHost.Mobile.Clients.Lyrics;
+namespace KHost.Mobile.Clients.LrcLib;
 
 /// <inheritdoc />
 /// <remarks>
@@ -8,7 +9,7 @@ namespace KHost.Mobile.Clients.Lyrics;
 /// descriptive <c>User-Agent</c>; that (and the base address) are configured on the injected
 /// <see cref="HttpClient"/> at registration.
 /// </remarks>
-public sealed class LrcLibLyricsClient(HttpClient httpClient) : ILyricsClient
+public sealed class LrcLibLyricsClient(HttpClient httpClient) : ILyricsLookup
 {
     public async Task<LyricsResult?> FetchAsync(string title, string artist, CancellationToken cancellationToken = default)
     {

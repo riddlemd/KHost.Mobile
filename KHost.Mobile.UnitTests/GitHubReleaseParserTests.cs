@@ -1,3 +1,4 @@
+using KHost.Mobile.Clients.GitHub;
 using KHost.Mobile.Clients.Updates;
 using Xunit;
 

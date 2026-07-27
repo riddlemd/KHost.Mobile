@@ -1,4 +1,6 @@
-namespace KHost.Mobile.Clients.Updates;
+using KHost.Mobile.Clients.Updates;
+
+namespace KHost.Mobile.Clients.GitHub;
 
 /// <inheritdoc />
 /// <remarks>
@@ -6,7 +8,7 @@ namespace KHost.Mobile.Clients.Updates;
 /// address, the mandatory <c>User-Agent</c>, and the <c>Accept: application/vnd.github+json</c> header are
 /// configured on the injected <see cref="HttpClient"/> at registration (keeping this library MAUI-free).
 /// </remarks>
-public sealed class GitHubReleaseClient(HttpClient httpClient) : IUpdateClient
+public sealed class GitHubReleaseClient(HttpClient httpClient) : IUpdateLookup
 {
     // Newest ~20 releases is plenty to find the highest version; the feed is small and already newest-first.
     private const string ReleasesPath = "repos/riddlemd/KHost.Mobile/releases?per_page=20";

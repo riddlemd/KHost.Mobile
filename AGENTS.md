@@ -26,7 +26,7 @@ repos/
 | Project | Role |
 |---|---|
 | `KHost.Mobile` | MAUI Blazor Hybrid host. Thin shell; UI is Razor components (`Components/`), local stores under `Services/`, models under `Models/`. |
-| `KHost.Mobile.Clients` | Standalone client library — the outward-facing lookups: playlist import (`Spotify/`, `YouTubeMusic/`), iTunes metadata (`Enrichment/`), Deezer cover-art fallback (`Deezer/`), LRCLIB lyrics (`Lyrics/`), and the GitHub-Releases update check (`Updates/`). No MAUI dependency. |
+| `KHost.Mobile.Clients` | Standalone client library — the outward-facing lookups. **Contracts and backends live in separate folders**: capability folders hold the vendor-neutral interfaces and result types (`Metadata/`, `CoverArt/`, `Lyrics/`, `Updates/`), vendor folders hold the implementations that satisfy them (`Apple/` = iTunes metadata, `Deezer/` = cover-art + spelling-suggestion fallback, `LrcLib/` = lyrics, `GitHub/` = the Releases update check). Playlist import (`Spotify/`, `YouTubeMusic/`) stays vendor-only — the two share no contract. No MAUI dependency. |
 
 > Razor UI lives in `KHost.Mobile/Components/` for now. If a PWA build is ever wanted, extract components into a Razor Class Library (`KHost.Mobile.UI`) — the Hybrid design keeps that door open with no rewrite.
 
@@ -122,7 +122,9 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
 - **`JsonFileSongListStore` is deliberately registered twice** — once as itself, once as `ISongListStore` resolving to the same instance (`MauiProgram.cs`) — so the profile export/import path and every interface consumer share one cache. It is not a redundant registration; collapsing it splits the cache and breaks import/export.
 
 ### Pattern: client backend (`KHost.Mobile.Clients`)
-- Stays **MAUI-free with zero package references** (pure BCL). One feature per folder/namespace.
+- Stays **MAUI-free with zero package references** (pure BCL).
+- **A capability folder never names a vendor, and a vendor folder never holds a contract.** `Metadata/`, `CoverArt/`, `Lyrics/` and `Updates/` hold only the interface, its result types and its exception — all vendor-neutral, so a second backend needs no edit to them. `Apple/`, `Deezer/`, `LrcLib/` and `GitHub/` hold only implementations, and those classes keep their vendor prefix (`ITunesResponseParser`, `DeezerCoverArtLookup`). A new backend is a new vendor folder, not a change to the contract.
+- The exception belongs to the **capability**, not the backend that throws it (`CoverArtLookupException`, not `DeezerCoverArtException`) — callers catch it through an interface that deliberately hides which vendor answered.
 - `HttpClient` is **injected** via primary constructor (never `new`); base address/headers are configured at DI registration, not in the library. Registered as a typed client (`AddHttpClient<IFace, Impl>`).
 - Isolate parsing in a `static` "pure — no network" parser class; the service does HTTP + error mapping only.
 - One `sealed` exception per feature: `sealed class FooException(string message, Exception? inner = null) : Exception(message, inner)`, with messages written to be shown in the UI. Deserialize via manual `JsonDocument` traversal (no reflection serializer here — that's the host's convention, not the client's).

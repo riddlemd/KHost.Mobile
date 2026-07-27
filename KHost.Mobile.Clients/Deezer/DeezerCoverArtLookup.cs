@@ -1,3 +1,5 @@
+using KHost.Mobile.Clients.CoverArt;
+
 namespace KHost.Mobile.Clients.Deezer;
 
 /// <inheritdoc />
@@ -26,17 +28,17 @@ public sealed class DeezerCoverArtLookup(HttpClient httpClient) : ICoverArtLooku
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            throw new DeezerCoverArtException("Couldn't reach Deezer for cover art.", ex);
+            throw new CoverArtLookupException("Couldn't reach Deezer for cover art.", ex);
         }
 
         // Dispose on every exit (including the throw paths) so the pooled connection is released.
         using var _ = response;
 
         if ((int)response.StatusCode == 429)
-            throw new DeezerCoverArtException("Deezer cover-art lookups are rate-limited right now.");
+            throw new CoverArtLookupException("Deezer cover-art lookups are rate-limited right now.");
 
         if (!response.IsSuccessStatusCode)
-            throw new DeezerCoverArtException($"Deezer error ({(int)response.StatusCode}).");
+            throw new CoverArtLookupException($"Deezer error ({(int)response.StatusCode}).");
 
         var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return DeezerCoverArtParser.ParseCoverArtUrl(json, title, artist);

@@ -1,4 +1,4 @@
-using KHost.Mobile.Clients.Enrichment;
+using KHost.Mobile.Clients.Metadata;
 
 namespace KHost.Mobile.Services;
 

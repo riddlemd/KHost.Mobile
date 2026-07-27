@@ -1,7 +1,7 @@
 @page "/"
-@using KHost.Mobile.Clients.Deezer
-@using KHost.Mobile.Clients.Enrichment
+@using KHost.Mobile.Clients.CoverArt
 @using KHost.Mobile.Clients.Lyrics
+@using KHost.Mobile.Clients.Metadata
 @using Microsoft.Extensions.Logging
 @inject ILogger<MySongs> Log
 @inject ISongListStore Store
@@ -10,7 +10,7 @@
 @inject ITrackMetadataLookup Metadata
 @inject ICoverArtLookup ArtFallback
 @inject ISpellingSuggestionLookup Spelling
-@inject ILyricsClient Lyrics
+@inject ILyricsLookup Lyrics
 @inject ILyricsCache LyricsCache
 @inject IAlbumArtService AlbumArt
 @inject IAppSettings Settings
@@ -1427,7 +1427,7 @@ else
                 Log.LogDebug("iTunes had no cover for “{Title}” — “{Artist}”; Deezer fallback → {Result}",
                     item.Title, item.Artist, artUrl is null ? "no cover found" : "cover found");
             }
-            catch (DeezerCoverArtException ex)
+            catch (CoverArtLookupException ex)
             {
                 artLookedUp = false;   // transient Deezer failure — leave art unflagged so it retries later
                 Log.LogWarning(ex, "Deezer cover fallback failed for “{Title}” — “{Artist}”; will retry later", item.Title, item.Artist);

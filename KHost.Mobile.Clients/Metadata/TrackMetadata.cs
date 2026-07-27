@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Enrichment;
+namespace KHost.Mobile.Clients.Metadata;
 
 /// <summary>Metadata looked up for a song by title + artist. Any field may be null when the source didn't carry it.</summary>
 /// <param name="MatchedTitle">What the source actually matched — sanity-check it against the query before trusting the rest.</param>

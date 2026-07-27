@@ -1,7 +1,8 @@
 using System.Net;
 using KHost.Mobile.Clients.Matching;
+using KHost.Mobile.Clients.Metadata;
 
-namespace KHost.Mobile.Clients.Enrichment;
+namespace KHost.Mobile.Clients.Apple;
 
 /// <inheritdoc />
 /// <remarks>

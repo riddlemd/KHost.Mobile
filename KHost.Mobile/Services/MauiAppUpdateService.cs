@@ -1,3 +1,4 @@
+using KHost.Mobile.Clients.GitHub;
 using KHost.Mobile.Clients.Updates;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
@@ -10,7 +11,7 @@ namespace KHost.Mobile.Services;
 /// the check <see cref="Task"/> is cached, so the network call happens once per launch no matter how many
 /// components ask.
 /// </remarks>
-public sealed class MauiAppUpdateService(IUpdateClient updateClient, IAppSettings settings, ILogger<MauiAppUpdateService> logger) : IAppUpdateService
+public sealed class MauiAppUpdateService(IUpdateLookup updateClient, IAppSettings settings, ILogger<MauiAppUpdateService> logger) : IAppUpdateService
 {
     private Task<AppUpdateStatus>? _check;
 

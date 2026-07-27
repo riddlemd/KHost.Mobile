@@ -1,12 +1,12 @@
 using KHost.Mobile.Clients.Matching;
 
-namespace KHost.Mobile.Clients.Deezer;
+namespace KHost.Mobile.Clients.Metadata;
 
 /// <summary>
-/// Asks a second catalogue whether a song that matched nowhere looks misspelled. Keyless. Used as a FALLBACK
-/// behind the iTunes lookup, which offers its own correction from a call that's already being made — this is
-/// only consulted when iTunes found neither a match nor a near-miss, which usually means the song simply
-/// isn't in Apple's catalogue.
+/// Asks a second catalogue whether a song that matched nowhere looks misspelled. Keyless. A FALLBACK behind
+/// <see cref="ITrackMetadataLookup"/>, which offers its own correction from a call that's already being made —
+/// this is consulted only when the primary lookup found neither a match nor a near-miss, which usually means
+/// the song simply isn't in its catalogue.
 /// </summary>
 public interface ISpellingSuggestionLookup
 {

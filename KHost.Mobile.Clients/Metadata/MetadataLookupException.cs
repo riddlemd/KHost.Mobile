@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Enrichment;
+namespace KHost.Mobile.Clients.Metadata;
 
 /// <summary>
 /// A metadata lookup hit a network or HTTP failure. "No match" is NOT an exception — the lookup returns

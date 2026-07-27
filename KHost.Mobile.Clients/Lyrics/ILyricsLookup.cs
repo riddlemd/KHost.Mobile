@@ -1,9 +1,9 @@
 namespace KHost.Mobile.Clients.Lyrics;
 
 /// <summary>
-/// Looks up a song's lyrics by title + artist. Keyless; backed by the LRCLIB API (lrclib.net).
+/// Looks up a song's lyrics by title + artist. Keyless.
 /// </summary>
-public interface ILyricsClient
+public interface ILyricsLookup
 {
     /// <summary>
     /// Looks up lyrics for <paramref name="title"/> by <paramref name="artist"/>. Returns null when

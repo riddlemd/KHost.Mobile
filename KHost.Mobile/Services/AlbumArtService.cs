@@ -1,5 +1,5 @@
-using KHost.Mobile.Clients.Deezer;
-using KHost.Mobile.Clients.Enrichment;
+using KHost.Mobile.Clients.CoverArt;
+using KHost.Mobile.Clients.Metadata;
 using KHost.Mobile.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
@@ -344,7 +344,7 @@ public sealed class AlbumArtService(
                     song.Title, song.Artist, art is null ? "no cover found" : "cover found");
             }
         }
-        catch (Exception ex) when (ex is MetadataLookupException or DeezerCoverArtException)
+        catch (Exception ex) when (ex is MetadataLookupException or CoverArtLookupException)
         {
             // Network / rate-limit failure on either source: leave ArtworkLookedUp unset so a later session
             // retries, and let this song out of the queue so the same request can try again.

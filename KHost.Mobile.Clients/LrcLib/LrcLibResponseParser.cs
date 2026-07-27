@@ -1,7 +1,8 @@
 using System.Text.Json;
 using KHost.Mobile.Clients.Json;
+using KHost.Mobile.Clients.Lyrics;
 
-namespace KHost.Mobile.Clients.Lyrics;
+namespace KHost.Mobile.Clients.LrcLib;
 
 /// <summary>
 /// Parses an LRCLIB <c>/api/search</c> response (a JSON array of records) into a <see cref="LyricsResult"/>.
