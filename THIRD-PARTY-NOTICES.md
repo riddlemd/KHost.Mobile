@@ -3,7 +3,9 @@
 KHost.Mobile (KHost Cue) itself is licensed under the PolyForm Shield License
 1.0.0 (see [`LICENSE`](LICENSE)). It incorporates and/or distributes the
 third-party components listed below, each of which remains under its own license
-and copyright. All of them are permissive (MIT / Apache-2.0) and permit inclusion
+and copyright. Nearly all are permissive (MIT / Apache-2.0); the one exception is
+Google's ML Kit barcode model on the Android head, distributed under Google's ML
+Kit terms, which likewise permit redistribution inside an app. All permit inclusion
 in a source-available and/or commercial product; nothing here changes the terms
 of the PolyForm Shield License covering KHost.Mobile's own code.
 
@@ -25,7 +27,9 @@ browser assets and fonts).
 | Microsoft.AspNetCore.Components.WebView.Maui (Blazor Hybrid) | app shell | MIT | Microsoft / .NET Foundation |
 | Microsoft.Extensions.Logging.Debug | app shell (debug logging) | MIT | Microsoft / .NET Foundation |
 | Microsoft.Extensions.* (transitive: DI, Logging, Options, Primitives, …) | app shell, client | MIT | Microsoft / .NET Foundation |
-| Bootstrap 5.3.3 (`wwwroot/lib/bootstrap/**`) | web UI assets | MIT | The Bootstrap Authors |
+| BarcodeScanning.Native.Maui 3.0.4 | QR scanner (Android/iOS heads only) | MIT | Alen Friščić |
+| Xamarin.AndroidX bindings — CameraX, Navigation, Collection (transitive via the scanner, Android head) | QR scanner camera stack | MIT (bindings) / Apache-2.0 (AndroidX libraries) | Microsoft / Google (AOSP) |
+| Google ML Kit barcode scanning (transitive `Xamarin.Google.MLKit.BarcodeScanning`, Android head) | QR decoding | Google ML Kit terms (redistributable in-app) | Google |
 | Open Sans — `OpenSans-Regular.ttf` (from the .NET MAUI template) | app font | Apache-2.0 | Digitized data © 2010–2011 Google; design Ascender Corp. |
 
 License texts:
@@ -35,7 +39,9 @@ License texts:
   ("Digitized data copyright 2010–2011, Google Corporation") with the font file.
 
 There are **no copyleft (GPL/LGPL) components** and no components that must be
-kept replaceable; every distributed dependency is permissively licensed.
+kept replaceable; every distributed dependency is permissively licensed except
+the ML Kit barcode model, which is proprietary but freely redistributable as part
+of an app under Google's ML Kit terms.
 
 ---
 

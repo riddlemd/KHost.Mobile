@@ -14,6 +14,10 @@ emulator/   cdp.mjs            raw-CDP driver     → the Android emulator
 shots/      screenshots from either walker (gitignored)
 ```
 
+The two `walk_tutorial.mjs` walkers are the canonical examples, not the whole inventory — a
+rotating set of one-off exercise/screenshot scripts (`shoot_docs.mjs`, `shoot_spelling.mjs`,
+`typo_*.mjs`, …) lives beside each driver, all following the same attach pattern.
+
 **Why two.** Playwright can't attach to the emulator's WebView: `connectOverCDP` calls
 `Browser.setDownloadBehavior` on connect, which that older WebView doesn't implement — it fails with
 *"Browser context management is not supported"* before it ever reaches the page. A physical device's
