@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using KHost.Mobile.Infrastructure.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -14,40 +15,42 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// <see cref="JsonFileTonightStore"/>. A corrupt file is quarantined and treated as an empty list. Read results
 /// are sorted favorites-first then by name; storage order itself is insertion order.
 /// </remarks>
-public sealed class JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFileVenueStore>? logger = null) : IVenueStore
+public sealed class JsonFileVenueStore : JsonFileStore<Venue>, IVenueStore
 {
-    private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "venues.json");
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    // Optional so the integration tests can `new` the store without a logging stack; DI supplies the real logger.
-    private readonly ILogger _log = logger ?? NullLogger<JsonFileVenueStore>.Instance;
+    private readonly string _filePath;
 
-    private List<Venue>? _venues;
+    // logger is optional so the integration tests can `new` the store without a logging stack; DI supplies the real one.
+    public JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFileVenueStore>? logger = null)
+        : base(logger ?? NullLogger<JsonFileVenueStore>.Instance)
+        => _filePath = Path.Combine(paths.AppDataDirectory, "venues.json");
 
-    public event EventHandler? Changed;
+    protected override JsonTypeInfo<List<Venue>> TypeInfo => VenueJsonContext.Default.ListVenue;
+    protected override string Label => "Venues";
+    protected override string PathFor(Guid? key) => _filePath;
 
     public async Task<IReadOnlyList<Venue>> GetAllAsync()
     {
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             return Sorted(await LoadAsync());
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
     }
 
     public async Task<Venue?> GetAsync(Guid id)
     {
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             return (await LoadAsync()).FirstOrDefault(v => v.Id == id);
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
     }
 
@@ -57,7 +60,7 @@ public sealed class JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFile
         if (venue.Id == Guid.Empty)
             venue.Id = Guid.NewGuid();
 
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var venues = await LoadAsync();
@@ -66,10 +69,10 @@ public sealed class JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFile
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
         return venue;
     }
 
@@ -78,7 +81,7 @@ public sealed class JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFile
         ArgumentNullException.ThrowIfNull(venue);
 
         var changed = false;
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var venues = await LoadAsync();
@@ -92,17 +95,17 @@ public sealed class JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFile
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
         if (changed)
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
     }
 
     public async Task RemoveAsync(Guid id)
     {
         var changed = false;
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var venues = await LoadAsync();
@@ -114,11 +117,11 @@ public sealed class JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFile
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
         if (changed)
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
     }
 
     // Favorites first, then case-insensitive by name — the order the list and switcher want. A copy, so callers
@@ -129,41 +132,4 @@ public sealed class JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFile
             .ThenBy(v => v.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-    // Callers must hold _gate.
-    private async Task<List<Venue>> LoadAsync()
-    {
-        if (_venues is not null)
-            return _venues;
-
-        if (!File.Exists(_filePath))
-        {
-            _log.LogDebug("Venues file not found at {Path}; starting with an empty list", _filePath);
-            return _venues = [];
-        }
-
-        try
-        {
-            await using var stream = File.OpenRead(_filePath);
-            _venues = await JsonSerializer.DeserializeAsync(stream, VenueJsonContext.Default.ListVenue) ?? [];
-            _log.LogDebug("Venues loaded: {Count} from {Path}", _venues.Count, _filePath);
-        }
-        catch (JsonException ex)
-        {
-            // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app.
-            _log.LogWarning(ex, "Venues file at {Path} is corrupt; quarantining it and starting with an empty list", _filePath);
-            if (!AtomicFile.Quarantine(_filePath))
-                _log.LogWarning("Corrupt {Path} could not be quarantined; the next save will overwrite it", _filePath);
-            _venues = [];
-        }
-
-        return _venues;
-    }
-
-    // Callers must hold _gate.
-    private async Task SaveAsync(List<Venue> venues)
-    {
-        _venues = venues;
-        await AtomicFile.WriteAsync(_filePath, stream => JsonSerializer.SerializeAsync(stream, venues, VenueJsonContext.Default.ListVenue));
-        _log.LogDebug("Venues saved: {Count} to {Path}", venues.Count, _filePath);
-    }
 }

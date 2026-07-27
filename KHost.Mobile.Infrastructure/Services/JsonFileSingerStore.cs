@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using KHost.Mobile.Infrastructure.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -14,40 +15,46 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// <see cref="JsonFileVenueStore"/>. A corrupt file is quarantined and treated as an empty roster. Removing a
 /// singer also deletes their personal data files so they don't orphan on disk.
 /// </remarks>
-public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFileSingerStore>? logger = null) : ISingerStore
+public sealed class JsonFileSingerStore : JsonFileStore<Singer>, ISingerStore
 {
-    private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "singers.json");
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    // Optional so the integration tests can `new` the store without a logging stack; DI supplies the real logger.
-    private readonly ILogger _log = logger ?? NullLogger<JsonFileSingerStore>.Instance;
+    private readonly IAppDataDirectory _paths;
+    private readonly string _filePath;
 
-    private List<Singer>? _singers;
+    // logger is optional so the integration tests can `new` the store without a logging stack; DI supplies the real one.
+    public JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFileSingerStore>? logger = null)
+        : base(logger ?? NullLogger<JsonFileSingerStore>.Instance)
+    {
+        _paths = paths;
+        _filePath = Path.Combine(paths.AppDataDirectory, "singers.json");
+    }
 
-    public event EventHandler? Changed;
+    protected override JsonTypeInfo<List<Singer>> TypeInfo => SingerJsonContext.Default.ListSinger;
+    protected override string Label => "Singers";
+    protected override string PathFor(Guid? key) => _filePath;
 
     public async Task<IReadOnlyList<Singer>> GetAllAsync()
     {
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             return Ordered(await LoadAsync());
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
     }
 
     public async Task<Singer?> GetAsync(Guid id)
     {
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             return (await LoadAsync()).FirstOrDefault(s => s.Id == id);
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
     }
 
@@ -57,7 +64,7 @@ public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFil
         if (singer.Id == Guid.Empty)
             singer.Id = Guid.NewGuid();
 
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var singers = await LoadAsync();
@@ -68,10 +75,10 @@ public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFil
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
         return singer;
     }
 
@@ -80,7 +87,7 @@ public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFil
         ArgumentNullException.ThrowIfNull(singer);
 
         var changed = false;
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var singers = await LoadAsync();
@@ -94,17 +101,17 @@ public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFil
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
         if (changed)
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
     }
 
     public async Task RemoveAsync(Guid id)
     {
         var changed = false;
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var singers = await LoadAsync();
@@ -119,18 +126,18 @@ public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFil
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
         if (changed)
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
     }
 
     public async Task<Singer> EnsureSeededAsync()
     {
         Singer active;
         var seeded = false;
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var singers = await LoadAsync();
@@ -145,47 +152,47 @@ public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFil
             singers.Add(active);
             await SaveAsync(singers);
             seeded = true;
-            _log.LogInformation("Seeded the default singer {SingerId} and migrated any legacy single-user files", active.Id);
+            Log.LogInformation("Seeded the default singer {SingerId} and migrated any legacy single-user files", active.Id);
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
         if (seeded)
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
         return active;
     }
 
     // Move a legacy single-user file into a singer's namespaced file, once. Only runs when the source exists and the
     // destination doesn't (so it never clobbers an already-migrated file). Best-effort: a failed move just means the
-    // upgrader starts that singer empty rather than crashing the seed. Callers hold _gate.
+    // upgrader starts that singer empty rather than crashing the seed. Callers hold Gate.
     private void MigrateLegacyFile(string legacyName, string singerName)
     {
-        var src = Path.Combine(paths.AppDataDirectory, legacyName);
-        var dst = Path.Combine(paths.AppDataDirectory, singerName);
+        var src = Path.Combine(_paths.AppDataDirectory, legacyName);
+        var dst = Path.Combine(_paths.AppDataDirectory, singerName);
         if (!File.Exists(src) || File.Exists(dst))
             return;
 
         try
         {
             File.Move(src, dst);
-            _log.LogInformation("Migrated legacy {Legacy} into {Singer}", legacyName, singerName);
+            Log.LogInformation("Migrated legacy {Legacy} into {Singer}", legacyName, singerName);
         }
         catch (IOException ex)
         {
-            _log.LogWarning(ex, "Couldn't migrate legacy {Legacy}; the singer will start empty", legacyName);
+            Log.LogWarning(ex, "Couldn't migrate legacy {Legacy}; the singer will start empty", legacyName);
         }
         catch (UnauthorizedAccessException ex)
         {
-            _log.LogWarning(ex, "Couldn't migrate legacy {Legacy}; the singer will start empty", legacyName);
+            Log.LogWarning(ex, "Couldn't migrate legacy {Legacy}; the singer will start empty", legacyName);
         }
     }
 
     // Best-effort delete of a removed singer's data file. A locked/absent file is harmless — don't fail the remove.
     private void DeleteFile(string name)
     {
-        var path = Path.Combine(paths.AppDataDirectory, name);
+        var path = Path.Combine(_paths.AppDataDirectory, name);
         try
         {
             if (File.Exists(path))
@@ -193,11 +200,11 @@ public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFil
         }
         catch (IOException ex)
         {
-            _log.LogWarning(ex, "Couldn't delete removed singer's file {Path}", path);
+            Log.LogWarning(ex, "Couldn't delete removed singer's file {Path}", path);
         }
         catch (UnauthorizedAccessException ex)
         {
-            _log.LogWarning(ex, "Couldn't delete removed singer's file {Path}", path);
+            Log.LogWarning(ex, "Couldn't delete removed singer's file {Path}", path);
         }
     }
 
@@ -205,41 +212,4 @@ public sealed class JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFil
     private static List<Singer> Ordered(List<Singer> singers) =>
         singers.OrderBy(s => s.Order).ThenBy(s => s.AddedAt).ToList();
 
-    // Callers must hold _gate.
-    private async Task<List<Singer>> LoadAsync()
-    {
-        if (_singers is not null)
-            return _singers;
-
-        if (!File.Exists(_filePath))
-        {
-            _log.LogDebug("Singers file not found at {Path}; starting with an empty roster", _filePath);
-            return _singers = [];
-        }
-
-        try
-        {
-            await using var stream = File.OpenRead(_filePath);
-            _singers = await JsonSerializer.DeserializeAsync(stream, SingerJsonContext.Default.ListSinger) ?? [];
-            _log.LogDebug("Singers loaded: {Count} from {Path}", _singers.Count, _filePath);
-        }
-        catch (JsonException ex)
-        {
-            // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app.
-            _log.LogWarning(ex, "Singers file at {Path} is corrupt; quarantining it and starting with an empty roster", _filePath);
-            if (!AtomicFile.Quarantine(_filePath))
-                _log.LogWarning("Corrupt {Path} could not be quarantined; the next save will overwrite it", _filePath);
-            _singers = [];
-        }
-
-        return _singers;
-    }
-
-    // Callers must hold _gate.
-    private async Task SaveAsync(List<Singer> singers)
-    {
-        _singers = singers;
-        await AtomicFile.WriteAsync(_filePath, stream => JsonSerializer.SerializeAsync(stream, singers, SingerJsonContext.Default.ListSinger));
-        _log.LogDebug("Singers saved: {Count} to {Path}", singers.Count, _filePath);
-    }
 }

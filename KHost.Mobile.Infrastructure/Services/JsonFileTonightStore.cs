@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using KHost.Mobile.Infrastructure.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -15,18 +16,14 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// contiguous and rewrites the file, under a <see cref="SemaphoreSlim"/>. A corrupt file is quarantined and
 /// treated as an empty set.
 /// </remarks>
-public sealed class JsonFileTonightStore : ITonightStore
+public sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonightStore
 {
     private readonly IAppDataDirectory _paths;
     private readonly IAppSession? _session;
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly ILogger _log;
     // GetLocalNow, not GetUtcNow: every stored timestamp in this app is local, and switching would shift every
     // new entry by the UTC offset against the ones already on the device.
     private readonly TimeProvider _clock;
 
-    private List<TonightEntry>? _entries;
-    private Guid? _loadedFor;   // the singer whose file _entries was loaded from (null = the legacy no-singer file)
 
     /// <summary>
     /// The Tonight set is per-singer: it reads/writes the active singer's file (<see cref="IAppSession.ActiveSingerId"/>).
@@ -38,26 +35,28 @@ public sealed class JsonFileTonightStore : ITonightStore
         IAppSession? session = null,
         ILogger<JsonFileTonightStore>? logger = null,
         TimeProvider? timeProvider = null)
+        : base(logger ?? NullLogger<JsonFileTonightStore>.Instance)
     {
         _paths = paths;
         _session = session;
-        _log = logger ?? NullLogger<JsonFileTonightStore>.Instance;
         _clock = timeProvider ?? TimeProvider.System;
         if (_session is not null)
             _session.ActiveSingerChanged += OnActiveSingerChanged;
     }
 
-    public event EventHandler? Changed;
-
     // A singer switch invalidates the cache (see LoadAsync's _loadedFor check) and must refresh every subscriber, so
     // re-raise Changed — the UI then reloads this singer's set exactly as it would after any mutation.
-    private void OnActiveSingerChanged(object? sender, EventArgs e) => Changed?.Invoke(this, EventArgs.Empty);
+    private void OnActiveSingerChanged(object? sender, EventArgs e) => RaiseChanged();
 
     // The given singer's tonight file, or the legacy single-user file when no singer is active (pre-seed, or the
     // session-less test path). Takes the singer explicitly — LoadAsync captures ActiveSingerId ONCE and SaveAsync
     // writes to the singer the data was LOADED for, so a singer switch landing mid-operation can't write one
     // singer's set into another singer's file.
-    private string PathFor(Guid? singerId)
+    protected override JsonTypeInfo<List<TonightEntry>> TypeInfo => TonightJsonContext.Default.ListTonightEntry;
+    protected override string Label => "Tonight set";
+    protected override Guid? CurrentKey => _session?.ActiveSingerId;
+
+    protected override string PathFor(Guid? singerId)
     {
         var name = singerId is null ? SingerDataFiles.LegacyTonight : SingerDataFiles.Tonight(singerId.Value);
         return Path.Combine(_paths.AppDataDirectory, name);
@@ -65,21 +64,21 @@ public sealed class JsonFileTonightStore : ITonightStore
 
     public async Task<IReadOnlyList<TonightEntry>> GetAllAsync()
     {
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             return (await LoadAsync()).OrderBy(e => e.Order).ToList();
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
     }
 
     public async Task AddAsync(Guid songId)
     {
         var changed = false;
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var entries = await LoadAsync();
@@ -98,17 +97,17 @@ public sealed class JsonFileTonightStore : ITonightStore
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
         if (changed)
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
     }
 
     public async Task RemoveAsync(Guid songId)
     {
         var changed = false;
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var entries = await LoadAsync();
@@ -121,18 +120,18 @@ public sealed class JsonFileTonightStore : ITonightStore
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
         if (changed)
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
     }
 
     public async Task ReorderAsync(IReadOnlyList<Guid> orderedSongIds)
     {
         ArgumentNullException.ThrowIfNull(orderedSongIds);
 
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var entries = await LoadAsync();
@@ -153,16 +152,16 @@ public sealed class JsonFileTonightStore : ITonightStore
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
     }
 
     public async Task SetCompletedAsync(Guid songId, bool completed, Guid? performanceId = null)
     {
         var changed = false;
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var entries = await LoadAsync();
@@ -178,17 +177,17 @@ public sealed class JsonFileTonightStore : ITonightStore
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
         if (changed)
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
     }
 
     public async Task ClearAsync()
     {
         var changed = false;
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var entries = await LoadAsync();
@@ -201,11 +200,11 @@ public sealed class JsonFileTonightStore : ITonightStore
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
         if (changed)
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
     }
 
     public async Task PruneAsync(IReadOnlyCollection<Guid> existingSongIds)
@@ -213,7 +212,7 @@ public sealed class JsonFileTonightStore : ITonightStore
         ArgumentNullException.ThrowIfNull(existingSongIds);
 
         var changed = false;
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var entries = await LoadAsync();
@@ -227,63 +226,17 @@ public sealed class JsonFileTonightStore : ITonightStore
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
         if (changed)
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
     }
 
-    // Callers must hold _gate.
+    // Callers must hold Gate.
     private static void Renumber(List<TonightEntry> entries)
     {
         for (var i = 0; i < entries.Count; i++)
             entries[i].Order = i;
-    }
-
-    // Callers must hold _gate.
-    private async Task<List<TonightEntry>> LoadAsync()
-    {
-        var singer = _session?.ActiveSingerId;
-        if (_entries is not null && _loadedFor == singer)
-            return _entries;
-
-        // First load, or the active singer changed out from under the cache → (re)load from that singer's file.
-        _entries = null;
-        _loadedFor = singer;
-        var path = PathFor(singer);
-
-        if (!File.Exists(path))
-        {
-            _log.LogDebug("Tonight file not found at {Path}; starting with an empty set", path);
-            return _entries = [];
-        }
-
-        try
-        {
-            await using var stream = File.OpenRead(path);
-            _entries = await JsonSerializer.DeserializeAsync(stream, TonightJsonContext.Default.ListTonightEntry) ?? [];
-            _log.LogDebug("Tonight set loaded: {Count} entries from {Path}", _entries.Count, path);
-        }
-        catch (JsonException ex)
-        {
-            // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app.
-            _log.LogWarning(ex, "Tonight file at {Path} is corrupt; quarantining it and starting with an empty set", path);
-            if (!AtomicFile.Quarantine(path))
-                _log.LogWarning("Corrupt {Path} could not be quarantined; the next save will overwrite it", path);
-            _entries = [];
-        }
-
-        return _entries;
-    }
-
-    // Callers must hold _gate. Writes to the singer the entries were LOADED for (_loadedFor, set by LoadAsync before
-    // any await) — never re-reads ActiveSingerId, which may have moved on while this operation was in flight.
-    private async Task SaveAsync(List<TonightEntry> entries)
-    {
-        _entries = entries;
-        var path = PathFor(_loadedFor);
-        await AtomicFile.WriteAsync(path, stream => JsonSerializer.SerializeAsync(stream, entries, TonightJsonContext.Default.ListTonightEntry));
-        _log.LogDebug("Tonight set saved: {Count} entries to {Path}", entries.Count, path);
     }
 }
