@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
-using KHost.Mobile.Models;
 using Xunit;
 
+using KHost.Mobile.Abstractions.Models;
 namespace KHost.Mobile.UnitTests.Abstractions.Models;
 
 public class SingerColorsTests

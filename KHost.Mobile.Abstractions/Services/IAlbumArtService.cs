@@ -1,6 +1,6 @@
-using KHost.Mobile.Models;
+using KHost.Mobile.Abstractions.Models;
 
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>Everything a surface needs to paint a song's cover.</summary>
 /// <param name="Style">Inline <c>--kh-card-art</c> declaration when the cover is ready, else null.</param>

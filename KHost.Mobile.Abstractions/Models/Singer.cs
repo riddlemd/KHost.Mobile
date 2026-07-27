@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// One singer who shares the device — the owner of a personal My Songs and Tonight set. Multiple singers can be

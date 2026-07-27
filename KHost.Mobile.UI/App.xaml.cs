@@ -2,7 +2,7 @@
 using Microsoft.Maui.Primitives;
 #endif
 
-namespace KHost.Mobile;
+namespace KHost.Mobile.UI;
 
 public partial class App : Application
 {

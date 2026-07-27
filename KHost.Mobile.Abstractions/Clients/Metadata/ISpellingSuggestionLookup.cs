@@ -1,6 +1,6 @@
-using KHost.Mobile.Clients.Matching;
+using KHost.Mobile.Abstractions.Clients.Matching;
 
-namespace KHost.Mobile.Clients.Metadata;
+namespace KHost.Mobile.Abstractions.Clients.Metadata;
 
 /// <summary>
 /// Asks a second catalogue whether a song that matched nowhere looks misspelled. Keyless. A FALLBACK behind

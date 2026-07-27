@@ -1,4 +1,6 @@
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Services;
+
+namespace KHost.Mobile.UI.Services;
 
 /// <summary>
 /// The app's date/time patterns in one place, so the 12/24-hour setting reaches every surface at once.

@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// User-adjustable app preferences, persisted across launches. Every flag defaults to <c>true</c> unless its

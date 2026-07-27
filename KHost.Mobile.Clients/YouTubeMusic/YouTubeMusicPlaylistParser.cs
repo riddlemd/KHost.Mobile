@@ -1,7 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using KHost.Mobile.Json;
+using KHost.Mobile.Abstractions.Clients.YouTubeMusic;
+using KHost.Mobile.Common.Json;
 
 namespace KHost.Mobile.Clients.YouTubeMusic;
 

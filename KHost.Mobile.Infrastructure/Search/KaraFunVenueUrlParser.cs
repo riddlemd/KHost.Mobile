@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
-
-namespace KHost.Mobile.Search;
+namespace KHost.Mobile.Infrastructure.Search;
 
 /// <summary>
 /// Parses a KaraFun venue ID out of a pasted venue URL (or a bare ID). Pure — no network. Accepts the shapes a

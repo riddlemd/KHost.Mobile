@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Search;
+namespace KHost.Mobile.Infrastructure.Search;
 
 /// <summary>Builds a KaraFun search URL for a song at a given venue. Pure and host-agnostic so it's trivially testable.</summary>
 public static class KaraFunSearch

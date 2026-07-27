@@ -6,10 +6,6 @@
        single third-party backend. Adding a reference here is almost always the wrong fix. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <!-- Pinned so the moved files keep their original namespaces (KHost.Mobile.Models, .Services,
-         .Clients.*) instead of picking up the assembly name. Renaming the assembly must not rename
-         every namespace in the app. -->
-    <RootNamespace>KHost.Mobile</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

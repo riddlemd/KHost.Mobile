@@ -1,9 +1,9 @@
-using KHost.Mobile.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Devices.Sensors;
-
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Models;
+using KHost.Mobile.Abstractions.Services;
+namespace KHost.Mobile.UI.Services;
 
 /// <inheritdoc />
 /// <remarks>

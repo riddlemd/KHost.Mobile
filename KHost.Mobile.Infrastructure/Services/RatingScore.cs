@@ -1,6 +1,6 @@
-using KHost.Mobile.Models;
-
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Infrastructure.Models;
+using KHost.Mobile.Abstractions.Models;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <summary>
 /// Confidence-weighted "how it went" scoring. A song's star is a Bayesian shrinkage of its own average toward the

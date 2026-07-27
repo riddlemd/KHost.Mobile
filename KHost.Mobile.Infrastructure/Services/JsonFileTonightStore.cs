@@ -1,10 +1,10 @@
 using System.Text.Json;
-using KHost.Mobile.Models;
-using KHost.Mobile.Serialization;
+using KHost.Mobile.Infrastructure.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Models;
+using KHost.Mobile.Abstractions.Services;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <inheritdoc />
 /// <remarks>
@@ -19,6 +19,9 @@ public sealed class JsonFileTonightStore : ITonightStore
     private readonly IAppSession? _session;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly ILogger _log;
+    // GetLocalNow, not GetUtcNow: every stored timestamp in this app is local, and switching would shift every
+    // new entry by the UTC offset against the ones already on the device.
+    private readonly TimeProvider _clock;
 
     private List<TonightEntry>? _entries;
     private Guid? _loadedFor;   // the singer whose file _entries was loaded from (null = the legacy no-singer file)
@@ -28,11 +31,16 @@ public sealed class JsonFileTonightStore : ITonightStore
     /// <paramref name="session"/> and <paramref name="logger"/> are optional so the integration tests can <c>new</c>
     /// the store bare; with no session it falls back to the single legacy file. DI supplies both.
     /// </summary>
-    public JsonFileTonightStore(IAppDataDirectory paths, IAppSession? session = null, ILogger<JsonFileTonightStore>? logger = null)
+    public JsonFileTonightStore(
+        IAppDataDirectory paths,
+        IAppSession? session = null,
+        ILogger<JsonFileTonightStore>? logger = null,
+        TimeProvider? timeProvider = null)
     {
         _paths = paths;
         _session = session;
         _log = logger ?? NullLogger<JsonFileTonightStore>.Instance;
+        _clock = timeProvider ?? TimeProvider.System;
         if (_session is not null)
             _session.ActiveSingerChanged += OnActiveSingerChanged;
     }
@@ -80,7 +88,7 @@ public sealed class JsonFileTonightStore : ITonightStore
             {
                 SongId = songId,
                 Order = entries.Count,
-                AddedAt = DateTimeOffset.Now,
+                AddedAt = _clock.GetLocalNow(),
             });
             Renumber(entries);
             changed = true;
@@ -161,7 +169,7 @@ public sealed class JsonFileTonightStore : ITonightStore
                 return;
 
             entry.Completed = completed;
-            entry.CompletedAt = completed ? DateTimeOffset.Now : null;
+            entry.CompletedAt = completed ? _clock.GetLocalNow() : null;
             entry.CompletedPerformanceId = completed ? performanceId : null;
             changed = true;
             await SaveAsync(entries);

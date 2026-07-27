@@ -1,4 +1,4 @@
-using KHost.Mobile.Services;
+using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
 namespace KHost.Mobile.UnitTests.Infrastructure.Services;

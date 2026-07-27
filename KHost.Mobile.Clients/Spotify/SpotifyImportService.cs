@@ -1,5 +1,7 @@
 using System.Net;
 
+using KHost.Mobile.Abstractions.Clients.Spotify;
+
 namespace KHost.Mobile.Clients.Spotify;
 
 /// <inheritdoc />

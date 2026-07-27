@@ -1,23 +1,29 @@
 using System.Text.Json;
-using KHost.Mobile.Clients.Lyrics;
-using KHost.Mobile.Models;
-using KHost.Mobile.Serialization;
+using KHost.Mobile.Abstractions.Clients.Lyrics;
+using KHost.Mobile.Infrastructure.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Models;
+using KHost.Mobile.Abstractions.Services;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <inheritdoc />
 /// <remarks>
 /// Backed by a single JSON file in the app's private data directory — the same durable-JSON pattern as
 /// <see cref="JsonFileSongListStore"/>. A corrupt file is quarantined and treated as an empty cache.
 /// </remarks>
-public sealed class JsonFileLyricsCache(IAppDataDirectory paths, ILogger<JsonFileLyricsCache>? logger = null) : ILyricsCache
+public sealed class JsonFileLyricsCache(
+    IAppDataDirectory paths,
+    ILogger<JsonFileLyricsCache>? logger = null,
+    TimeProvider? timeProvider = null) : ILyricsCache
 {
     private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "lyrics-cache.json");
     private readonly SemaphoreSlim _gate = new(1, 1);
     // Optional so the integration tests can `new` the cache without a logging stack; DI supplies the real logger.
     private readonly ILogger _log = logger ?? NullLogger<JsonFileLyricsCache>.Instance;
+    // GetLocalNow, not GetUtcNow: every stored timestamp in this app is local, and switching would shift
+    // every new entry by the UTC offset against the ones already on the device.
+    private readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
 
     private Dictionary<string, LyricsCacheEntry>? _entries;
 
@@ -57,7 +63,7 @@ public sealed class JsonFileLyricsCache(IAppDataDirectory paths, ILogger<JsonFil
             PlainLyrics = result?.PlainLyrics,
             SyncedLyrics = result?.SyncedLyrics,
             Instrumental = result?.Instrumental ?? false,
-            CachedAt = DateTimeOffset.Now,
+            CachedAt = _clock.GetLocalNow(),
         };
 
         await _gate.WaitAsync();

@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Components;
+namespace KHost.Mobile.UI.Components;
 
 /// <summary>Which way a <see cref="SplitButton"/>'s dropdown opens.</summary>
 public enum SplitDirection

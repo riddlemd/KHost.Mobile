@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// Opens an external URL <em>outside</em> the app's WebView, letting the OS pick the handler (native

@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// A latitude/longitude pair — a device fix or a venue's saved location. Deliberately decoupled from MAUI's

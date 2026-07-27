@@ -2,8 +2,8 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Services;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <inheritdoc />
 /// <remarks>

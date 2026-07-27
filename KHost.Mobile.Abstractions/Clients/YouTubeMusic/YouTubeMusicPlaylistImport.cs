@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.YouTubeMusic;
+namespace KHost.Mobile.Abstractions.Clients.YouTubeMusic;
 
 /// <summary>Result of reading a public YouTube Music playlist via the token-free page scrape.</summary>
 /// <param name="Name">The playlist's name (from the page title), if found; otherwise null.</param>

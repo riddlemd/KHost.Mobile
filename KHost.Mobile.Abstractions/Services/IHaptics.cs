@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// Short device haptics for gestures that complete without a visual transition of their own — today the

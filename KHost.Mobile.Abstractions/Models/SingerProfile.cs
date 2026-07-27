@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// A portable export of one singer — their identity plus their whole song list <em>including sung history</em> —

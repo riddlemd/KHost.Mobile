@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
-using KHost.Mobile.Models;
+using KHost.Mobile.Infrastructure.Models;
+using KHost.Mobile.Abstractions.Models;
 
-namespace KHost.Mobile.Serialization;
+using KHost.Mobile.Abstractions.Services;
+namespace KHost.Mobile.Infrastructure.Serialization;
 
 /// <summary>
 /// System.Text.Json source-generation context for the persisted / exported song list — generated metadata instead

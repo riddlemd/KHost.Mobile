@@ -1,4 +1,4 @@
-using KHost.Mobile.Clients.Updates;
+using KHost.Mobile.Abstractions.Clients.Updates;
 
 namespace KHost.Mobile.Clients.GitHub;
 

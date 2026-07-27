@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// Scans a QR code with the device camera. Backed natively on Android/iOS (ML Kit / Apple Vision); a no-op on

@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Lyrics;
+namespace KHost.Mobile.Abstractions.Clients.Lyrics;
 
 /// <summary>
 /// A lyrics lookup hit a network or HTTP failure. "No lyrics found" is NOT an exception — the lookup

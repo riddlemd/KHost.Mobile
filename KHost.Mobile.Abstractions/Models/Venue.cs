@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// A karaoke venue the singer keeps on their device — a local, user-authored record. Identity is a local

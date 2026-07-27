@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// Pure geo helpers for "which venue am I at?" — great-circle distance and nearest-venue selection over a device

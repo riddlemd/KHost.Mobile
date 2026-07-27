@@ -1,3 +1,4 @@
+using KHost.Mobile.Abstractions.Clients.YouTubeMusic;
 using KHost.Mobile.Clients.YouTubeMusic;
 using Xunit;
 

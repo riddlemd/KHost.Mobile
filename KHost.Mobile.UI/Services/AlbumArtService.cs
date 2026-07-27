@@ -1,10 +1,10 @@
-using KHost.Mobile.Clients.CoverArt;
-using KHost.Mobile.Clients.Metadata;
-using KHost.Mobile.Models;
+using KHost.Mobile.Abstractions.Clients.CoverArt;
+using KHost.Mobile.Abstractions.Clients.Metadata;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
-
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Models;
+using KHost.Mobile.Abstractions.Services;
+namespace KHost.Mobile.UI.Services;
 
 /// <inheritdoc />
 /// <remarks>

@@ -1,5 +1,5 @@
 using System.Net;
-using KHost.Mobile.Clients.Lyrics;
+using KHost.Mobile.Abstractions.Clients.Lyrics;
 
 namespace KHost.Mobile.Clients.LrcLib;
 

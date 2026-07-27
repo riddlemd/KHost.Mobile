@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Spotify;
+namespace KHost.Mobile.Abstractions.Clients.Spotify;
 
 /// <summary>One track read from a public Spotify playlist.</summary>
 /// <param name="Title">Song title.</param>

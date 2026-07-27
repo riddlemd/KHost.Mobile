@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <summary>
 /// Central naming for the per-singer JSON data files, so the per-singer stores and

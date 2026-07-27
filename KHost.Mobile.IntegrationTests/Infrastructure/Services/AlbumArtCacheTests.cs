@@ -1,5 +1,5 @@
 using System.Net;
-using KHost.Mobile.Services;
+using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
 namespace KHost.Mobile.IntegrationTests.Infrastructure.Services;

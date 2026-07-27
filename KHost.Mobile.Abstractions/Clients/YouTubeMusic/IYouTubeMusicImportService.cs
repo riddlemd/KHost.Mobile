@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.YouTubeMusic;
+namespace KHost.Mobile.Abstractions.Clients.YouTubeMusic;
 
 /// <summary>
 /// Reads a public YouTube Music playlist's tracks with no token or login, via the

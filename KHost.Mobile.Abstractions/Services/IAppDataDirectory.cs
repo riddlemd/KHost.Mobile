@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// Supplies the directory where the app persists its JSON stores. Abstracted so the stores depend on a plain path

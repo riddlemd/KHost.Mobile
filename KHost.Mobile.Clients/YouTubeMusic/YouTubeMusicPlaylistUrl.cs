@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 
+using KHost.Mobile.Abstractions.Clients.YouTubeMusic;
+
 namespace KHost.Mobile.Clients.YouTubeMusic;
 
 /// <summary>

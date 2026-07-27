@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text;
-using KHost.Mobile.Diagnostics;
+using KHost.Mobile.Infrastructure.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Xunit;
 

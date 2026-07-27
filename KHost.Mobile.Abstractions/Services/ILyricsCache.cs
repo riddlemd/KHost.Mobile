@@ -1,6 +1,6 @@
-using KHost.Mobile.Clients.Lyrics;
+using KHost.Mobile.Abstractions.Clients.Lyrics;
 
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// A cached lyrics lookup. A hit whose <see cref="Result"/> is null is a cached "no match" — distinct from

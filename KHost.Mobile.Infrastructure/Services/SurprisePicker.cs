@@ -1,6 +1,6 @@
-using KHost.Mobile.Models;
-
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Infrastructure.Models;
+using KHost.Mobile.Abstractions.Models;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <summary>
 /// Chooses a song at random for "Surprise me". Pure and deterministic given its roll value, so the narrowing rules

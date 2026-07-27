@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace KHost.Mobile.Json;
+namespace KHost.Mobile.Common.Json;
 
 /// <summary>
 /// Null-safe navigation helpers over <see cref="JsonElement"/>, shared by the client parsers. Every hop

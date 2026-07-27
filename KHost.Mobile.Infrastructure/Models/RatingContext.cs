@@ -1,6 +1,4 @@
-using KHost.Mobile.Services;
-
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Infrastructure.Models;
 
 /// <summary>
 /// The list-wide context a star is computed against — chiefly the prior mean <c>C</c> (the whole list's average

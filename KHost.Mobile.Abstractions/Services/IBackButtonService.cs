@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// App-wide registry that lets the Android hardware/gesture back button dismiss an open in-page overlay

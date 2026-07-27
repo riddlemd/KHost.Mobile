@@ -16,10 +16,9 @@
         <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">maccatalyst-arm64</RuntimeIdentifiers>
 
         <OutputType>Exe</OutputType>
-        <!-- Both pinned to KHost.Mobile so renaming the project to .UI changed only the container: the
-             namespaces and the built assembly name are what they always were. ApplicationId below is what
-             actually identifies the app to a device — leave it alone or a deploy uninstalls and wipes data. -->
-        <RootNamespace>KHost.Mobile</RootNamespace>
+        <!-- RootNamespace is left to default (KHost.Mobile.UI) so namespaces name their assembly. AssemblyName is
+             pinned to KHost.Mobile on purpose: it keeps the built artifact identical across the project rename.
+             ApplicationId below is what actually identifies the app to a device — moving it wipes user data. -->
         <AssemblyName>KHost.Mobile</AssemblyName>
         <UseMaui>true</UseMaui>
         <SingleProject>true</SingleProject>

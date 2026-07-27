@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Spotify;
+namespace KHost.Mobile.Abstractions.Clients.Spotify;
 
 /// <summary>Result of reading a public playlist via the token-free embed endpoint.</summary>
 /// <param name="Name">The playlist's name, if the page exposed it; otherwise null.</param>

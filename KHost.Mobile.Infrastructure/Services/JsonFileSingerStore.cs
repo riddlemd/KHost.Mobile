@@ -1,10 +1,10 @@
 using System.Text.Json;
-using KHost.Mobile.Models;
-using KHost.Mobile.Serialization;
+using KHost.Mobile.Infrastructure.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Models;
+using KHost.Mobile.Abstractions.Services;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <inheritdoc />
 /// <remarks>

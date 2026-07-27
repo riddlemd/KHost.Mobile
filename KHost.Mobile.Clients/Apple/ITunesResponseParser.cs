@@ -1,7 +1,8 @@
 using System.Text.Json;
+using KHost.Mobile.Abstractions.Clients.Matching;
+using KHost.Mobile.Abstractions.Clients.Metadata;
 using KHost.Mobile.Clients.Matching;
-using KHost.Mobile.Clients.Metadata;
-using KHost.Mobile.Json;
+using KHost.Mobile.Common.Json;
 
 namespace KHost.Mobile.Clients.Apple;
 

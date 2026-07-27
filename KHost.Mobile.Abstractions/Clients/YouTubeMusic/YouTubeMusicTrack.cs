@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.YouTubeMusic;
+namespace KHost.Mobile.Abstractions.Clients.YouTubeMusic;
 
 /// <summary>
 /// One track from a public YouTube Music playlist. A YT Music catalog entry carries title and artist as

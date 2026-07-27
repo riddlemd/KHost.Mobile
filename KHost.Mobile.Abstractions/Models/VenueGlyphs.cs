@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// The curated set of venue icons the picker offers. A fixed grid rather than the native OS emoji keyboard, whose

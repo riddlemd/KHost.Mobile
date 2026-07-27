@@ -1,7 +1,7 @@
-using KHost.Mobile.Models;
 using Microsoft.Extensions.Logging;
-
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Models;
+using KHost.Mobile.Abstractions.Services;
+namespace KHost.Mobile.UI.Services;
 
 /// <summary>
 /// <see cref="IVenueLocator"/> tying the location fix to the saved venues and the session's active-venue pointer.

@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Updates;
+namespace KHost.Mobile.Abstractions.Clients.Updates;
 
 /// <summary>
 /// Finds the newest published version of the app. Keyless. The check is a best-effort nicety: it returns

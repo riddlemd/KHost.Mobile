@@ -1,7 +1,6 @@
 using Android.App;
 using Android.Runtime;
-
-namespace KHost.Mobile;
+namespace KHost.Mobile.UI;
 
 [Application]
 public class MainApplication : MauiApplication

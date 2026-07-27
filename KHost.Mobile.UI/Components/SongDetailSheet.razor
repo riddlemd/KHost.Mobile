@@ -1,7 +1,9 @@
-@using KHost.Mobile.Models
+@using KHost.Mobile.Abstractions.Models
+@using KHost.Mobile.Infrastructure.Models
 @inject IAppSettings Settings
 @inject IAlbumArtService AlbumArt
 @inject IJSRuntime JS
+@inject TimeProvider Clock
 
 @* Shared song detail card (My Songs + Tonight). Presentational — it owns only the edit buffers; the host owns the
    @Item state, does every store write and link launch, and supplies what can't be derived here (the rating math,
@@ -338,7 +340,7 @@
 
     private bool _editFieldsBound;
 
-    private static int CurrentYear => DateTime.Now.Year;
+    private int CurrentYear => Clock.GetLocalNow().Year;
     private bool EditYearValid => !_editYear.HasValue || (_editYear.Value >= 1 && _editYear.Value <= CurrentYear);
     private bool CanSaveEdit => !string.IsNullOrWhiteSpace(_editTitle) && EditYearValid;
 

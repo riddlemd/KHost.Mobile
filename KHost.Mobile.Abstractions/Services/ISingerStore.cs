@@ -1,6 +1,6 @@
-using KHost.Mobile.Models;
+using KHost.Mobile.Abstractions.Models;
 
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// The roster of singers who share this device. UI binds to this interface only; today it's backed by a local JSON

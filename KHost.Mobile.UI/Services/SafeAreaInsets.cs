@@ -1,4 +1,5 @@
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Services;
+namespace KHost.Mobile.UI.Services;
 
 /// <inheritdoc />
 /// <remarks>A plain value holder: the Android activity's inset listener writes, the layout reads. Values only

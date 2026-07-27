@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Spotify;
+namespace KHost.Mobile.Abstractions.Clients.Spotify;
 
 /// <summary>
 /// An import failure: a bad link, a network problem, an HTTP error, or an unrecognized page (e.g. Spotify

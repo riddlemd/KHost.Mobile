@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// The curated set of accent colors a singer can carry; the active singer's choice re-tints the app. A fixed

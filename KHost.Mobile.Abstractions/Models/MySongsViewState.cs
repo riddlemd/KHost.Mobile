@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// The My Songs list's filter + sort presentation, held on <see cref="IAppSession"/> so it survives leaving and

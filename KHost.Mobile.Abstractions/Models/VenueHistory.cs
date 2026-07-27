@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// One song's tally at a venue: how many times sung there and the average "how it went" of the rated performances.

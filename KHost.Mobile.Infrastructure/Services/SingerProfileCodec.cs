@@ -1,8 +1,7 @@
 using System.Text.Json;
-using KHost.Mobile.Models;
-using KHost.Mobile.Serialization;
-
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Infrastructure.Serialization;
+using KHost.Mobile.Abstractions.Models;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <summary>
 /// Pure (no-I/O) serialize/parse for the Import/Export page's file round-trips — a singer profile, a legacy

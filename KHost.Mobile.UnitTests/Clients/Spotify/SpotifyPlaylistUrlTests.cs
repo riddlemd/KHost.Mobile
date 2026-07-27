@@ -1,3 +1,4 @@
+using KHost.Mobile.Abstractions.Clients.Spotify;
 using KHost.Mobile.Clients.Spotify;
 using Xunit;
 

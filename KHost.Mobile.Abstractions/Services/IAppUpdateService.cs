@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// The app-facing "is there a newer version?" check. It runs at most <b>once per application launch</b>

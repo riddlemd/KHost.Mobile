@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 
+using KHost.Mobile.Abstractions.Clients.Spotify;
+
 namespace KHost.Mobile.Clients.Spotify;
 
 /// <summary>

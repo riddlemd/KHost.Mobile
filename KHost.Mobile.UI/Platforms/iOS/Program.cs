@@ -1,7 +1,6 @@
 using ObjCRuntime;
 using UIKit;
-
-namespace KHost.Mobile;
+namespace KHost.Mobile.UI;
 
 public class Program
 {

@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Lyrics;
+namespace KHost.Mobile.Abstractions.Clients.Lyrics;
 
 /// <summary>
 /// Looks up a song's lyrics by title + artist. Keyless.

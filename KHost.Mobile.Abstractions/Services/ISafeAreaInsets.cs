@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// The device safe-area insets (status / navigation bars and any display cutout) in CSS pixels, for platforms

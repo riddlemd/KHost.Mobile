@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// Normalization rules for a song's free-form <see cref="SongListItem.Tags"/>. Kept pure (no I/O) so it can be

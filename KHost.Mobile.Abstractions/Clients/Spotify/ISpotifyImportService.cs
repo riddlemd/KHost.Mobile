@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Spotify;
+namespace KHost.Mobile.Abstractions.Clients.Spotify;
 
 /// <summary>
 /// Reads a public Spotify playlist's tracks with no token or login, via the

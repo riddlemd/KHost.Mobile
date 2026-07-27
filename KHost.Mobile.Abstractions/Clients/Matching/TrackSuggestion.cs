@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Matching;
+namespace KHost.Mobile.Abstractions.Clients.Matching;
 
 /// <summary>
 /// A catalogue title/artist offered as the correct spelling of what the user typed. Produced by any lookup

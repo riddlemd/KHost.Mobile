@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.CoverArt;
+namespace KHost.Mobile.Abstractions.Clients.CoverArt;
 
 /// <summary>
 /// A cover-art lookup hit a network or HTTP failure. "No cover found" is NOT an exception — the

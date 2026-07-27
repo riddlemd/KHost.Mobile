@@ -1,6 +1,6 @@
-using KHost.Mobile.Clients.Matching;
+using KHost.Mobile.Abstractions.Clients.Matching;
 
-namespace KHost.Mobile.Clients.Metadata;
+namespace KHost.Mobile.Abstractions.Clients.Metadata;
 
 /// <summary>
 /// The outcome of a metadata lookup: either a verified match, or a near-miss worth offering as a correction —

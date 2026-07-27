@@ -1,6 +1,6 @@
 using System.Net;
+using KHost.Mobile.Abstractions.Clients.Metadata;
 using KHost.Mobile.Clients.Apple;
-using KHost.Mobile.Clients.Metadata;
 using Xunit;
 
 namespace KHost.Mobile.UnitTests.Clients.Apple;

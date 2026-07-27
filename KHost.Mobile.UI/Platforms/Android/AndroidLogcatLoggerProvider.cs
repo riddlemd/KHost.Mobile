@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using AndroidLog = Android.Util.Log;
-
-namespace KHost.Mobile.Diagnostics;
+namespace KHost.Mobile.UI.Diagnostics;
 
 /// <summary>
 /// An <see cref="ILoggerProvider"/> that writes to Android's logcat via <see cref="Android.Util.Log"/>.

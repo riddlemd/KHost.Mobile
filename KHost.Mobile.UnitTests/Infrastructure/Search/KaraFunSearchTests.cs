@@ -1,4 +1,4 @@
-using KHost.Mobile.Search;
+using KHost.Mobile.Infrastructure.Search;
 using Xunit;
 
 namespace KHost.Mobile.UnitTests.Infrastructure.Search;

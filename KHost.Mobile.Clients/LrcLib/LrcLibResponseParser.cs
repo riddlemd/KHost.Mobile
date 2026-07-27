@@ -1,6 +1,6 @@
 using System.Text.Json;
-using KHost.Mobile.Clients.Lyrics;
-using KHost.Mobile.Json;
+using KHost.Mobile.Abstractions.Clients.Lyrics;
+using KHost.Mobile.Common.Json;
 
 namespace KHost.Mobile.Clients.LrcLib;
 

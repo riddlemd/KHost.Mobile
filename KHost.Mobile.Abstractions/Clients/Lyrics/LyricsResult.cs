@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Lyrics;
+namespace KHost.Mobile.Abstractions.Clients.Lyrics;
 
 /// <summary>Lyrics looked up for a song by title + artist.</summary>
 /// <param name="MatchedTitle">What the source actually matched.</param>

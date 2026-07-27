@@ -1,5 +1,5 @@
-using KHost.Mobile.Services;
 
+using KHost.Mobile.Abstractions.Services;
 namespace KHost.Mobile.IntegrationTests;
 
 /// <summary>

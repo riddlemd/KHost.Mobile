@@ -1,6 +1,6 @@
-using KHost.Mobile.Models;
+using KHost.Mobile.Abstractions.Models;
 
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// Best-effort access to the device's current location, abstracted so the venue logic stays MAUI-free and the

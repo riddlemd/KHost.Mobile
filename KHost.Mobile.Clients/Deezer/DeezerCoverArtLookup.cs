@@ -1,4 +1,4 @@
-using KHost.Mobile.Clients.CoverArt;
+using KHost.Mobile.Abstractions.Clients.CoverArt;
 
 namespace KHost.Mobile.Clients.Deezer;
 

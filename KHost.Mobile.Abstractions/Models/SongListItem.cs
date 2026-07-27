@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>Where a saved song sits in the singer's journey. Starts as a wishlist entry; extends to history later.</summary>
 public enum SongListItemStatus

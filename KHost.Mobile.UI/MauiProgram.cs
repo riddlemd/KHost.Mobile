@@ -1,22 +1,27 @@
 using KHost.Mobile.Clients.Apple;
-using KHost.Mobile.Clients.CoverArt;
+using KHost.Mobile.Abstractions.Clients.CoverArt;
 using KHost.Mobile.Clients.Deezer;
 using KHost.Mobile.Clients.GitHub;
 using KHost.Mobile.Clients.LrcLib;
-using KHost.Mobile.Clients.Lyrics;
-using KHost.Mobile.Clients.Metadata;
-using KHost.Mobile.Clients.Spotify;
-using KHost.Mobile.Clients.Updates;
-using KHost.Mobile.Clients.YouTubeMusic;
-using KHost.Mobile.Diagnostics;
-using KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Clients.Lyrics;
+using KHost.Mobile.Abstractions.Clients.Metadata;
+using KHost.Mobile.Abstractions.Clients.Spotify;
+using KHost.Mobile.Abstractions.Clients.Updates;
+using KHost.Mobile.Abstractions.Clients.YouTubeMusic;
+using KHost.Mobile.Infrastructure.Diagnostics;
+using KHost.Mobile.Infrastructure.Services;
+using KHost.Mobile.UI.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 #if ANDROID || IOS
 using BarcodeScanning;
 #endif
 
-namespace KHost.Mobile;
+using KHost.Mobile.Clients.Spotify;
+using KHost.Mobile.Clients.YouTubeMusic;
+using KHost.Mobile.UI.Diagnostics;
+using KHost.Mobile.Abstractions.Services;
+namespace KHost.Mobile.UI;
 
 public static class MauiProgram
 {
@@ -40,6 +45,11 @@ public static class MauiProgram
         // The private data folder the JSON stores write into. Abstracted behind IAppDataDirectory so the stores stay
         // MAUI-free and unit-testable; the app binds it to the real FileSystem.AppDataDirectory.
         builder.Services.AddSingleton<IAppDataDirectory, MauiAppDataDirectory>();
+
+        // One clock for the whole app, so a test can freeze it. Everything reads GetLocalNow() — every timestamp
+        // this app has ever persisted is local, and moving to GetUtcNow would silently shift new ones by the UTC
+        // offset against the ones already on the device.
+        builder.Services.AddSingleton(TimeProvider.System);
 
         // Singleton so the in-memory cache and Changed event are shared app-wide. The concrete type is registered
         // too, so both it and ISongListStore resolve to the one instance.

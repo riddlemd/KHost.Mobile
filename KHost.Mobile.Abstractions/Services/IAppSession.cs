@@ -1,4 +1,6 @@
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Models;
+
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// Ephemeral, per-launch app state that isn't persisted (unlike <see cref="IAppSettings"/>). Lives as a singleton

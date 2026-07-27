@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// On-device cache of album-art images. Given a cover URL it ensures the image is downloaded + stored, then hands

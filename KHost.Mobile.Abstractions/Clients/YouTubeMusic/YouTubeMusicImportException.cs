@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.YouTubeMusic;
+namespace KHost.Mobile.Abstractions.Clients.YouTubeMusic;
 
 /// <summary>
 /// A YouTube Music import failure: a bad link, a network problem, an HTTP error, or an unrecognized page

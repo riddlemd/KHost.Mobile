@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Metadata;
+namespace KHost.Mobile.Abstractions.Clients.Metadata;
 
 /// <summary>
 /// Looks up release year, genre, and cover-art URL for a song by title + artist. Keyless.

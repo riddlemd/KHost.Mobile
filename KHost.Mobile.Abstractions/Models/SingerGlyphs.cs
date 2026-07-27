@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// The curated set of emoji a singer can pick for their avatar instead of the name's first letter. A fixed grid

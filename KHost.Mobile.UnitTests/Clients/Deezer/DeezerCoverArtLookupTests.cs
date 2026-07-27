@@ -1,5 +1,5 @@
 using System.Net;
-using KHost.Mobile.Clients.CoverArt;
+using KHost.Mobile.Abstractions.Clients.CoverArt;
 using KHost.Mobile.Clients.Deezer;
 using Xunit;
 

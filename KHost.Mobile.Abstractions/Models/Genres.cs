@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>Common music genres offered in the (searchable) genre picker. Free text is still allowed on top of these.</summary>
 public static class Genres

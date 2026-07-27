@@ -11,6 +11,7 @@
 @inject IVenueStore Venues
 @inject IAlbumArtService AlbumArt
 @inject ILogger<Tonight> Log
+@inject TimeProvider Clock
 @implements IDisposable
 
 @if (_loading)
@@ -298,7 +299,7 @@ else
             }
             else
             {
-                var perf = new Performance { Date = DateTimeOffset.Now, HowItWent = 0, VenueId = Session.ActiveVenueId };
+                var perf = new Performance { Date = Clock.GetLocalNow(), HowItWent = 0, VenueId = Session.ActiveVenueId };
                 song.Performances.Add(perf);
                 song.Status = SongListItemStatus.Sang;
                 await Store.UpdateAsync(song);
@@ -323,7 +324,7 @@ else
 
         var performance = new Performance
         {
-            Date = DateTimeOffset.Now,
+            Date = Clock.GetLocalNow(),
             HowItWent = Math.Clamp(result.howItWent, 0, 5),
             Note = string.IsNullOrWhiteSpace(result.note) ? null : result.note.Trim(),
             VenueId = Session.ActiveVenueId,   // tag with wherever they are right now (null when not at a venue)
@@ -386,7 +387,7 @@ else
                 PriorWeight = Settings.RatingPriorWeight,
                 HalfLifeDays = Settings.RecencyHalfLifeDays,
             },
-            DateTimeOffset.Now);
+            Clock.GetLocalNow());
         await RefreshActiveVenueKaraFunAsync();
         await TonightStore.PruneAsync(_items.Select(i => i.Id).ToList());
         _tonight = await TonightStore.GetAllAsync();

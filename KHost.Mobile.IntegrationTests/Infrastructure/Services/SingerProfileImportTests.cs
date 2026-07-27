@@ -1,7 +1,7 @@
-using KHost.Mobile.Models;
-using KHost.Mobile.Services;
+using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
+using KHost.Mobile.Abstractions.Models;
 namespace KHost.Mobile.IntegrationTests.Infrastructure.Services;
 
 // The store-level behavior behind the Import/Export page's "import a profile" flow: the id-preserving upsert

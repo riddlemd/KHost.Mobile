@@ -1,4 +1,5 @@
-@using KHost.Mobile.Models
+@using KHost.Mobile.Abstractions.Models
+@using KHost.Mobile.Infrastructure.Models
 @inject IJSRuntime JS
 @inject IAppSettings Settings
 @inject IAppSession Session
@@ -7,6 +8,7 @@
 @inject IVenueStore VenueStore
 @inject ISingerStore SingerStore
 @inject NavigationManager Nav
+@inject TimeProvider Clock
 @implements IDisposable
 
 @* First-run coach-marks. Must live in MainLayout — it drives navigations between pages and has to survive them.
@@ -368,11 +370,11 @@
     private Guid? _tourStartSingerId;   // who was singing when the tour began, so a hold on the sample can be undone
     private readonly List<Guid> _seededTonightSongIds = [];
 
-    private static List<SongListItem> BuildSampleSongs()
+    private List<SongListItem> BuildSampleSongs()
     {
         // Staggered AddedAt so the "Added" sort has a real order; a couple favorited / rated so the cards aren't all
         // blank. MetadataLookedUp/ArtworkLookedUp are pre-set so a seed never kicks off a network lookup.
-        var now = DateTimeOffset.Now;
+        var now = Clock.GetLocalNow();
         SongListItem Make(int i, string title, string artist, string genre, int year, int enjoyment, bool fav,
             params int[] howItWent) => new()
         {
@@ -399,16 +401,16 @@
         ];
     }
 
-    private static Singer BuildSampleSinger() => new()
+    private Singer BuildSampleSinger() => new()
     {
         Id = SampleSingerId,
         Name = "Sam",
         Color = SingerColors.All[1],   // not the brand violet, so the two avatars read as different people
         Glyph = "🎸",
-        AddedAt = DateTimeOffset.Now,
+        AddedAt = Clock.GetLocalNow(),
     };
 
-    private static Venue BuildSampleVenue() => new()
+    private Venue BuildSampleVenue() => new()
     {
         Id = SampleVenueId,
         Name = "The Mockingbird",
@@ -417,7 +419,7 @@
         IsFavorite = true,
         ShowInSwitcher = true,
         Notes = "Thursday karaoke — a great crowd.",
-        AddedAt = DateTimeOffset.Now,
+        AddedAt = Clock.GetLocalNow(),
     };
 
     private async Task SeedSampleDataAsync()

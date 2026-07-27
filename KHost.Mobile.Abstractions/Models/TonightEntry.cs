@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// One song queued in tonight's on-deck set. Links to a <see cref="SongListItem"/> by id; ordering and completion

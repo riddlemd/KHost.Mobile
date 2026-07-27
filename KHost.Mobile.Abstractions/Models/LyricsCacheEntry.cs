@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// One cached lyrics lookup, persisted on-device so re-opening a song's lyrics doesn't re-hit LRCLIB. Keyed by

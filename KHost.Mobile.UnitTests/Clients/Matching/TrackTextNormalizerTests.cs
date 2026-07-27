@@ -1,3 +1,4 @@
+using KHost.Mobile.Abstractions.Clients.Matching;
 using KHost.Mobile.Clients.Matching;
 using Xunit;
 

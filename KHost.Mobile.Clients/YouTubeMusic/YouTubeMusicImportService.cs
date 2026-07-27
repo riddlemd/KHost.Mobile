@@ -1,3 +1,5 @@
+using KHost.Mobile.Abstractions.Clients.YouTubeMusic;
+
 namespace KHost.Mobile.Clients.YouTubeMusic;
 
 /// <inheritdoc />

@@ -1,5 +1,5 @@
 using System.Text.Json;
-using KHost.Mobile.Json;
+using KHost.Mobile.Common.Json;
 using Xunit;
 
 namespace KHost.Mobile.UnitTests.Common.Json;

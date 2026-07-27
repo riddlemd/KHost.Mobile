@@ -1,6 +1,6 @@
-using KHost.Mobile.Clients.Metadata;
-
-namespace KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Clients.Metadata;
+using KHost.Mobile.Abstractions.Services;
+namespace KHost.Mobile.UI.Services;
 
 /// <summary>
 /// Bridges the app's settings to the Clients library's <see cref="ILookupOptions"/>, which can't reference

@@ -1,6 +1,6 @@
 using System.Net;
+using KHost.Mobile.Abstractions.Clients.Updates;
 using KHost.Mobile.Clients.GitHub;
-using KHost.Mobile.Clients.Updates;
 using Xunit;
 
 namespace KHost.Mobile.UnitTests.Clients.GitHub;

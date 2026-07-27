@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// Resolves the active venue from the device's location — the "auto-switch as you move between venues" behavior.

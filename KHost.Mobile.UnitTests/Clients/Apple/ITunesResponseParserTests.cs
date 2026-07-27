@@ -1,7 +1,8 @@
+using KHost.Mobile.Abstractions.Clients.Metadata;
 using KHost.Mobile.Clients.Apple;
-using KHost.Mobile.Clients.Metadata;
 using Xunit;
 
+using KHost.Mobile.Abstractions.Models;
 namespace KHost.Mobile.UnitTests.Clients.Apple;
 
 public class ITunesResponseParserTests

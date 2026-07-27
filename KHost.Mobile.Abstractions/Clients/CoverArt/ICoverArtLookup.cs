@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.CoverArt;
+namespace KHost.Mobile.Abstractions.Clients.CoverArt;
 
 /// <summary>
 /// Finds a cover-art image URL for a song by title + artist. Keyless. A FALLBACK behind the primary metadata

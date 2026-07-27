@@ -1,10 +1,10 @@
 using System.Text.Json;
-using KHost.Mobile.Clients.Lyrics;
-using KHost.Mobile.Models;
-using KHost.Mobile.Serialization;
-using KHost.Mobile.Services;
+using KHost.Mobile.Abstractions.Clients.Lyrics;
+using KHost.Mobile.Infrastructure.Serialization;
+using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
+using KHost.Mobile.Abstractions.Models;
 namespace KHost.Mobile.IntegrationTests.Infrastructure.Services;
 
 public sealed class JsonFileLyricsCacheTests : IDisposable

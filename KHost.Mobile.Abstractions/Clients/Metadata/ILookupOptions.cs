@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Clients.Metadata;
+namespace KHost.Mobile.Abstractions.Clients.Metadata;
 
 /// <summary>
 /// Host-supplied preferences for catalogue lookups. Declared here rather than taking the app's settings type so

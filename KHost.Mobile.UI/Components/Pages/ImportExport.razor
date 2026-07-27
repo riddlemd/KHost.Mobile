@@ -2,9 +2,9 @@
 @layout MainLayout
 @using Microsoft.Maui.Storage
 @using Microsoft.Maui.ApplicationModel.DataTransfer
-@using KHost.Mobile.Clients.Metadata
-@using KHost.Mobile.Clients.Spotify
-@using KHost.Mobile.Clients.YouTubeMusic
+@using KHost.Mobile.Abstractions.Clients.Metadata
+@using KHost.Mobile.Abstractions.Clients.Spotify
+@using KHost.Mobile.Abstractions.Clients.YouTubeMusic
 @using Microsoft.Extensions.Logging
 @inject ILogger<ImportExport> Log
 @inject ISongListStore Store
@@ -17,6 +17,7 @@
 @inject IAppSettings Settings
 @inject IBackButtonService BackButton
 @inject NavigationManager Nav
+@inject TimeProvider Clock
 @implements IDisposable
 
 <section class="ie">
@@ -404,7 +405,7 @@
             var singer = _activeSinger ?? new Singer { Name = "Me" };   // session-less fallback
             var songs = await Store.GetAllAsync();
             var json = SingerProfileCodec.Serialize(SingerProfile.Create(singer, songs));
-            await ShareJsonAsync($"khost-{Slug(singer.Name)}-profile-{DateTime.Now:yyyy-MM-dd}.json", json, "Export singer profile");
+            await ShareJsonAsync($"khost-{Slug(singer.Name)}-profile-{Clock.GetLocalNow():yyyy-MM-dd}.json", json, "Export singer profile");
         }
         catch (Exception ex)
         {
@@ -560,7 +561,7 @@
         {
             var venues = await Venues.GetAllAsync();
             var json = SingerProfileCodec.SerializeVenues(venues);
-            await ShareJsonAsync($"khost-venues-{DateTime.Now:yyyy-MM-dd}.json", json, "Export venues");
+            await ShareJsonAsync($"khost-venues-{Clock.GetLocalNow():yyyy-MM-dd}.json", json, "Export venues");
         }
         catch (Exception ex)
         {

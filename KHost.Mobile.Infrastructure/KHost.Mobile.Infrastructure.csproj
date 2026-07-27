@@ -7,7 +7,6 @@
        projects can just reference it. Anything touching Microsoft.Maui.* stays in KHost.Mobile.UI. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>KHost.Mobile</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

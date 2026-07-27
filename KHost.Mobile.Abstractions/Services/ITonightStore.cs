@@ -1,6 +1,6 @@
-using KHost.Mobile.Models;
+using KHost.Mobile.Abstractions.Models;
 
-namespace KHost.Mobile.Services;
+namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>
 /// The "Tonight" on-deck set list — an ordered, persisted queue of songs with a per-entry completed flag. Its own

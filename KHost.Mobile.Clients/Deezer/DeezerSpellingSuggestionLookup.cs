@@ -1,5 +1,6 @@
+using KHost.Mobile.Abstractions.Clients.Matching;
+using KHost.Mobile.Abstractions.Clients.Metadata;
 using KHost.Mobile.Clients.Matching;
-using KHost.Mobile.Clients.Metadata;
 
 namespace KHost.Mobile.Clients.Deezer;
 

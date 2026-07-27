@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Logging;
-
-namespace KHost.Mobile.Diagnostics;
+namespace KHost.Mobile.Infrastructure.Diagnostics;
 
 /// <summary>
 /// A <see cref="DelegatingHandler"/> that logs every outbound request and its response for the app's typed
