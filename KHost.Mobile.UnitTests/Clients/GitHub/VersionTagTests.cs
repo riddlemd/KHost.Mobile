@@ -1,7 +1,7 @@
-using KHost.Mobile.Common.Versioning;
+using KHost.Mobile.Clients.GitHub;
 using Xunit;
 
-namespace KHost.Mobile.UnitTests.Common.Versioning;
+namespace KHost.Mobile.UnitTests.Clients.GitHub;
 
 public class VersionTagTests
 {

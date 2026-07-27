@@ -2,7 +2,6 @@ using KHost.Mobile.Abstractions.Clients.Updates;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 using KHost.Mobile.Abstractions.Services;
-using KHost.Mobile.Common.Versioning;
 
 namespace KHost.Mobile.UI.Services;
 
@@ -28,7 +27,10 @@ public sealed class MauiAppUpdateService(IUpdateLookup updateClient, IAppSetting
         if (!settings.UpdateCheckEnabled)
             return AppUpdateStatus.None;
 
-        if (!VersionTag.TryParse(AppInfo.Current.VersionString, out var current))
+        // Plain Version.TryParse, not the GitHub tag normalizer: this string is ApplicationDisplayVersion,
+        // which we set and which has always been plain dotted numerics. Giving it a "v" or a "-beta" suffix
+        // would land here as a silent no-update — so if that ever changes, change this too.
+        if (!Version.TryParse(AppInfo.Current.VersionString, out var current))
             return AppUpdateStatus.None;
 
         ReleaseInfo? latest;

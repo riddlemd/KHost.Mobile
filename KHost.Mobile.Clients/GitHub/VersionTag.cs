@@ -1,11 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace KHost.Mobile.Common.Versioning;
+namespace KHost.Mobile.Clients.GitHub;
 
 /// <summary>
-/// Normalizes a release tag into a <see cref="Version"/>. Pure — no network.
+/// Normalizes a GitHub release tag into a <see cref="Version"/>. Pure — no network. Internal because the
+/// only thing that produces tags is <see cref="GitHubReleaseParser"/>: the app's OWN version string comes from
+/// ApplicationDisplayVersion, which is always plain dotted numerics and needs no stripping.
 /// </summary>
-public static class VersionTag
+internal static class VersionTag
 {
     /// <summary>
     /// Parses <paramref name="tag"/> into <paramref name="version"/>, stripping a leading <c>v</c>/<c>V</c>

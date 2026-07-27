@@ -2,7 +2,6 @@ using System.Text.Json;
 using KHost.Mobile.Abstractions.Clients.Updates;
 using KHost.Mobile.Common.Json;
 
-using KHost.Mobile.Common.Versioning;
 
 namespace KHost.Mobile.Clients.GitHub;
 
