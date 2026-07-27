@@ -6,6 +6,7 @@
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![UI](https://img.shields.io/badge/UI-MAUI%20Blazor%20Hybrid-5C2D91)](https://learn.microsoft.com/dotnet/maui/)
 [![License](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-orange)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-wiki-7c3aed)](https://github.com/riddlemd/KHost.Mobile/wiki)
 
 KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a personal karaoke wishlist in your pocket. Add songs you'd love to sing, line up a set for the night, rate how each performance went, and look up lyrics on the spot — with your list stored **on your device**.
 
@@ -57,6 +58,16 @@ KHost Cue is a cross-platform mobile app for **iOS and Android** that keeps a pe
 Grab the latest `KHostCue-vX.Y.Z.apk` from [Releases](https://github.com/riddlemd/KHost.Mobile/releases) and sideload it on **Android** (you may need to allow installs from your browser or file manager). The app checks Releases itself and shows a banner when a newer version is out. On **iOS**, build from source for now.
 
 > **Building from source or contributing?** See **[DEVELOPMENT.md](DEVELOPMENT.md)** for prerequisites, build & run commands, testing, project layout, and design notes.
+
+## 📖 Documentation
+
+The **[KHost Cue wiki](https://github.com/riddlemd/KHost.Mobile/wiki)** documents every screen, gesture and setting — written against the app running on a device, so the labels it quotes are the ones you'll see.
+
+- **Using the app** — [Getting started](https://github.com/riddlemd/KHost.Mobile/wiki/Getting-Started) · [My Songs](https://github.com/riddlemd/KHost.Mobile/wiki/My-Songs) · [Tonight](https://github.com/riddlemd/KHost.Mobile/wiki/Tonight) · [Singers](https://github.com/riddlemd/KHost.Mobile/wiki/Singers) · [Venues](https://github.com/riddlemd/KHost.Mobile/wiki/Venues) · [Ratings & history](https://github.com/riddlemd/KHost.Mobile/wiki/Ratings-and-History) · [Settings reference](https://github.com/riddlemd/KHost.Mobile/wiki/Settings-Reference) · [FAQ](https://github.com/riddlemd/KHost.Mobile/wiki/FAQ-and-Troubleshooting)
+- **What leaves the device** — [Privacy, permissions & network use](https://github.com/riddlemd/KHost.Mobile/wiki/Privacy-and-Network) lists every outside service the app can contact and the setting that switches each one off.
+- **Building on it** — [Architecture](https://github.com/riddlemd/KHost.Mobile/wiki/Architecture) · [Data storage](https://github.com/riddlemd/KHost.Mobile/wiki/Data-Storage) · [UI components](https://github.com/riddlemd/KHost.Mobile/wiki/UI-Components) · [External services](https://github.com/riddlemd/KHost.Mobile/wiki/Clients-Library) · [Building & testing](https://github.com/riddlemd/KHost.Mobile/wiki/Building-and-Testing) · [Conventions](https://github.com/riddlemd/KHost.Mobile/wiki/Conventions)
+
+The wiki lives in its own repo (`KHost.Mobile.wiki.git`) — clone it, edit the markdown, push. [DEVELOPMENT.md](DEVELOPMENT.md) stays canonical for build commands and design rationale; the wiki's contributor pages point back at it.
 
 ## 🤝 Contributing
 

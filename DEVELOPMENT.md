@@ -1,11 +1,6 @@
 # 🧑‍💻 Development & design notes
 
-Developer-facing docs for **KHost Cue** — how to build and test it, and the reasoning behind a few non-obvious parts. For the product overview, features, and screenshots, see **[README.md](README.md)**. For AI-agent / contributor coding conventions (style, patterns, gotchas), see **[AGENTS.md](AGENTS.md)**.
-
-## 🛠️ Tech stack
-
-- **[.NET 10](https://dotnet.microsoft.com/)** with **[.NET MAUI Blazor Hybrid](https://learn.microsoft.com/dotnet/maui/)** — native iOS/Android shell hosting a Razor (Blazor) UI.
-- On-device storage in JSON files behind interfaces (`ISongListStore`, `ITonightStore`, `IVenueStore`, `ISingerStore`, `ILyricsCache`) that keep storage concerns out of the UI. The song-list and tonight stores are namespaced per singer, so each person's lists live in their own file.
+Developer-facing docs for **KHost Cue** — the reasoning behind a few non-obvious parts of the app, plus genuine first-time build setup. For the product overview, features, and screenshots, see **[README.md](README.md)**. For coding conventions, tech stack, and project layout, see **[AGENTS.md](AGENTS.md)**. For the full build/deploy/test command reference, see the wiki's [Building and Testing](https://github.com/riddlemd/KHost.Mobile/wiki/Building-and-Testing) page.
 
 ## 🚀 Building from source
 
@@ -29,25 +24,11 @@ Developer-facing docs for **KHost Cue** — how to build and test it, and the re
 
 ### Build & run
 
-```bash
-# Android
-dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-android "-p:BaseOutputPath=./obj/_build"
-
-# Deploy and launch on a connected Android device / emulator
-dotnet build KHost.Mobile/KHost.Mobile.csproj -t:Run -f net10.0-android "-p:BaseOutputPath=./obj/_build"
-
-# Run on Windows — the quickest way to iterate on the Blazor UI (no emulator needed)
-dotnet run --project KHost.Mobile -f net10.0-windows10.0.19041.0 "-p:BaseOutputPath=./obj/_build"
-
-# Run on macOS — the Mac equivalent, same story (no simulator needed)
-dotnet run --project KHost.Mobile -f net10.0-maccatalyst "-p:BaseOutputPath=./obj/_build"
-```
-
-> `-p:BaseOutputPath=./obj/_build` keeps build output out of the IDE's `bin/` folder so it doesn't get locked while the IDE is open.
+Full command reference — all four heads, deploy-and-launch, the Windows/Catalyst iteration loops — lives on the wiki's [Building and Testing](https://github.com/riddlemd/KHost.Mobile/wiki/Building-and-Testing) page. AGENTS.md carries the two rules that matter for a device build: always deploy the Debug build with `-t:Run`, never `adb install` the APK (Fast Deployment keeps the .NET assemblies out of the APK, so a bare install crashes on launch), and the `<MauiVersion>` pin (currently `10.0.80`) — don't "clean it up" back to the workload default, which crashes on Android 16 launch.
 
 ### Backing up on-device data (before a risky redeploy)
 
-Deploying with `-t:Run` **updates the app in place** — the on-device data (`files/*.json`, `shared_prefs/`) survives. It's only wiped by an **uninstall**, and the sneaky way that happens is a *reinstall you didn't ask for*: deploying a build signed with a **different debug keystore** (fresh machine, regenerated `~/.android/debug.keystore`) fails to install over the existing app with a signature mismatch, and the tooling falls back to uninstall + reinstall — taking your singers, song lists, tonight sets, venues and settings with it. A manual "uninstall to fix a launch crash" does the same.
+Deploying with `-t:Run` **updates the app in place** — the on-device data (`files/*.json`, `shared_prefs/`) survives. It's only wiped by an **uninstall**, and there are three sneaky ways that happens without you asking for it: deploying a build signed with a **different debug keystore** (fresh machine, regenerated `~/.android/debug.keystore`) fails to install over the existing app with a signature mismatch, so the tooling falls back to uninstall + reinstall; a **package-id change** makes Android treat the build as a different app entirely; and a manual "uninstall to fix a launch crash" does the same on purpose. All three take your singers, song lists, tonight sets, venues and settings with them.
 
 The host test suites (Unit + Integration) run against a throwaway temp folder and **never touch device data** — so the risk is device deploys, not tests. **Back up before any redeploy that might reinstall, or before any manual uninstall:**
 
@@ -81,29 +62,17 @@ Backups are the only safety net against a redeploy that reinstalls, so the newes
 
 ### Sample data for testing
 
-Need songs to populate the list while testing? This public **YouTube Music** playlist imports cleanly via **Import & Export → YouTube Music**:
-
-```text
-https://music.youtube.com/playlist?list=PLrB1lrYJ3YfvS2ZaTJZ_D8vvIv_fowkNM
-```
+See AGENTS.md → Gotchas for a public YouTube Music playlist link that imports cleanly via Import & Export → YouTube Music — handy for populating the list while testing.
 
 ## 🧪 Testing
 
-Two xUnit projects, split by what they touch. Both must pass before any commit:
+Two xUnit projects, split by what they touch. Commands, and the rule that both must pass before a commit, are in AGENTS.md's Housekeeping section; the wiki's [Building and Testing](https://github.com/riddlemd/KHost.Mobile/wiki/Building-and-Testing) page has the full reference.
 
-```bash
-# Unit tests — pure, no-I/O logic (playlist/metadata/lyrics parsers, Genres.Map, SongListItem computed properties)
-dotnet test KHost.Mobile.UnitTests/KHost.Mobile.UnitTests.csproj "-p:BaseOutputPath=./obj/_build"
-
-# Integration tests — the JSON stores against a real temp folder (real file I/O + serialization)
-dotnet test KHost.Mobile.IntegrationTests/KHost.Mobile.IntegrationTests.csproj "-p:BaseOutputPath=./obj/_build"
-```
-
-Neither test project needs the MAUI workload: they target plain `net10.0`. The MAUI-free source they cover (models, stores) is pulled in via linked `<Compile>` since a `net10.0` project can't reference the MAUI head. The stores' only device dependency — the app-data folder — is abstracted behind `IAppDataDirectory`, which the integration tests point at a throwaway temp directory.
+Neither test project needs the MAUI workload: they target plain `net10.0`. The MAUI-free source they cover (models, stores) is pulled in via linked `<Compile>` items, since a `net10.0` project can't reference the MAUI head. The stores' only device dependency — the app-data folder — is abstracted behind `IAppDataDirectory`, which the integration tests point at a throwaway temp directory.
 
 ### Driving the running UI
 
-Neither suite touches the UI; gesture- and sheet-shaped changes are verified by driving the app's WebView over CDP with the tools in **[`playwright/`](playwright/README.md)**. Split by target: **`playwright/device/`** (full Playwright) and **`playwright/emulator/`** (raw CDP with real-touch `tap`/`swipeDown` — the emulator's older WebView rejects Playwright's connect handshake). Each has a `walk_tutorial.mjs`; the README there has the attach flow, examples, and the on-device gotchas.
+Gesture- and sheet-shaped changes are verified by driving the app's WebView over CDP rather than through either test suite — see AGENTS.md → Commands → UI automation for the attach flow and the on-device gotchas, and [`playwright/README.md`](playwright/README.md) for the full how-to. `walk_tutorial.mjs` (in both `playwright/device/` and `playwright/emulator/`) is the worked example to start from.
 
 ## 📸 Screenshots
 
@@ -170,9 +139,9 @@ Mouse input covers the gestures: `swipe.js` runs off pointer events, so click-an
 
 ## 📁 Project structure
 
+AGENTS.md's Solution / project layout table covers `KHost.Mobile` and `KHost.Mobile.Clients` — the two shipping projects — in more detail. The two test projects aren't in that table:
+
 | Project | Role |
 |---|---|
-| `KHost.Mobile` | The MAUI Blazor Hybrid app — a thin native shell hosting the Razor UI in `Components/`. |
-| `KHost.Mobile.Clients` | Client library: playlist import (Spotify / YouTube Music), iTunes metadata lookup, Deezer cover-art fallback, and LRCLIB lyrics lookup. |
 | `KHost.Mobile.UnitTests` | xUnit unit tests for the pure, no-I/O logic (parsers, `Genres`, `SongListItem`). |
 | `KHost.Mobile.IntegrationTests` | xUnit integration tests for the JSON stores against a real temp folder, via a fake `IAppDataDirectory`. |

@@ -38,14 +38,13 @@ repos/
 # Android head — THE green signal on Windows (iOS cannot build here; see gotcha).
 dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-android "-p:BaseOutputPath=./obj/_build"
 
-# Windows head — fastest way to iterate the Blazor Hybrid UI on Windows (no emulator).
-dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-windows10.0.19041.0 "-p:BaseOutputPath=./obj/_build"
-dotnet run   --project KHost.Mobile -f net10.0-windows10.0.19041.0   # launch the UI on the desktop
+# Windows / Mac Catalyst heads — fastest UI iteration, no emulator or simulator.
+# Catalyst is DEV-ONLY (layout preview). There is no desktop product; don't treat it as a shipping target.
+dotnet run --project KHost.Mobile -f net10.0-windows10.0.19041.0
+dotnet run --project KHost.Mobile -f net10.0-maccatalyst
 
-# Mac Catalyst head — the macOS equivalent: fastest UI iteration on a Mac, no simulator.
-# DEV-ONLY (layout preview). There is no desktop product; don't treat it as a shipping target.
-dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-maccatalyst "-p:BaseOutputPath=./obj/_build"
-dotnet run   --project KHost.Mobile -f net10.0-maccatalyst            # launch the UI on the desktop
+# Build, deploy AND launch on a connected Android device or emulator.
+dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-android -t:Run "-p:BaseOutputPath=./obj/_build"
 
 # Client library on its own
 dotnet build KHost.Mobile.Clients/KHost.Mobile.Clients.csproj
@@ -53,31 +52,13 @@ dotnet build KHost.Mobile.Clients/KHost.Mobile.Clients.csproj
 
 `-p:BaseOutputPath=./obj/_build` mirrors the KHost repo convention (redirects output so it doesn't lock VS's `bin/`).
 
-### Deploying to a device / emulator
+**The full command reference lives in the wiki — [Building & testing](https://github.com/riddlemd/KHost.Mobile/wiki/Building-and-Testing):** first-time workload/SDK setup, iOS-simulator deploy, targeting one of several attached devices (`-p:AdbTarget=-s <serial>`), the cold-`actool` hang, the `-t:Run` simulator stall and its `simctl` fallback, and how to verify which build a device is actually running. Look it up when you need it. What stays below is the handful of rules that bite whatever you're doing.
 
-```bash
-# Build, deploy, AND launch on the connected Android device (physical Pixel or emulator).
-dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-android -t:Run "-p:BaseOutputPath=./obj/_build"
-# Target a specific device when more than one is attached:
-#   "-p:AdbTarget=-s <serial>"      (e.g. -s emulator-5554, or the wireless-adb serial)
-```
+### Device-deploy rules
 
 - **Always deploy the Debug build with `-t:Run`, never `adb install` the APK.** The Debug config keeps the .NET assemblies *outside* the APK (Fast Deployment) and relies on the MSBuild deploy target to push them to the device's `files/.__override__/`; a bare `adb install` launches then **crashes** with *"No assemblies found in '.../.__override__/...'. Assuming this is part of Fast Deployment. Exiting."* `-t:Run` does the push and starts the activity. (For a self-contained APK instead, build with `-p:EmbedAssembliesIntoApk=true`.)
-- Deploying **updates the app in place** — the on-device data files (`files/*.json`, `shared_prefs/`) persist across a redeploy; they're only lost on an uninstall.
-- **Always deploy the build you just made to every emulator/simulator you're about to look at — never trust what's already installed.** An emulator keeps its last install indefinitely, so a months-old version sits there looking current and you end up reviewing code that isn't yours. Building alone doesn't install anything; it takes the `-t:Run` deploy. Verify the version rather than assuming: Android `adb -s <serial> shell dumpsys package khost.mobile | grep versionName`, iOS `xcrun simctl listapps <udid> | grep -A12 khost.mobile` (look at `CFBundleVersion`, which is `ApplicationVersion` in the csproj).
-  - iOS simulator: `dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-ios -t:Run "-p:BaseOutputPath=./obj/_build" "-p:_DeviceName=:v2:udid=<udid>"` (boot it first with `xcrun simctl boot <udid>`; `xcrun simctl list devices available` lists them).
-- **A cold iOS build looks hung at `actool` — always run it with the output going to a log, and watch the log instead of the terminal.** `_CoreCompileImageAssets` shells out to `xcrun actool` to compile the asset catalog, and actool prints *nothing* for minutes while it works, so a foreground build sits silent long enough to look dead and get killed — which is how you end up with a simulator still running last month's version. Run it detached and tail the log (`*.log` is gitignored):
-  ```bash
-  dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-ios "-p:BaseOutputPath=./obj/_build" -v:n > ios-build.log 2>&1 &
-  tail -f ios-build.log     # last line names the phase; "external tool execution … actool" = still working, not stuck
-  ```
-  A genuinely stuck actool is a different signature — see the Gotchas entry on Xcode components (`ibtoold failed IDE initialization`); check `ps -Ao pid,etime,comm | grep -iE 'actool|ibtool'` to tell a working actool from an absent one.
-- **`-t:Run` can stall on the iOS simulator even when the build is fine.** If the build log reaches `Build succeeded` but nothing installs, skip MSBuild's deploy and install the bundle directly — safe on iOS (unlike Android's Fast Deployment, the simulator bundle carries its own assemblies):
-  ```bash
-  xcrun simctl install <udid> KHost.Mobile/obj/_buildDebug/net10.0-ios/iossimulator-arm64/KHost.Mobile.app
-  xcrun simctl launch  <udid> khost.mobile
-  ```
-- **ALWAYS back up the device's data before pushing a build to a live/physical device — no exceptions.** Run `dotnet run scripts/backup-device-data.cs -- backup` first (it lands a gitignored tarball in `device-backups/`). A redeploy *normally* keeps data, but a signing-key mismatch (a build from a different machine / regenerated debug keystore), a package-id change, or a troubleshooting uninstall silently forces an **uninstall + reinstall that wipes singers, song lists, tonight sets, venues and settings**. The backup is the only safety net — take it every time, restore with `… -- restore <file>` if a deploy wipes the device. See DEVELOPMENT.md → "Backing up on-device data" for the full flow.
+- **ALWAYS back up the device's data before pushing a build to a live/physical device — no exceptions.** Run `dotnet run scripts/backup-device-data.cs -- backup` first (it lands a gitignored tarball in `device-backups/`). A redeploy *normally* keeps data — `files/*.json` and `shared_prefs/` survive an in-place update — but a signing-key mismatch (a build from a different machine / regenerated debug keystore), a package-id change, or a troubleshooting uninstall silently forces an **uninstall + reinstall that wipes singers, song lists, tonight sets, venues and settings**. The backup is the only safety net — take it every time, restore with `… -- restore <file>` if a deploy wipes the device. See DEVELOPMENT.md → "Backing up on-device data" for the full flow.
+- **Deploy the build you just made to every emulator/simulator you're about to look at — never trust what's already installed.** An emulator keeps its last install indefinitely, so a months-old version sits there looking current and you review code that isn't yours. Building alone installs nothing; it takes the `-t:Run` deploy. Verify rather than assume — the wiki page has the version-check commands.
 - **`<MauiVersion>` is pinned to `10.0.80` in the csproj on purpose — don't "clean it up" back to the workload default.** The workload default (10.0.20) crashes immediately on launch on Android 16 / API 36 (a .NET 10 MAUI root-fragment regression: *"No view found for id … for fragment NavigationRootManager_ElementBasedFragment"*). If an Android launch crash reappears after a workload update, bump `MauiVersion` to the latest serviced `10.0.x` on NuGet and verify with `adb logcat` for the "No view found" FATAL.
 
 ### UI automation (`playwright/`)
@@ -100,6 +81,10 @@ The app ships **offline/local UI only**. All local data sits behind an interface
 - `Models/TonightEntry.cs` — references a `SongListItem` by id; owns `Order`, `Completed`/`CompletedAt`, and `CompletedPerformanceId` (so an undo removes exactly the performance the check-off logged, even after restart).
 - `Services/ITonightStore.cs` + `JsonFileTonightStore.cs`.
 
+**Venues** — the places you sing, **shared by every singer on the device** (unlike the song list and tonight set, which are per-singer). A performance is tagged with whichever venue is active when it's logged, so each venue accumulates its own history and go-to songs; deleting a venue leaves those tags orphaned rather than deleting the performances.
+- `Models/Venue.cs` (+ `VenueGlyphs`, `VenueHistory`, `VenueProximity`, `GeoPoint`) — name, glyph, optional location, KaraFun id, favorite/show-in-switcher flags.
+- `Services/IVenueStore.cs` + `JsonFileVenueStore.cs` (`venues.json`); `IVenueLocator`/`MauiVenueLocator` picks the nearest saved venue when auto-detect is on, and any manual pick **pins** it so the periodic re-check won't override it.
+
 **Singers (multiple users, one device)** — several people can share one device, each with their own **My Songs** and **Tonight** set; the **Venues** list is shared. Casual switching — no login/PIN — via the header **avatar** (`Components/Layout/SingerChip.razor`, a "Who's singing?" switcher mirroring `VenueChip`) or the **Singers** page (`Singers.razor` + `SingerEditSheet.razor`, reached from the ⋮ menu below Venues). The active singer's color re-tints the whole app chrome by overriding the `--kh-primary` tokens on `<html>` (`wwwroot/js/singer.js`, called from `SingerChip`).
 - `Models/Singer.cs` + `SingerColors`/`SingerGlyphs` (the pickers); `Services/ISingerStore.cs` + `JsonFileSingerStore.cs` (`singers.json`). `EnsureSeededAsync` creates a default "Me" on first run and **migrates the legacy single-user `song-list.json` / `tonight.json` into it**.
 - The **active singer** lives on `IAppSession` (`ActiveSingerId` / `ActiveSingerChanged`), remembered via `IAppSettings.LastActiveSingerId`; `MainLayout` resolves it before any personal page loads.
@@ -120,7 +105,7 @@ The app ships **offline/local UI only**. All local data sits behind an interface
 
 **Spelling suggestions** — when a lookup finds no exact match but one near-miss, the song carries `SuggestedTitle`/`SuggestedArtist` and a ⚠ appears beside its name; in the detail sheet that mark is a button that unfolds the "Did you mean …?" offer. The lookup that produces it is gated on `ShouldLookUp` (**not** on genre/year still being blank — a song can have complete metadata and a wrong title). iTunes offers the correction from the call it was already making; `Deezer/DeezerSpellingSuggestionLookup.cs` (keyless, `ISpellingSuggestionLookup`) is a fallback consulted **only when iTunes returned neither a match nor a suggestion**. It uses Deezer's **plain free-text** search, not the field-scoped `artist:"…" track:"…"` form the cover-art lookup uses — that one is exact-only and returns nothing for a typo. The matching bar lives in `Matching/TrackSimilarity.cs` + `TrackSuggestionFinder.cs`, shared by both sources; see DEVELOPMENT.md → Design notes for why it's set where it is.
 
-**Album-art display** — `Services/IAlbumArtLoader` + `AlbumArtLoader` own the loaded-cover map (song id → `blob:` URL) and the `khAlbumArt` interop; My Songs and Tonight share it, so a cover fetched on one tab is already there on the other. Registered **scoped, not singleton** — it talks through `IJSRuntime`, which is scoped in Blazor Hybrid; a singleton captures a JS runtime that isn't attached to the WebView and every transfer silently fails. (Why `blob:` URLs at all: DEVELOPMENT.md → Design notes.)
+**Album-art display** — `Services/IAlbumArtService` + `AlbumArtService` own the loaded-cover map (song id → `blob:` URL) and the `khAlbumArt` interop; asking for a song's view is what starts the fetch, and an `IntersectionObserver` (`wwwroot/js/art-visibility.js`) bounds how many covers stay in memory — keyed on what's *visible*, not what's rendered, or eviction thrashes. My Songs and Tonight share it, so a cover fetched on one tab is already there on the other. Registered **scoped, not singleton** — it talks through `IJSRuntime`, which is scoped in Blazor Hybrid; a singleton captures a JS runtime that isn't attached to the WebView and every transfer silently fails. (Why `blob:` URLs at all: DEVELOPMENT.md → Design notes.)
 
 **Import / export** — `ImportExport.razor` pulls songs from a public Spotify or YouTube Music playlist link, or a KHost Cue `.json` file, and exports the whole list back out (`KHost.Mobile.Clients/Spotify/`, `YouTubeMusic/`).
 
@@ -167,7 +152,11 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
 - `IFooStore` interface + `JsonFileFooStore` impl (platform-backed services use the `MauiFoo` prefix instead), registered **singleton** in `MauiProgram`.
 - `private readonly SemaphoreSlim _gate = new(1, 1)` + a nullable in-memory cache field as the source of truth. Every public method: `await _gate.WaitAsync(); try { … } finally { _gate.Release(); }`. Private `LoadAsync`/`SaveAsync` assume the caller already holds the gate (say so in a comment).
 - Fire `Changed?.Invoke(this, EventArgs.Empty)` **after** releasing the gate, and only when something actually changed.
-- One JSON file per store under `FileSystem.AppDataDirectory`; serialize with a **System.Text.Json source-gen** `JsonSerializerContext`. Swallow a corrupt file (`catch (JsonException)`) → empty state rather than crash.
+- One JSON file per store under `FileSystem.AppDataDirectory`; write through `AtomicFile.WriteAsync` (`.tmp` + rename) so a kill mid-write can't truncate the file.
+- A corrupt file (`catch (JsonException)`) degrades to empty state rather than crashing — but **move the bad bytes aside with `AtomicFile.Quarantine` (a `.corrupt` sibling), never overwrite them.** "Swallow" means the app keeps running, not that the user's data is discarded; the sibling is the only route to recovery.
+- **Register a new persisted type on its `JsonSerializerContext`, and check the nested ones too.** Missing it fails at **runtime** (`NotSupportedException`), not at compile time, so it survives a green build — and a type nested inside another serialized type still needs its own `[JsonSerializable]` line if anything serializes it standalone.
+- **A store that writes per-singer files must save to the singer its cache was loaded for** (`_loadedFor`, captured before any `await`) — never a freshly re-read `IAppSession.ActiveSingerId`. A singer switch landing mid-write would otherwise put one singer's songs in another's file. See `JsonFileSongListStore.SaveAsync`.
+- **`JsonFileSongListStore` is deliberately registered twice** — once as itself, once as `ISongListStore` resolving to the same instance (`MauiProgram.cs`) — so the profile export/import path and every interface consumer share one cache. It is not a redundant registration; collapsing it splits the cache and breaks import/export.
 
 ### Pattern: client backend (`KHost.Mobile.Clients`)
 - Stays **MAUI-free with zero package references** (pure BCL). One feature per folder/namespace.
@@ -179,6 +168,7 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
 - Single-file `.razor` (no code-behind, no scoped `.razor.css`; all CSS in `wwwroot/app.css`). Keep components single-purpose. `@inject` (never `[Inject]`); injected services get short semantic field names (`Store`, `Settings`, `JS`). `[Parameter]` props get `<summary>` docs.
 - Load data in `OnInitializedAsync`, subscribe to store `Changed`, and implement `IDisposable` to unsubscribe. `async Task` handlers — never `async void`; fire-and-forget is an explicit `_ = FooAsync()` with an internal try/catch. `InvokeAsync(StateHasChanged)` from async continuations; bare `StateHasChanged()` from sync / `[JSInvokable]` paths.
 - JS interop only in `OnAfterRenderAsync`: one `wwwroot/js/<feature>.js` per feature exposing `window.kh<Feature>.register(...)`, bound once via a `_xBound` flag; C#↔JS round-trips use `DotNetObjectReference` + `[JSInvokable]`.
+- **A pointer gesture module ends the gesture on `window`, not the element** — `swipe.js` binds `pointerup`/`pointercancel` there on purpose. A press-and-hold opens an overlay *over* the row, so the release lands on the overlay; a container-scoped listener would never fire, leaving the gesture stuck active and killing every later gesture on that list.
 - **Bottom sheets wrap `Components/Sheet.razor`** — it owns the backdrop, ✕, pull-down-to-dismiss and the page-scroll lock (read from the DOM, so stacked sheets can't strand it). Don't hand-roll `khSheet.register` / `setLock` in a page; pass `Open`/`OnClose` (and `OnSwipeDismiss` when a pull-down means something other than close — see `RatingPromptSheet`).
 - CSS: `--kh-` design tokens in `:root`; light/dark via `@media (prefers-color-scheme)` plus a `[data-theme]` override; BEM class naming (`block__element`, `block--modifier`, `is-`/`active` state).
 
@@ -188,21 +178,17 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
   - `dotnet test KHost.Mobile.UnitTests/KHost.Mobile.UnitTests.csproj "-p:BaseOutputPath=./obj/_build"` — pure, no-I/O logic (parsers, `Genres`, `SongListItem`).
   - `dotnet test KHost.Mobile.IntegrationTests/KHost.Mobile.IntegrationTests.csproj "-p:BaseOutputPath=./obj/_build"` — the JSON stores against a real temp folder (real file I/O + serialization) via a fake `IAppDataDirectory`.
 - **Keep the docs in sync with the app.** `README.md` is product-facing — update its feature list (and the screenshot grid where relevant) whenever a user-facing feature is added or its behavior changes, so it never lags the app. **[DEVELOPMENT.md](DEVELOPMENT.md)** holds the developer-facing docs — build/test commands, the screenshot target size, and the **Design notes** section; put design rationale for a non-obvious implementation (a new reusable component, a storage/serving decision, a platform workaround) there, not in the README.
+- **The [wiki](https://github.com/riddlemd/KHost.Mobile/wiki) is a SEPARATE repo (`KHost.Mobile.wiki.git`) — a commit here never touches it, so it goes stale silently.** Clone it, edit the markdown, push. Its user pages describe the app screen by screen and **quote on-screen labels verbatim**, so renaming a button, a setting or its helper text breaks them even when nothing in this repo looks wrong. Two rules that keep it honest:
+  - **Verify a user page against the running app, not the source.** Attach with the `playwright/` tools and read the actual rendered control. Source-reading produced a page claiming a 🎤 quick-add button (the real one is an icon tooltipped "Add to tonight"; 🎤 is the *tab*) and a six-column sort bar (it's one dropdown plus a direction button) — both obvious on screen, both invisible in the markup a reader of `.razor` reconstructs in their head.
+  - **No developer identifiers on a user page** — no type names, settings property names, file names or CSS classes. Name the setting by its on-screen label (*"Trust a rating after"*, not `RatingPriorWeight`). The contributor pages (Architecture, Data storage, UI components, External services, Building & testing, Conventions, Roadmap) are the opposite: technical by design, and they defer to DEVELOPMENT.md rather than restating it.
 - **`/research/` is gitignored and must never be committed** — it holds local planning/research notes and scratch data. Don't stage it, don't offer to commit it, and don't propose removing it from `.gitignore`.
 - Secrets via user-secrets/config — never hard-coded or committed.
 
 ## Roadmap (server integration — deferred)
 
-Eventual slice: **join venue → search library → request song → live queue** against KHost.Online. When it lands, `KHost.Mobile.Clients` gains the typed HTTP + `HubConnection` server client and re-takes a `KHost.Contracts` reference (removed for now so this repo builds standalone). `KHost.Online`'s REST slice is scaffolded and runtime-verified in its own repo.
+Eventual slice: **join venue → search library → request song → live queue** against KHost.Online (`../KHost.Online`, see its own `CLAUDE.md`). When it lands, `KHost.Mobile.Clients` gains the typed HTTP + `HubConnection` server client and re-takes a `KHost.Contracts` reference — removed for now so this repo builds standalone.
 
-Server repo: `../KHost.Online` (see its own `CLAUDE.md`). Planned first-slice REST + SignalR surface, all route strings in `KHost.Contracts/Routes.cs`:
+**None of it exists yet, and most sessions never touch it.** The planned REST + SignalR surface, the `Bearer` session-token stand-in and the `IQueueClient` push methods are written up in the wiki — [Roadmap](https://github.com/riddlemd/KHost.Mobile/wiki/Roadmap). Two constraints bind *today's* code, so they stay here:
 
-| Method | Route (`Routes.Api.*`) | Purpose |
-|---|---|---|
-| POST | `/api/venues/join` | join code + display name → session token (`Bearer`) |
-| GET | `/api/songs/search?q=` | filtered library (auth required) |
-| POST | `/api/queue/request` | add self to queue for a song; broadcasts `QueueUpdated` |
-| GET | `/api/queue` | current queue snapshot |
-| Hub | `/hubs/queue` | SignalR push — connect with `?access_token=<sessionToken>` |
-
-Planned auth (first slice): an opaque server-side session token sent as `Authorization: Bearer <token>` — a deliberate stand-in for a signed JWT later. Demo venue join code is `DEMO`. `IQueueClient` push methods: `QueueUpdated(queue)`, `NowPlayingChanged(nowPlaying?)`, `YoureUpNext()`.
+- **Never reference `KHost.Abstractions` / `Domain` / EF from mobile.** The wire contract is a projection, not the host's domain model.
+- **`KHost.Contracts` must stay a plain `net10.0` library with zero package references.** A platform MAUI head can consume a base `net10.0` library; not the reverse.
