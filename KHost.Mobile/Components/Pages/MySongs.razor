@@ -629,7 +629,7 @@ else
     private bool _lyricsSheetBound;
     private bool _pageLocked;   // mirrors body.kh-sheet-open; reconciled from sheet state each render
 
-    // Read here only to light up each card's 🎤 quick-add state; the set itself is managed on the Tonight tab.
+    // Read here only to light up each card's "Add to tonight" state; the set itself is managed on the Tonight tab.
     private IReadOnlyList<TonightEntry> _tonight = [];
 
     // Lyrics lookup (LRCLIB) shown in its own sheet; fetched fresh each open.
