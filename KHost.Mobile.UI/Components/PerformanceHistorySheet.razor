@@ -101,7 +101,7 @@
     private bool _bound;              // the list element is rebuilt each open, so this resets on close
     private Guid? _openFor;
 
-    private const int UndoWindowMs = 5000;
+    private int UndoWindowMs => Settings.UndoWindowSeconds * 1000;
 
     private int? _editIndex;
     private string _editDate = string.Empty;
