@@ -4,7 +4,7 @@ namespace KHost.Mobile.Services;
 
 /// <summary>
 /// The patron's on-device song list. UI binds to this interface only; today it's backed by a local JSON file, and
-/// a future implementation can sync to KHost.Online behind the same contract with no UI change.
+/// swapping the implementation requires no UI change.
 /// </summary>
 public interface ISongListStore
 {

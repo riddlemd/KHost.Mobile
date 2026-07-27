@@ -43,8 +43,7 @@ public sealed class Performance
 
 /// <summary>
 /// A song the patron has saved on their device. Deliberately local-first: title/artist are free text, not a
-/// reference to a server library, so a singer can jot down anything offline. A future sync step can link this to
-/// a real library song (<c>LibrarySongId</c>) and flip <see cref="Status"/> to <see cref="SongListItemStatus.Sang"/>.
+/// reference to any catalogue, so a singer can jot down anything offline.
 /// Mutable class (not a record) because it's an editable, JSON-persisted entity.
 /// </summary>
 public sealed class SongListItem
@@ -109,7 +108,7 @@ public sealed class SongListItem
     /// <see cref="Performance.HowItWent"/> on load, then left at 0. Kept only so old files still deserialize.</summary>
     public int Confidence { get; set; }
 
-    /// <summary>Future link to a KHost.Online library song once online sync exists. Null for offline-only entries.</summary>
+    /// <summary>Reserved external-catalogue id — always null today. Persisted, so keep the property for schema stability.</summary>
     public Guid? LibrarySongId { get; set; }
 
     /// <summary>True once the keyless year/genre auto-lookup has run for this song (hit OR miss), so a

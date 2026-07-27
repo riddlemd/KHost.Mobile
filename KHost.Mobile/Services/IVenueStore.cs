@@ -4,7 +4,7 @@ namespace KHost.Mobile.Services;
 
 /// <summary>
 /// The patron's on-device list of karaoke venues. UI binds to this interface only; today it's backed by a local
-/// JSON file, and a future implementation could sync to KHost.Online behind the same contract. <see cref="Changed"/>
+/// JSON file, and swapping the implementation requires no UI change. <see cref="Changed"/>
 /// drives UI refresh, matching the other stores.
 /// </summary>
 public interface IVenueStore

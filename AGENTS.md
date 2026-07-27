@@ -4,22 +4,20 @@ Guidance for AI coding agents (Claude Code, GitHub Copilot, Cursor, etc.) workin
 
 **KHost.Mobile** (app name **"KHost Cue"**) — the singer/patron-facing companion app for [KHost](../KHost) (open-source karaoke host software). A **.NET MAUI Blazor Hybrid** app (iOS + Android) on **.NET 10**.
 
-**Today the app is local/offline only** — a personal, on-device karaoke wishlist and "tonight" set list. It does **not** talk to any server yet. A future online slice (see Roadmap) will connect it to the **KHost.Online** cloud relay for join-a-venue → search → request → live queue; that work is deferred, so treat any server/queue references below as roadmap, not current behavior.
+**The app is local/offline only** — a personal, on-device karaoke wishlist and "tonight" set list. It talks to no first-party server; the only network calls are the keyless third-party lookups in `KHost.Mobile.Clients`. Don't design toward a server: keep UI bound to the store interfaces and keep `KHost.Mobile.Clients` self-contained, and that's enough.
 
 ## Cross-repo topology
 
-Three repos, kept as **siblings under `repos/`**:
+The desktop host lives in a **sibling repo under `repos/`**:
 
 ```
 repos/
 ├── KHost/            PUBLIC — the desktop karaoke host (Blazor Server + Avalonia). Untouched by mobile.
-├── KHost.Online/     PRIVATE — the cloud relay (ASP.NET Core: REST + SignalR) + KHost.Contracts (the wire DTOs).
 └── KHost.Mobile/     THIS repo — the MAUI Blazor Hybrid app.
 ```
 
-- **The mobile app currently references none of the other repos — it builds standalone.** The online slice is deferred (see Roadmap), so the `KHost.Contracts` reference has been removed for now.
-- When that slice lands, the shared code is `KHost.Contracts` (DTOs + the `IQueueClient` hub interface), which lives in the `KHost.Online` repo (it *is* the server's public API surface). Consume it as a published **NuGet package** — also how the public `KHost` client will — or a relative project reference during build-out. It must stay a plain `net10.0` library with **zero package references**: a platform MAUI head can consume a base `net10.0` library, but not vice-versa.
-- **Never** reference `KHost.Abstractions`/`Domain`/EF from mobile. The wire contract is a projection, not the host's domain model.
+- **The mobile app references no other repo — it builds standalone.** Don't add a cross-repo reference.
+- **Never** reference the host's `KHost.Abstractions`/`Domain`/EF from mobile — mobile never consumes the host's domain model directly.
 
 ## Solution / project layout
 
@@ -65,9 +63,9 @@ dotnet build KHost.Mobile.Clients/KHost.Mobile.Clients.csproj
 
 To drive the running app's WebView (walk the tour, exercise a flow, screenshot), use the tools in `playwright/` rather than hand-rolling a client — `device/` (full Playwright) for a physical device, `emulator/` (raw CDP with real-touch `tap`/`swipeDown`) for the emulator, whose older WebView rejects Playwright's connect. **`playwright/README.md` is the canonical how-to** — attach flow, examples, and the on-device gotchas.
 
-## Local features (current focus — no server yet)
+## Local features
 
-The app ships **offline/local UI only**. All local data sits behind an interface with a device-backed JSON implementation, so a server-sync implementation can drop in later without UI changes (the store pattern itself is under Conventions). **The full feature/file map — every page, store, model and client with its role — is the wiki's [Architecture](https://github.com/riddlemd/KHost.Mobile/wiki/Architecture), [Data storage](https://github.com/riddlemd/KHost.Mobile/wiki/Data-Storage) and [External services](https://github.com/riddlemd/KHost.Mobile/wiki/Clients-Library) pages; look the inventory up there.** What follows are the per-feature invariants that aren't visible from the code you happen to have open:
+All local data sits behind an interface with a device-backed JSON implementation; UI code depends only on the interfaces (the store pattern itself is under Conventions). **The full feature/file map — every page, store, model and client with its role — is the wiki's [Architecture](https://github.com/riddlemd/KHost.Mobile/wiki/Architecture), [Data storage](https://github.com/riddlemd/KHost.Mobile/wiki/Data-Storage) and [External services](https://github.com/riddlemd/KHost.Mobile/wiki/Clients-Library) pages; look the inventory up there.** What follows are the per-feature invariants that aren't visible from the code you happen to have open:
 
 - **Two tabs, gated** — the bottom bar (`NavMenu`) renders only when `IAppSettings.TonightEnabled` is on; off, the whole bar hides (a one-tab bar made no sense) and nav moves to the header ⋮ menu. Brand accent violet `#7c3aed`; the active singer's color re-tints the chrome by overriding `--kh-primary` on `<html>` (`wwwroot/js/singer.js`).
 - **Tonight ≠ wishlist state** — the set is deliberately separate so a song sung earlier today stays un-checked until checked off there. `TonightEntry.CompletedPerformanceId` exists so an undo removes exactly the performance the check-off logged, even after a restart — keep that linkage when touching either side.
@@ -84,7 +82,7 @@ The app ships **offline/local UI only**. All local data sits behind an interface
 - **`TargetFrameworks` is `android;ios` + `windows` on Windows + `maccatalyst` on macOS** (tizen dropped). Don't re-add heads without a reason. Note that **restore evaluates every TFM even when you pass `-f`**, so a build of any single head fails until *all* the declared workloads are installed — `dotnet workload restore KHost.Mobile/KHost.Mobile.csproj` installs exactly the set the project declares.
 - **The Mac Catalyst head needs full Xcode, not Command Line Tools** — three setup gaps (`xcode-select` path, unaccepted license, missing `-runFirstLaunch` components) all surface as errors that look like build breakage but aren't; `ibtoold failed IDE initialization` is the signature. The checks and fixes are in the wiki's [Building & testing](https://github.com/riddlemd/KHost.Mobile/wiki/Building-and-Testing) — note `xcodebuild -version` succeeding is NOT proof the license is accepted.
 - **The Mac Catalyst head is a layout preview, not a product** — see DEVELOPMENT.md → Design notes. Don't add desktop breakpoints, a side rail, or hover affordances "for the desktop app": there isn't one, and a wide window looking wrong is expected.
-- This repo **builds standalone** — it no longer references the sibling `KHost.Online`/`KHost.Contracts` projects. (They return with the online slice; see Roadmap.)
+- This repo **builds standalone** — no references to any sibling repo. Don't add one.
 - **`FileSystem.AppDataDirectory` is the `Data` SUBFOLDER** — `%LOCALAPPDATA%\KHost\khost.mobile\Data\` on unpackaged Windows, NOT the parent `khost.mobile\`. Seeding/inspecting persisted state must target `Data\`. (A stale legacy copy from before the publisher/id rename may exist under `com.companyname.khost.mobile`; current builds ignore it.)
 - The template's `Components/Routes.razor` has `FocusOnNavigate Selector="h1"`; pages here have no `<h1>`, so nothing auto-focuses. Harmless, but don't rely on autofocus.
 - **UI test automation on the Windows head is flaky** — WebView2 swallows the *first* SendKeys burst after launch, and page scroll position varies between launches (fixed click coords drift). For persistence checks, prefer seeding/reading the JSON files under `Data\` directly over driving the form. To drive the UI itself, use the Playwright tools in `playwright/` (see Commands → UI automation) — attaching over CDP with real locators sidesteps the SendKeys/coordinate flakiness.
@@ -145,15 +143,6 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
 - **Keep the docs in sync with the app.** `README.md` is product-facing — update its feature list (and the screenshot grid where relevant) whenever a user-facing feature is added or its behavior changes, so it never lags the app. **[DEVELOPMENT.md](DEVELOPMENT.md)** holds the developer-facing docs — build/test commands, the screenshot target size, and the **Design notes** section; put design rationale for a non-obvious implementation (a new reusable component, a storage/serving decision, a platform workaround) there, not in the README.
 - **The [wiki](https://github.com/riddlemd/KHost.Mobile/wiki) is a SEPARATE repo (`KHost.Mobile.wiki.git`) — a commit here never touches it, so it goes stale silently.** Clone it, edit the markdown, push. Its user pages describe the app screen by screen and **quote on-screen labels verbatim**, so renaming a button, a setting or its helper text breaks them even when nothing in this repo looks wrong. Two rules that keep it honest:
   - **Verify a user page against the running app, not the source.** Attach with the `playwright/` tools and read the actual rendered control. Source-reading produced a page claiming a 🎤 quick-add button (the real one is an icon tooltipped "Add to tonight"; 🎤 is the *tab*) and a six-column sort bar (it's one dropdown plus a direction button) — both obvious on screen, both invisible in the markup a reader of `.razor` reconstructs in their head.
-  - **No developer identifiers on a user page** — no type names, settings property names, file names or CSS classes. Name the setting by its on-screen label (*"Trust a rating after"*, not `RatingPriorWeight`). The contributor pages (Architecture, Data storage, UI components, External services, Building & testing, Conventions, Roadmap) are the opposite: technical by design, and they defer to DEVELOPMENT.md rather than restating it.
+  - **No developer identifiers on a user page** — no type names, settings property names, file names or CSS classes. Name the setting by its on-screen label (*"Trust a rating after"*, not `RatingPriorWeight`). The contributor pages (Architecture, Data storage, UI components, External services, Building & testing, Conventions) are the opposite: technical by design, and they defer to DEVELOPMENT.md rather than restating it.
 - **`/research/` is gitignored and must never be committed** — it holds local planning/research notes and scratch data. Don't stage it, don't offer to commit it, and don't propose removing it from `.gitignore`.
 - Secrets via user-secrets/config — never hard-coded or committed.
-
-## Roadmap (server integration — deferred)
-
-Eventual slice: **join venue → search library → request song → live queue** against KHost.Online (`../KHost.Online`, see its own `CLAUDE.md`). When it lands, `KHost.Mobile.Clients` gains the typed HTTP + `HubConnection` server client and re-takes a `KHost.Contracts` reference — removed for now so this repo builds standalone.
-
-**None of it exists yet, and most sessions never touch it.** The planned REST + SignalR surface, the `Bearer` session-token stand-in and the `IQueueClient` push methods are written up in the wiki — [Roadmap](https://github.com/riddlemd/KHost.Mobile/wiki/Roadmap). Two constraints bind *today's* code, so they stay here:
-
-- **Never reference `KHost.Abstractions` / `Domain` / EF from mobile.** The wire contract is a projection, not the host's domain model.
-- **`KHost.Contracts` must stay a plain `net10.0` library with zero package references.** A platform MAUI head can consume a base `net10.0` library; not the reverse.

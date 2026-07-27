@@ -4,7 +4,7 @@ namespace KHost.Mobile.Services;
 
 /// <summary>
 /// The roster of singers who share this device. UI binds to this interface only; today it's backed by a local JSON
-/// file, and a future implementation could sync behind the same contract. <see cref="Changed"/> drives UI refresh,
+/// file, and swapping the implementation requires no UI change. <see cref="Changed"/> drives UI refresh,
 /// matching the other stores. Which singer is <em>active</em> (whose personal lists the app currently shows) is a
 /// separate ephemeral pointer on <see cref="IAppSession.ActiveSingerId"/>, not stored here.
 /// </summary>
