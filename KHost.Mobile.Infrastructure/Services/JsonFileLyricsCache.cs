@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using KHost.Mobile.Abstractions.Clients.Lyrics;
 using KHost.Mobile.Infrastructure.Serialization;
 using Microsoft.Extensions.Logging;
@@ -14,22 +15,39 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// Backed by a single JSON file in the app's private data directory — the same durable-JSON pattern as
 /// <see cref="JsonFileSongListStore"/>. A corrupt file is quarantined and treated as an empty cache.
 /// </remarks>
-public sealed class JsonFileLyricsCache(
-    IAppDataDirectory paths,
-    ILogger<JsonFileLyricsCache>? logger = null,
-    TimeProvider? timeProvider = null) : ILyricsCache
+public sealed class JsonFileLyricsCache
+    : JsonFileStore<LyricsCacheEntry, Dictionary<string, LyricsCacheEntry>>, ILyricsCache
 {
-    private readonly string _filePath = Path.Combine(paths.AppDataDirectory, "lyrics-cache.json");
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    // Optional so the integration tests can `new` the cache without a logging stack; DI supplies the real logger.
-    private readonly ILogger _log = logger ?? NullLogger<JsonFileLyricsCache>.Instance;
+    private readonly string _filePath;
     // GetLocalNow, not GetUtcNow: every stored timestamp in this app is local, and switching would shift
     // every new entry by the UTC offset against the ones already on the device.
-    private readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _clock;
 
-    private Dictionary<string, LyricsCacheEntry>? _entries;
+    // logger is optional so the integration tests can `new` the cache without a logging stack; DI supplies the real one.
+    public JsonFileLyricsCache(
+        IAppDataDirectory paths,
+        ILogger<JsonFileLyricsCache>? logger = null,
+        TimeProvider? timeProvider = null)
+        : base(logger ?? NullLogger<JsonFileLyricsCache>.Instance)
+    {
+        _filePath = Path.Combine(paths.AppDataDirectory, "lyrics-cache.json");
+        _clock = timeProvider ?? TimeProvider.System;
+    }
 
-    public event EventHandler? Changed;
+    protected override JsonTypeInfo<List<LyricsCacheEntry>> TypeInfo => LyricsCacheJsonContext.Default.ListLyricsCacheEntry;
+    protected override string Label => "Lyrics cache";
+    protected override string PathFor(Guid? key) => _filePath;
+
+    // Keyed in memory, a flat array on disk. Blank keys are dropped and a duplicate key is last-write-wins —
+    // neither should happen, but a hand-edited file could carry either.
+    protected override Dictionary<string, LyricsCacheEntry> Project(List<LyricsCacheEntry> items) =>
+        items
+            .Where(e => !string.IsNullOrEmpty(e.Key))
+            .GroupBy(e => e.Key, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Last(), StringComparer.Ordinal);
+
+    protected override List<LyricsCacheEntry> Flatten(Dictionary<string, LyricsCacheEntry> cache) =>
+        cache.Values.ToList();
 
     public async Task<LyricsCacheHit?> GetAsync(string title, string artist)
     {
@@ -37,7 +55,7 @@ public sealed class JsonFileLyricsCache(
             return null;
 
         var key = KeyFor(title, artist);
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var entries = await LoadAsync();
@@ -45,7 +63,7 @@ public sealed class JsonFileLyricsCache(
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
     }
 
@@ -68,7 +86,7 @@ public sealed class JsonFileLyricsCache(
             CachedAt = _clock.GetLocalNow(),
         };
 
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var entries = await LoadAsync();
@@ -77,16 +95,16 @@ public sealed class JsonFileLyricsCache(
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
     }
 
     public async Task ClearAsync()
     {
         var changed = false;
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             var entries = await LoadAsync();
@@ -99,23 +117,23 @@ public sealed class JsonFileLyricsCache(
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
 
         if (changed)
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
     }
 
     public async Task<int> CountAsync()
     {
-        await _gate.WaitAsync();
+        await Gate.WaitAsync();
         try
         {
             return (await LoadAsync()).Count;
         }
         finally
         {
-            _gate.Release();
+            Gate.Release();
         }
     }
 
@@ -128,47 +146,4 @@ public sealed class JsonFileLyricsCache(
         => e.Found
             ? new LyricsResult(e.MatchedTitle, e.MatchedArtist, e.PlainLyrics, e.SyncedLyrics, e.Instrumental)
             : null;
-
-    // Callers must hold _gate.
-    private async Task<Dictionary<string, LyricsCacheEntry>> LoadAsync()
-    {
-        if (_entries is not null)
-            return _entries;
-
-        if (!File.Exists(_filePath))
-        {
-            _log.LogDebug("Lyrics cache file not found at {Path}; starting empty", _filePath);
-            return _entries = new Dictionary<string, LyricsCacheEntry>(StringComparer.Ordinal);
-        }
-
-        try
-        {
-            await using var stream = File.OpenRead(_filePath);
-            var list = await JsonSerializer.DeserializeAsync(stream, LyricsCacheJsonContext.Default.ListLyricsCacheEntry) ?? [];
-            // Last-write-wins on a duplicate key (shouldn't happen, but a hand-edited file could carry one).
-            _entries = list
-                .Where(e => !string.IsNullOrEmpty(e.Key))
-                .GroupBy(e => e.Key, StringComparer.Ordinal)
-                .ToDictionary(g => g.Key, g => g.Last(), StringComparer.Ordinal);
-            _log.LogDebug("Lyrics cache loaded: {Count} entries from {Path}", _entries.Count, _filePath);
-        }
-        catch (JsonException ex)
-        {
-            // Corrupt file — quarantine the bad bytes aside, then start clean rather than crash the app.
-            _log.LogWarning(ex, "Lyrics cache file at {Path} is corrupt; quarantining it and starting empty", _filePath);
-            if (!AtomicFile.Quarantine(_filePath))
-                _log.LogWarning("Corrupt {Path} could not be quarantined; the next save will overwrite it", _filePath);
-            _entries = new Dictionary<string, LyricsCacheEntry>(StringComparer.Ordinal);
-        }
-
-        return _entries;
-    }
-
-    // Callers must hold _gate.
-    private async Task SaveAsync(Dictionary<string, LyricsCacheEntry> entries)
-    {
-        _entries = entries;
-        await AtomicFile.WriteAsync(_filePath, stream => JsonSerializer.SerializeAsync(stream, entries.Values.ToList(), LyricsCacheJsonContext.Default.ListLyricsCacheEntry));
-        _log.LogDebug("Lyrics cache saved: {Count} entries to {Path}", entries.Count, _filePath);
-    }
 }
