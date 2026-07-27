@@ -80,6 +80,8 @@ Gesture- and sheet-shaped changes are verified by driving the app's WebView over
 
 Capture goes through `adb exec-out screencap`, **not** `page.screenshot`: CDP capture hangs on this WebView, on a current device head as well as the emulator's older one. Only navigation runs over CDP. Two traps the script encodes, both of which silently photograph the wrong screen: sheets **stack** (detail → history), so close the *last* `.sheet__close`, not the first; and the venue/singer chip popovers are **not** sheets, so they survive a sheet close and then eat the next click. Every shot asserts what's on screen before the shutter, because a wrong-screen capture is otherwise invisible until you look at the PNG.
 
+**Shoot the grid in dark mode, with the active singer on the brand violet.** Both are set on the device before you start: dark via the header **⋮ → 🌙 Dark mode** (it writes `data-theme` on `<html>`, overriding the OS preference, and persists), violet by making a singer whose colour is `SingerColors.Default` (`#7c3aed`) the active one. This isn't taste — the active singer's colour overrides the `--kh-primary` tokens across the whole chrome, so shooting while a teal or amber singer is active produces a grid that doesn't match the app's own branding, and a set shot across two singers won't even match itself. Check the header chip before the first shutter.
+
 **Mobile-preview target size:** **786 × 1704 px** — a **393 × 852** (iPhone 15/16) viewport at **2× device-pixel-ratio**. This is what `App.PinToMobilePreviewViewport` pins the Catalyst window to; the docs grid no longer uses it.
 
 ## 🎨 Design notes

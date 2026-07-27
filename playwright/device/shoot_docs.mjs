@@ -4,13 +4,48 @@
 // so shots are the device's native 1080x2400 including the Android status/nav bars, NOT the old
 // 786x1704 Catalyst-preview crop. Navigation is CDP; only the pixels come from adb.
 //
-// Usage: node device/shoot_docs.mjs [name ...]   (no args = every shot)
+// Usage: node device/shoot_docs.mjs [name ...] [--force]   (no args = every shot)
 import { attach, shot, TAP } from './khdrive.mjs';
 
+/** The brand violet (SingerColors.Default) — the accent the README grid is shot in. */
+const BRAND_ACCENT = '#7c3aed';
+
 const { browser, page } = await attach();
-const only = process.argv.slice(2);
+const args = process.argv.slice(2);
+const force = args.includes('--force');
+const only = args.filter(a => a !== '--force');
 const want = name => !only.length || only.includes(name);
 const pause = ms => page.waitForTimeout(ms);
+
+/**
+ * Theme and accent are set once on the device and then apply silently to every frame, so unlike a
+ * wrong-screen shot no per-shot assert can catch them — you find out when you open the PNGs. The
+ * active singer's colour overrides --kh-primary across the whole chrome, so shooting under a teal
+ * or amber singer yields a grid that doesn't match the app's own branding.
+ */
+async function preflight() {
+    const look = await page.evaluate(`(() => ({
+        theme: document.documentElement.getAttribute('data-theme')
+            || (window.khTheme ? window.khTheme.current() : ''),
+        accent: getComputedStyle(document.documentElement)
+            .getPropertyValue('--kh-primary').trim().toLowerCase(),
+    }))()`);
+
+    const wrong = [];
+    if (look.theme !== 'dark')
+        wrong.push(`theme is "${look.theme || 'unset'}", expected dark — set it via ⋮ → 🌙 Dark mode`);
+    if (look.accent !== BRAND_ACCENT)
+        wrong.push(`accent is "${look.accent || 'unset'}", expected ${BRAND_ACCENT} — switch to a singer on the default violet`);
+    if (!wrong.length) return;
+
+    console.error('Refusing to shoot — the device is not set up for the README grid:');
+    wrong.forEach(w => console.error(`  • ${w}`));
+    console.error('Fix it on the device, or pass --force to shoot anyway.');
+    await browser.close();
+    process.exit(1);
+}
+
+if (!force) await preflight();
 
 /** Back to a bare My Songs list. The tab bar is always present, so it beats hunting a back link. */
 async function home() {
