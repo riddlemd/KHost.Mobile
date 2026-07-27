@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The MAUI-free implementations: the JSON stores and their serializer contexts, the app session,
+       the pure scoring/picking logic and the search-URL builders. Everything here used to live in the
+       MAUI head and had to be <Compile Include>-linked into the test projects one file at a time,
+       because a net10.0 test project cannot reference a MAUI project. It lives here so both test
+       projects can just reference it. Anything touching Microsoft.Maui.* stays in KHost.Mobile.UI. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>KHost.Mobile</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The integration tests exercise AtomicFile and SingerDataFiles directly; both are internal
+         because nothing outside this assembly should be writing data files by hand. -->
+    <InternalsVisibleTo Include="KHost.Mobile.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Logging.Abstractions: the stores take an optional ILogger<T>. Http: AlbumArtCache resolves an
+         IHttpClientFactory. Neither pulls in MAUI. -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KHost.Mobile.Abstractions\KHost.Mobile.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

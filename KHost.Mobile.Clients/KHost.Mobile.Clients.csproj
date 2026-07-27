@@ -1,14 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- The vendor backends only: Apple, Deezer, LrcLib, GitHub, Spotify, YouTubeMusic. Every contract they
+       satisfy lives in Abstractions, so nothing here is referenced by name outside MauiProgram. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>KHost.Mobile</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The unit tests drive the internal parsing helpers (TrackTextNormalizer, JsonElementExtensions) directly. -->
+    <!-- The unit tests drive the internal DeezerArtistMatcher directly. -->
     <InternalsVisibleTo Include="KHost.Mobile.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KHost.Mobile.Abstractions\KHost.Mobile.Abstractions.csproj" />
+    <ProjectReference Include="..\KHost.Mobile.Common\KHost.Mobile.Common.csproj" />
   </ItemGroup>
 
 </Project>

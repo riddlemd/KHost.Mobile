@@ -12,7 +12,7 @@ Developer-facing docs for **KHost Cue** — the reasoning behind a few non-obvio
   ```
 - **Android**: the Android SDK, a JDK 17+, and an emulator or a connected device. If you have neither SDK nor JDK, .NET Android can fetch both at the versions this project targets:
   ```bash
-  dotnet build KHost.Mobile/KHost.Mobile.csproj -f net10.0-android -t:InstallAndroidDependencies \
+  dotnet build KHost.Mobile.UI/KHost.Mobile.UI.csproj -f net10.0-android -t:InstallAndroidDependencies \
     -p:AndroidSdkDirectory=$HOME/Library/Android/sdk -p:JavaSdkDirectory=$HOME/Library/Android/jdk \
     -p:AcceptAndroidSDKLicenses=true
   ```
@@ -20,7 +20,7 @@ Developer-facing docs for **KHost Cue** — the reasoning behind a few non-obvio
 - **iOS**: a paired Mac (iOS cannot be built on Windows).
 - **macOS (Mac Catalyst)**: full **Xcode** — Command Line Tools alone is not enough. Point the toolchain at it with `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
 
-> Restore walks **every** target framework the project declares, even when you build a single head with `-f`, so a build fails until all of them have workloads. `dotnet workload restore KHost.Mobile/KHost.Mobile.csproj` installs exactly the set this project needs.
+> Restore walks **every** target framework the project declares, even when you build a single head with `-f`, so a build fails until all of them have workloads. `dotnet workload restore KHost.Mobile.UI/KHost.Mobile.UI.csproj` installs exactly the set this project needs.
 
 ### Build & run
 
@@ -68,7 +68,9 @@ See AGENTS.md → Gotchas for a public YouTube Music playlist link that imports 
 
 Two xUnit projects, split by what they touch. Commands, and the rule that both must pass before a commit, are in AGENTS.md's Housekeeping section; the wiki's [Building and Testing](https://github.com/riddlemd/KHost.Mobile/wiki/Building-and-Testing) page has the full reference.
 
-Neither test project needs the MAUI workload: they target plain `net10.0`. The MAUI-free source they cover (models, stores) is pulled in via linked `<Compile>` items, since a `net10.0` project can't reference the MAUI head. The stores' only device dependency — the app-data folder — is abstracted behind `IAppDataDirectory`, which the integration tests point at a throwaway temp directory.
+Neither test project needs the MAUI workload: they target plain `net10.0` and reference `KHost.Mobile.Abstractions`, `.Common`, `.Infrastructure` and `.Clients` — none of which knows MAUI exists. The stores' only device dependency — the app-data folder — is abstracted behind `IAppDataDirectory`, which the integration tests point at a throwaway temp directory.
+
+> This used to require ~56 hand-maintained `<Compile Include>` links, one per file, because the models and stores lived in the MAUI head and a `net10.0` project can't reference a MAUI project. Pulling them out into Abstractions and Infrastructure is what removed that list. **If you find yourself adding a `<Compile Include>` to a test project, the type is in the wrong project** — move it down a layer instead.
 
 ### Driving the running UI
 
@@ -141,7 +143,7 @@ Mouse input covers the gestures: `swipe.js` runs off pointer events, so click-an
 
 ## 📁 Project structure
 
-AGENTS.md's Solution / project layout table covers `KHost.Mobile` and `KHost.Mobile.Clients` — the two shipping projects — in more detail. The two test projects aren't in that table:
+AGENTS.md's Solution / project layout table covers the five shipping projects — `KHost.Mobile.Abstractions`, `.Common`, `.Infrastructure`, `.Clients` and `.UI` — and the layering rule between them, in more detail. The two test projects aren't in that table:
 
 | Project | Role |
 |---|---|

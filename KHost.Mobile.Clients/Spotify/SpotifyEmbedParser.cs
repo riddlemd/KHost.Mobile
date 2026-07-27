@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using KHost.Mobile.Clients.Json;
+using KHost.Mobile.Json;
 
 namespace KHost.Mobile.Clients.Spotify;
 

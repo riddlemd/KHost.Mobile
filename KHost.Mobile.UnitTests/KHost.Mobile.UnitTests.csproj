@@ -15,42 +15,15 @@
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
   </ItemGroup>
 
+  <!-- Pure, no-I/O logic: the vendor parsers, the matching helpers, Genres, SongListItem, the scoring and
+       picking rules. None of it lives in the MAUI head any more, so this project references what it needs
+       instead of <Compile Include>-linking the source file by file. Real filesystem I/O is exercised in
+       KHost.Mobile.IntegrationTests. -->
   <ItemGroup>
+    <ProjectReference Include="..\KHost.Mobile.Abstractions\KHost.Mobile.Abstractions.csproj" />
+    <ProjectReference Include="..\KHost.Mobile.Common\KHost.Mobile.Common.csproj" />
+    <ProjectReference Include="..\KHost.Mobile.Infrastructure\KHost.Mobile.Infrastructure.csproj" />
     <ProjectReference Include="..\KHost.Mobile.Clients\KHost.Mobile.Clients.csproj" />
-  </ItemGroup>
-
-  <!-- The app's pure domain models live in the MAUI head (KHost.Mobile), which a net10.0 test project can't
-       reference directly. Compile the MAUI-free source in so their no-I/O logic (Genres.Map, the SongListItem
-       computed properties) is unit-testable without pulling the MAUI workload. The JSON stores — which do real
-       filesystem I/O — are exercised in KHost.Mobile.IntegrationTests instead. -->
-  <ItemGroup>
-    <Compile Include="..\KHost.Mobile\Models\Genres.cs" Link="Linked\Models\Genres.cs" />
-    <Compile Include="..\KHost.Mobile\Models\SongListItem.cs" Link="Linked\Models\SongListItem.cs" />
-    <Compile Include="..\KHost.Mobile\Models\Singer.cs" Link="Linked\Models\Singer.cs" />
-    <Compile Include="..\KHost.Mobile\Models\SingerColors.cs" Link="Linked\Models\SingerColors.cs" />
-    <Compile Include="..\KHost.Mobile\Models\SingerGlyphs.cs" Link="Linked\Models\SingerGlyphs.cs" />
-    <Compile Include="..\KHost.Mobile\Models\SingerProfile.cs" Link="Linked\Models\SingerProfile.cs" />
-    <Compile Include="..\KHost.Mobile\Services\SingerProfileCodec.cs" Link="Linked\Services\SingerProfileCodec.cs" />
-    <Compile Include="..\KHost.Mobile\Services\ProfileJsonContext.cs" Link="Linked\Services\ProfileJsonContext.cs" />
-    <Compile Include="..\KHost.Mobile\Services\SongListJsonContext.cs" Link="Linked\Services\SongListJsonContext.cs" />
-    <Compile Include="..\KHost.Mobile\Services\VenueJsonContext.cs" Link="Linked\Services\VenueJsonContext.cs" />
-    <Compile Include="..\KHost.Mobile\Models\SongTags.cs" Link="Linked\Models\SongTags.cs" />
-    <Compile Include="..\KHost.Mobile\Models\VenueGlyphs.cs" Link="Linked\Models\VenueGlyphs.cs" />
-    <Compile Include="..\KHost.Mobile\Models\Venue.cs" Link="Linked\Models\Venue.cs" />
-    <Compile Include="..\KHost.Mobile\Models\VenueHistory.cs" Link="Linked\Models\VenueHistory.cs" />
-    <Compile Include="..\KHost.Mobile\Models\GeoPoint.cs" Link="Linked\Models\GeoPoint.cs" />
-    <Compile Include="..\KHost.Mobile\Models\VenueProximity.cs" Link="Linked\Models\VenueProximity.cs" />
-    <Compile Include="..\KHost.Mobile\Services\IAppSession.cs" Link="Linked\Services\IAppSession.cs" />
-    <Compile Include="..\KHost.Mobile\Services\AppSession.cs" Link="Linked\Services\AppSession.cs" />
-    <Compile Include="..\KHost.Mobile\Services\MySongsViewState.cs" Link="Linked\Services\MySongsViewState.cs" />
-    <Compile Include="..\KHost.Mobile\Services\KaraFunSearch.cs" Link="Linked\Services\KaraFunSearch.cs" />
-    <Compile Include="..\KHost.Mobile\Services\KaraFunVenueUrlParser.cs" Link="Linked\Services\KaraFunVenueUrlParser.cs" />
-    <Compile Include="..\KHost.Mobile\Services\YouTubeSearch.cs" Link="Linked\Services\YouTubeSearch.cs" />
-    <Compile Include="..\KHost.Mobile\Services\SpotifySearch.cs" Link="Linked\Services\SpotifySearch.cs" />
-
-    <!-- Bayesian how-it-went scoring (MAUI-free, pure): the confidence-weighted star + list prior. -->
-    <Compile Include="..\KHost.Mobile\Services\RatingScore.cs" Link="Linked\Services\RatingScore.cs" />
-    <Compile Include="..\KHost.Mobile\Services\SurprisePicker.cs" Link="Linked\Services\SurprisePicker.cs" />
   </ItemGroup>
 
 </Project>

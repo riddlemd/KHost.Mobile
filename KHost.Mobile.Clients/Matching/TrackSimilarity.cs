@@ -7,6 +7,9 @@ namespace KHost.Mobile.Clients.Matching;
 /// <remarks>
 /// Tuned to under-report. Most of a real library legitimately isn't in the catalogue, so a loose rule would
 /// offer a "did you mean" on dozens of correctly-spelled songs and train the user to ignore the hint.
+/// <para>Adding a second matcher? <see cref="TypoEdits"/> returns an edit COUNT — Levenshtein's own unit, which
+/// <see cref="TrackSuggestionFinder"/> also ranks by. A phonetic or n-gram matcher has no edit count to give, so
+/// don't extract an interface around this signature; reshape the contract as a score first.</para>
 /// </remarks>
 internal static class TrackSimilarity
 {

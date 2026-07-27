@@ -1,0 +1,106 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFrameworks>net10.0-android</TargetFrameworks>
+        <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+        <!-- Mac Catalyst is a DEV-ONLY head: the macOS equivalent of the Windows head, for previewing UI changes
+             without an emulator. It is not a shipping target — there is no desktop product. Gated on osx because
+             the Apple toolchain it needs exists nowhere else. -->
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">$(TargetFrameworks);net10.0-maccatalyst</TargetFrameworks>
+
+        <!-- arm64 only. Debug otherwise defaults to maccatalyst-x64, which runs under Rosetta on Apple silicon;
+             building both slices would just double the build time for a head that is never distributed. (A Mac
+             App Store submission would need x64 too — not applicable here.) Scoped to the maccatalyst head so it
+             can't leak into the other TFMs' RID resolution. -->
+        <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">maccatalyst-arm64</RuntimeIdentifiers>
+
+        <OutputType>Exe</OutputType>
+        <!-- Both pinned to KHost.Mobile so renaming the project to .UI changed only the container: the
+             namespaces and the built assembly name are what they always were. ApplicationId below is what
+             actually identifies the app to a device — leave it alone or a deploy uninstalls and wipes data. -->
+        <RootNamespace>KHost.Mobile</RootNamespace>
+        <AssemblyName>KHost.Mobile</AssemblyName>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <EnableDefaultCssItems>false</EnableDefaultCssItems>
+        <Nullable>enable</Nullable>
+
+        <!-- Enable XAML source generation for faster build times and improved performance.
+             This generates C# code from XAML at compile time instead of runtime inflation.
+             To disable, remove this line.
+             For individual files, you can override by setting Inflator metadata:
+               <MauiXaml Update="MyPage.xaml" Inflator="Default" /> (reverts to defaults: Runtime for Debug, XamlC for Release)
+               <MauiXaml Update="MyPage.xaml" Inflator="Runtime" /> (force runtime inflation) -->
+        <MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+        <!-- Display name -->
+        <ApplicationTitle>KHost Cue</ApplicationTitle>
+
+        <!-- App Identifier -->
+        <ApplicationId>khost.mobile</ApplicationId>
+
+        <!-- Override the VS workload's default MAUI (10.0.20) with the latest serviced release. 10.0.20 hits a
+             known .NET 10 startup crash on Android API 36 ("No view found for id ... NavigationRootManager_
+             ElementBasedFragment", dotnet/maui #35418/#31581). Same feature band (10.0.x), just newer patches. -->
+        <MauiVersion>10.0.80</MauiVersion>
+
+        <!-- Versions -->
+        <ApplicationDisplayVersion>0.13.0</ApplicationDisplayVersion>
+        <ApplicationVersion>13</ApplicationVersion>
+
+        <!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
+        <WindowsPackageType>None</WindowsPackageType>
+
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+        <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- App Icon -->
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#7c3aed" />
+
+        <!-- Splash Screen -->
+        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#7c3aed" BaseSize="128,128" />
+
+        <!-- Images -->
+        <MauiImage Include="Resources\Images\*" />
+
+        <!-- Custom Fonts -->
+        <MauiFont Include="Resources\Fonts\*" />
+
+        <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+        <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+    </ItemGroup>
+
+    <!-- QR/barcode scanning (KaraFun venue link). ML Kit on Android, Apple Vision on iOS — the package has no
+         benefit on Windows (scanner is Android/iOS only, per design), so it's scoped to those heads. -->
+    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+        <PackageReference Include="BarcodeScanning.Native.Maui" Version="3.0.4" />
+    </ItemGroup>
+
+    <!-- ML Kit + CameraX (pulled in by the scanner above) ship the same native .so libs in more than one transitive
+         package; the Android packager dedupes them and warns (XA4301). Harmless — suppress so the build stays clean. -->
+    <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+        <NoWarn>$(NoWarn);XA4301</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\KHost.Mobile.Abstractions\KHost.Mobile.Abstractions.csproj" />
+      <ProjectReference Include="..\KHost.Mobile.Common\KHost.Mobile.Common.csproj" />
+      <ProjectReference Include="..\KHost.Mobile.Infrastructure\KHost.Mobile.Infrastructure.csproj" />
+      <ProjectReference Include="..\KHost.Mobile.Clients\KHost.Mobile.Clients.csproj" />
+    </ItemGroup>
+
+</Project>

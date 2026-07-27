@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Generic, domain-free helpers: nothing here may know what a track, a singer or a venue is. That is the
+       line between this project and the others — the track matching algorithms started here and moved to
+       Clients precisely because they were track-shaped. Pure BCL, no project references, no packages. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>KHost.Mobile</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
