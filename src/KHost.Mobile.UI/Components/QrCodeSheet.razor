@@ -1,0 +1,41 @@
+@* Shows a QR code big enough for someone else's phone to scan off this screen. The code is handed in as
+   pre-rendered SVG so this component stays display-only — no encoder dependency in the UI layer. *@
+<Sheet Open="Open" Class="sheet--qr" AriaLabel="@AriaLabel" ClosePx="150" OnClose="OnClose">
+    <div class="sheet__title">@Title</div>
+    @if (!string.IsNullOrWhiteSpace(Subtitle))
+    {
+        <div class="sheet__subtitle">@Subtitle</div>
+    }
+
+    @* The quiet zone and module colors are fixed light regardless of theme: an inverted or tinted code
+       is where phone scanners start failing. *@
+    <div class="qr-code">@Svg</div>
+
+    @if (!string.IsNullOrWhiteSpace(Caption))
+    {
+        <div class="qr-code__caption">@Caption</div>
+    }
+</Sheet>
+
+@code {
+    /// <summary>Whether the sheet is showing.</summary>
+    [Parameter] public bool Open { get; set; }
+
+    /// <summary>Heading text, e.g. the venue's name.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Optional line under the title.</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>The QR code itself, as an <c>&lt;svg&gt;</c> element.</summary>
+    [Parameter] public MarkupString Svg { get; set; }
+
+    /// <summary>Optional text under the code — typically the URL it encodes, so it can be read out or typed.</summary>
+    [Parameter] public string? Caption { get; set; }
+
+    /// <summary>Accessible name for the sheet.</summary>
+    [Parameter] public string AriaLabel { get; set; } = "QR code";
+
+    /// <summary>Raised by the ✕, the backdrop and a pull-down dismiss.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+}

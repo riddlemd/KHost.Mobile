@@ -734,6 +734,26 @@ button { text-transform: none; color: inherit; }
 /* Options sheet for the picker, stacked above nothing else — it's opened straight from the FAB. */
 .surprise-sheet__roll { margin-top: 1.15rem; }
 
+/* ---- QR code sheet ------------------------------------------------------ */
+/* Held up for someone else's phone to scan, so the code keeps a white quiet zone and dark modules in BOTH
+   themes — a theme-tinted or inverted code is where phone scanners start failing. */
+.qr-code {
+    margin: 1.15rem auto 0;
+    width: min(72vw, 20rem);
+    aspect-ratio: 1;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    background: #fff;
+}
+.qr-code svg { display: block; width: 100%; height: 100%; }
+.qr-code__caption {
+    margin-top: 0.75rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--kh-text-muted);
+    word-break: break-all;
+}
+
 /* ---- Roll result sheet -------------------------------------------------- */
 /* The pick is shown as a song card so it reads as one of the user's own, not a system message. Only the
    height changes: everything else is inherited from .song-card / .song-card--art. */
@@ -2528,6 +2548,10 @@ body.kh-sheet-open { overflow: hidden; }
 .venue-detail__name { font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; }
 .venue-detail__actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
 .venue-detail__actions .btn { width: 100%; }
+/* A split button is two .btn children, so the rule above would stretch both and push the chevron off the
+   row — the main segment flexes instead and the chevron keeps its intrinsic width. */
+.venue-detail__actions .kh-split .kh-split__main { width: auto; flex: 1; }
+.venue-detail__actions .kh-split .kh-split__toggle { width: auto; flex: 0 0 auto; }
 /* Favorite / Active switches in the detail card: centered single-line toggle rows. */
 .venue-detail__toggle { align-items: center; }
 .venue-detail__info { margin-top: 1rem; border-top: 1px solid var(--kh-border); padding-top: 0.75rem; }

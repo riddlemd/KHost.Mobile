@@ -143,6 +143,27 @@ Treat a wide Catalyst window as a diagnostic, not a bug: the shell is deliberate
 
 Mouse input covers the gestures: `swipe.js` runs off pointer events, so click-and-drag is a swipe and click-and-hold is a press-and-hold. Where a gesture is awkward to trigger, the reachable equivalents added for assistive tech work too — Venues' *Active* toggle and the singer sheet's *Switch to this singer*.
 
+**Venue catalog QR — generated on-device, and why error correction is Medium.** A venue's KaraFun songbook can be
+shown as a QR code (Venues → the catalog button's chevron → *Show QR Code*) so someone else can scan it off the
+screen. Generation is local: the app is offline-only, and calling a QR-image web service would both break that
+promise and put a venue's ID in someone else's server log. The encoder is `Net.Codecrete.QrCodeGenerator` (MIT,
+zero dependencies, trimming-enabled) behind `IQrCodeService`, so the package is named in exactly one class.
+
+Three choices worth knowing before changing it:
+
+- **SVG, not a bitmap.** A `viewBox` measured in modules scales to any size with CSS, needs no imaging stack
+  (`System.Drawing` is Windows-only since .NET 6 and would have ruled the library out), and needs no cache.
+- **Error correction `Medium`, not `Quartile`/`High`.** The higher levels exist to survive *physical* damage —
+  dirt, scratches, print smudging — none of which a screen suffers. They pay for it with denser modules, which is
+  what actually costs a scan at arm's length. Raise it only if a logo is ever overlaid on the code, since an
+  overlay masks real modules. For a ~31-character catalog URL, Medium and Quartile both land on version 3
+  (29 modules) anyway; Medium just leaves more headroom before the next version bump.
+- **Fixed light colors in both themes.** The sheet forces a white quiet zone and dark modules rather than
+  inheriting `--kh-` tokens — an inverted or tinted code is where phone scanners start failing.
+
+Screen brightness is deliberately **not** boosted while the code is shown: MAUI has no cross-platform brightness
+API, so it would mean per-platform code for a problem a normally-lit screen doesn't have.
+
 ## 📁 Project structure
 
 AGENTS.md's Solution / project layout table covers the five shipping projects — `KHost.Mobile.Abstractions`, `.Common`, `.Infrastructure`, `.Clients` and `.UI` — and the layering rule between them, in more detail. The two test projects aren't in that table:

@@ -28,6 +28,7 @@ browser assets and fonts).
 | Microsoft.Extensions.Logging.Debug | app shell (debug logging) | MIT | Microsoft / .NET Foundation |
 | Microsoft.Extensions.* (transitive: DI, Logging, Options, Primitives, …) | app shell, client | MIT | Microsoft / .NET Foundation |
 | BarcodeScanning.Native.Maui 3.0.4 | QR scanner (Android/iOS heads only) | MIT | Alen Friščić |
+| Net.Codecrete.QrCodeGenerator 3.0.0 | QR code generation (venue catalog QR) | MIT | Manuel Bleichenbacher (port of Project Nayuki's QR Code generator) |
 | Xamarin.AndroidX bindings — CameraX, Navigation, Collection (transitive via the scanner, Android head) | QR scanner camera stack | MIT (bindings) / Apache-2.0 (AndroidX libraries) | Microsoft / Google (AOSP) |
 | Google ML Kit barcode scanning (transitive `Xamarin.Google.MLKit.BarcodeScanning`, Android head) | QR decoding | Google ML Kit terms (redistributable in-app) | Google |
 | Open Sans — `OpenSans-Regular.ttf` (from the .NET MAUI template) | app font | Apache-2.0 | Digitized data © 2010–2011 Google; design Ascender Corp. |
