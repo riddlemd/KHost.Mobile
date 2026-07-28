@@ -3,6 +3,14 @@
 // Touch uses non-passive touch events, not pointer events, so preventDefault() can take the gesture away from
 // native overscroll — with pointer events the browser claims a downward pull for its bounce and fires
 // pointercancel, so the sheet never closed. Mouse (desktop / Windows head) is handled separately below.
+
+// Must match `.sheet` in app.css; the backdrop sits one below.
+const SHEET_Z = 41;
+
+// Stacking follows the order sheets OPENED, not the order they're declared: Tonight declares its rating prompt
+// above the song detail it can open over.
+let sheetSeq = 0;
+
 window.khSheet = {
     register(sheet, dotNetRef, options) {
         if (!sheet || sheet._khSheetBound) return;
@@ -99,5 +107,27 @@ window.khSheet = {
     // sheet), so a caller-driven lock would unlock the page out from under a sheet still showing.
     syncLock() {
         document.body.classList.toggle('kh-sheet-open', !!document.querySelector('.sheet'));
+        this.restack();
+    },
+
+    // Stacks every open sheet so the newest covers the rest and its backdrop blocks them.
+    //
+    // Inline styles rather than CSS modifier classes: a modifier ties with `.sheet-backdrop` on specificity, so
+    // source order decides the winner and one declared above the base rule silently loses.
+    restack() {
+        // Blazor builds a fresh element per open, so a reopened sheet always sorts above one already showing.
+        const sheets = Array.from(document.querySelectorAll('.sheet'));
+        for (const sheet of sheets)
+            if (sheet._khOrder === undefined) sheet._khOrder = ++sheetSeq;
+        sheets.sort((a, b) => a._khOrder - b._khOrder);
+
+        sheets.forEach((sheet, i) => {
+            sheet.style.zIndex = SHEET_Z + i * 2;
+            // A confirm backdrop sits above every sheet; an inline z-index here would outrank the CSS saying so.
+            const backdrop = sheet.previousElementSibling;
+            if (backdrop && backdrop.classList.contains('sheet-backdrop')
+                && !backdrop.classList.contains('sheet-backdrop--confirm'))
+                backdrop.style.zIndex = SHEET_Z - 1 + i * 2;
+        });
     },
 };

@@ -516,8 +516,8 @@ else
 
 @if (_lyricsItem is not null)
 {
-    <div class="sheet-backdrop sheet-backdrop--history" @onclick="CloseLyrics"></div>
-    <div class="sheet sheet--history" role="dialog" aria-modal="true" @ref="_lyricsSheet">
+    <div class="sheet-backdrop" @onclick="CloseLyrics"></div>
+    <div class="sheet" role="dialog" aria-modal="true" @ref="_lyricsSheet">
         <button type="button" class="sheet__close" @onclick="CloseLyrics" aria-label="Close">✕</button>
         <div class="sheet__title">Lyrics</div>
         <div class="sheet__subtitle">@_lyricsItem.Title@(string.IsNullOrWhiteSpace(_lyricsItem.Artist) ? "" : $" · {_lyricsItem.Artist}")</div>

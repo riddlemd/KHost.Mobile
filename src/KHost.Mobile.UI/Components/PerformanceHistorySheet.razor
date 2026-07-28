@@ -5,7 +5,7 @@
 @* Every performance of one song: when, how it went, and a note. Rows carry the standard row gestures (swipe.js):
    swipe left to remove, press and hold to change the date. swipe.js ignores the note field and the stars, so a
    hold lands on the date. The undo and the date editor live here; the host only persists the resulting change. *@
-<Sheet Open="Item is not null" Class="sheet--history" BackdropClass="sheet-backdrop--history"
+<Sheet Open="Item is not null"
        AriaLabel="Performance history" ClosePx="150" OnClose="OnClose">
     @if (Item is { } item)
     {

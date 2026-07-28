@@ -189,7 +189,6 @@
 @* ---- Add / edit sheet ---- *@
 <VenueEditSheet Editing="_editing" IsNew="_editingIsNew" OnSave="SaveVenueAsync" OnClose="CloseEdit" />
 
-@* Stacked over the venue detail sheet, which stays open behind it — closing the QR returns you to the venue. *@
 <QrCodeSheet Open="_qrVenue is not null" Title="@_qrVenue?.Name" Subtitle="Scan to open the KaraFun songbook"
              Svg="_qrSvg" Caption="@_qrUrl" AriaLabel="KaraFun catalog QR code" OnClose="CloseQr" />
 
@@ -520,7 +519,9 @@
     // Closes the single top-most overlay, matching the CSS stacking (confirm > edit sheet > detail sheet).
     private bool TryCloseTopOverlay()
     {
+        // Newest overlay first — the QR sheet sits over the detail sheet, so back must close it, not what's under it.
         if (_confirmDelete is not null) { CancelDelete(); return true; }
+        if (_qrVenue is not null) { CloseQr(); return true; }
         if (_editing is not null) { CloseEdit(); return true; }
         if (_detail is not null) { CloseDetail(); return true; }
         return false;

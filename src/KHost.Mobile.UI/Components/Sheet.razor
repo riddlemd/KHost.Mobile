@@ -23,10 +23,10 @@
     /// <c>@if</c> can just be wrapped — needed because Razor rejects <c>@{ }</c> inside child content.</summary>
     [Parameter] public bool Open { get; set; } = true;
 
-    /// <summary>Extra classes on the panel, for a variant (e.g. <c>sheet--history</c>, <c>filter-sheet</c>).</summary>
+    /// <summary>Extra classes on the panel, for a variant (e.g. <c>filter-sheet</c>). Stacking is automatic — see khSheet.restack.</summary>
     [Parameter] public string? Class { get; set; }
 
-    /// <summary>Extra classes on the backdrop (e.g. <c>sheet-backdrop--history</c> for a stacked sheet).</summary>
+    /// <summary>Extra classes on the backdrop. Not needed for stacking; khSheet.restack handles that.</summary>
     [Parameter] public string? BackdropClass { get; set; }
 
     /// <summary>Accessible name for the dialog.</summary>
