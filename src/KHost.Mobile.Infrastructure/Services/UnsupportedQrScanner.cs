@@ -10,6 +10,8 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// </remarks>
 public sealed class UnsupportedQrScanner : IQrScanner
 {
+    public bool IsSupported => false;
+
     public Task<string?> ScanQrCodeAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
 }
 #endif

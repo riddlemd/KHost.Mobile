@@ -14,6 +14,8 @@ namespace KHost.Mobile.UI.Services;
 /// </remarks>
 public sealed class MauiQrScanner(IBackButtonService backButton, ILogger<MauiQrScanner> logger) : IQrScanner
 {
+    public bool IsSupported => true;
+
     public async Task<string?> ScanQrCodeAsync(CancellationToken cancellationToken = default)
     {
         // ML Kit / AVFoundation both need camera permission (and VIBRATE on Android); the library's helper requests it.

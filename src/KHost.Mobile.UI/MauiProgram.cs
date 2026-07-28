@@ -94,6 +94,10 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
 
+        builder.Services.AddSingleton<IAppVersionInfo, MauiAppVersionInfo>();
+
+        builder.Services.AddSingleton<IFileExchange, MauiFileExchange>();
+
         // Stateless and thread-safe, so one instance serves every caller.
         builder.Services.AddSingleton<IQrCodeService, QrCodeService>();
 

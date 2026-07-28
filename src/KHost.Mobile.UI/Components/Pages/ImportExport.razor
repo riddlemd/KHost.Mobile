@@ -1,12 +1,11 @@
 @page "/import-export"
 @layout MainLayout
-@using Microsoft.Maui.Storage
-@using Microsoft.Maui.ApplicationModel.DataTransfer
 @using KHost.Mobile.Abstractions.Clients.Metadata
 @using KHost.Mobile.Abstractions.Clients.Spotify
 @using KHost.Mobile.Abstractions.Clients.YouTubeMusic
 @using Microsoft.Extensions.Logging
 @inject ILogger<ImportExport> Log
+@inject IFileExchange Files
 @inject ISongListStore Store
 @inject ISingerStore Singers
 @inject IVenueStore Venues
@@ -275,14 +274,6 @@
     // The profile a picked file parsed to, awaiting the add-as-new-singer / merge choice (null = sheet closed).
     private SingerProfile? _pendingProfile;
     private bool _profileImportBusy;
-
-    private static readonly FilePickerFileType JsonFileType = new(new Dictionary<DevicePlatform, IEnumerable<string>>
-    {
-        [DevicePlatform.Android] = ["application/json"],
-        [DevicePlatform.iOS] = ["public.json", "public.text"],
-        [DevicePlatform.WinUI] = [".json"],
-        [DevicePlatform.macOS] = ["json"],
-    });
 
     // Playlist import sheet (Spotify or YouTube Music). _importRows is null until a fetch succeeds.
     private enum ImportSource { Spotify, YouTubeMusic }
@@ -629,26 +620,10 @@
 
     // ---- Shared file helpers ------------------------------------------------------------------
 
-    // Pick a .json file and read it to text. Returns null if the user cancelled. Uses OpenReadAsync so the
-    // content:// URI works on Android (never .FullPath).
-    private static async Task<string?> ReadPickedTextAsync(string pickerTitle)
-    {
-        var pick = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = pickerTitle, FileTypes = JsonFileType });
-        if (pick is null)
-            return null;
+    // Null when the user cancelled the picker.
+    private Task<string?> ReadPickedTextAsync(string pickerTitle) => Files.PickJsonTextAsync(pickerTitle);
 
-        await using var stream = await pick.OpenReadAsync();
-        using var reader = new StreamReader(stream);
-        return await reader.ReadToEndAsync();
-    }
-
-    // Write json to a cache file and hand it to the OS share sheet (Files, Drive, email, …).
-    private static async Task ShareJsonAsync(string fileName, string json, string title)
-    {
-        var path = Path.Combine(FileSystem.CacheDirectory, fileName);
-        await File.WriteAllTextAsync(path, json);
-        await Share.Default.RequestAsync(new ShareFileRequest { Title = title, File = new ShareFile(path) });
-    }
+    private Task ShareJsonAsync(string fileName, string json, string title) => Files.ShareJsonAsync(fileName, json, title);
 
     // Filename-safe lower-kebab of a singer name (non-alphanumerics → '-'); falls back to "singer" when empty.
     private static string Slug(string name)
