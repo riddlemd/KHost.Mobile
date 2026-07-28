@@ -257,13 +257,14 @@
         {
         <label class="setting">
             <span class="setting__text">
-                <span class="setting__title">Enable “Find on KaraFun” Button</span>
+                <span class="setting__title">Enable KaraFun Features</span>
                 <span class="setting__desc">
-                    Search the active venue's KaraFun catalogue. Needs a KaraFun ID on that venue.
+                    The “Find on KaraFun” button on a song, a venue's catalog button and QR code, and the KaraFun
+                    ID field when you edit a venue. Off hides all of them; venues keep any ID already saved.
                 </span>
             </span>
             <span class="switch">
-                <input class="switch__input" type="checkbox" @bind="Prefs.KaraFunEnabled" />
+                <input class="switch__input" type="checkbox" @bind="Prefs.KaraFunFeaturesEnabled" />
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>

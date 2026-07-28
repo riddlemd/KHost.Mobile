@@ -61,10 +61,10 @@
     // One tour step. Chapter "" = the chapter-less Welcome/outro; IsIntro marks a chapter's opening card. Route ""
     // = My Songs. Anchor is the data-tut value to spotlight; null = a centered explain card, which is also the
     // fallback when a target never appears. VenueDetail opens the Venues detail sheet via the session signal.
-    // NeedsTonight/NeedsTags/NeedsSurprise steps drop out entirely when that feature is off.
+    // NeedsTonight/NeedsTags/NeedsSurprise/NeedsKaraFun steps drop out entirely when that feature is off.
     private sealed record Step(string Chapter, string Route, string? Anchor, string Badge, string Title, string Body,
         bool IsIntro = false, bool NeedsTonight = false, bool NeedsTags = false, bool NeedsSurprise = false,
-        bool VenueDetail = false);
+        bool NeedsKaraFun = false, bool VenueDetail = false);
 
     private static readonly Step[] AllSteps =
     [
@@ -131,15 +131,15 @@
         new("Venues", "venues", "venue-hold", "👇", "Press and hold to activate",
             "Press and hold a venue to make it active — you'll feel a short buzz. A regular tap opens the venue's details, where an Active switch does the same thing."),
         new("Venues", "venues", null, "🎙️", "KaraFun integration",
-            "KHost Cue works with KaraFun, the catalog many venues run. Add a venue's KaraFun ID to browse its whole song list — and every song gets a “Find on KaraFun” button."),
+            "KHost Cue works with KaraFun, the catalog many venues run. Add a venue's KaraFun ID — by typing it or scanning the venue's QR code — to browse its whole song list, and every song gets a “Find on KaraFun” button.", NeedsKaraFun: true),
         new("Venues", "venues", "venue-karafun", "🎫", "Browse the catalog",
-            "Open a venue's KaraFun catalog in one tap and see what the room can actually play. The chevron beside it shows that catalog as a QR code — someone else scans it and browses the songbook on their own phone.", VenueDetail: true),
+            "Open a venue's KaraFun catalog in one tap and see what the room can actually play. The chevron beside it shows that catalog as a QR code — someone else scans it and browses the songbook on their own phone.", NeedsKaraFun: true, VenueDetail: true),
         new("Venues", "venues", "venue-history", "🏠", "Every venue remembers",
             "See your history at each venue — how many songs you've sung there, your average, and your go-to songs.", VenueDetail: true),
         new("Venues", "venues", "venue-favorite", "⭐", "Favorite & hide",
             "Favorite the venues you sing at most to keep them at the top. Rarely visit one? Hide it from the quick switcher under Edit → Show in quick switch.", VenueDetail: true),
         new("Venues", "venues", "venue-add", "➕", "Add a venue",
-            "Add a venue by typing its details — or scan its KaraFun QR code and they fill in for you."),
+            "Add a venue by typing its details — a name and a glyph are all it takes."),
 
         // ============ Chapter: Singers ============
         new("Singers", "", null, "👥", "Singers",
@@ -177,7 +177,8 @@
 
     private List<Step> Steps => AllSteps
         .Where(s => (!s.NeedsTonight || Settings.TonightEnabled) && (!s.NeedsTags || Settings.TagsEnabled)
-                    && (!s.NeedsSurprise || Settings.SurpriseEnabled))
+                    && (!s.NeedsSurprise || Settings.SurpriseEnabled)
+                    && (!s.NeedsKaraFun || Settings.KaraFunFeaturesEnabled))
         .ToList();
 
     // ---- Chapter helpers (grouping, per-chapter dots + numbering, skip-a-chapter) ----
