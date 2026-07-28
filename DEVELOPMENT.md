@@ -12,7 +12,7 @@ Developer-facing docs for **KHost Cue** — the reasoning behind a few non-obvio
   ```
 - **Android**: the Android SDK, a JDK 17+, and an emulator or a connected device. If you have neither SDK nor JDK, .NET Android can fetch both at the versions this project targets:
   ```bash
-  dotnet build src/KHost.Mobile.UI/KHost.Mobile.UI.csproj -f net10.0-android -t:InstallAndroidDependencies \
+  dotnet build src/KHost.Mobile/KHost.Mobile.csproj -f net10.0-android -t:InstallAndroidDependencies \
     -p:AndroidSdkDirectory=$HOME/Library/Android/sdk -p:JavaSdkDirectory=$HOME/Library/Android/jdk \
     -p:AcceptAndroidSDKLicenses=true
   ```
@@ -20,7 +20,7 @@ Developer-facing docs for **KHost Cue** — the reasoning behind a few non-obvio
 - **iOS**: a paired Mac (iOS cannot be built on Windows).
 - **macOS (Mac Catalyst)**: full **Xcode** — Command Line Tools alone is not enough. Point the toolchain at it with `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
 
-> Restore walks **every** target framework the project declares, even when you build a single head with `-f`, so a build fails until all of them have workloads. `dotnet workload restore src/KHost.Mobile.UI/KHost.Mobile.UI.csproj` installs exactly the set this project needs.
+> Restore walks **every** target framework the project declares, even when you build a single head with `-f`, so a build fails until all of them have workloads. `dotnet workload restore src/KHost.Mobile/KHost.Mobile.csproj` installs exactly the set this project needs.
 
 ### Build & run
 
@@ -68,7 +68,7 @@ See AGENTS.md → Gotchas for a public YouTube Music playlist link that imports 
 
 Two xUnit projects, split by what they touch. Commands, and the rule that both must pass before a commit, are in AGENTS.md's Housekeeping section; the wiki's [Building and Testing](https://github.com/riddlemd/KHost.Mobile/wiki/Building-and-Testing) page has the full reference.
 
-Neither test project needs the MAUI workload: they target plain `net10.0` and reference `KHost.Mobile.Abstractions`, `.Common`, `.Infrastructure` and `.Clients` — none of which knows MAUI exists. The stores' only device dependency — the app-data folder — is abstracted behind `IAppDataDirectory`, which the integration tests point at a throwaway temp directory.
+Neither test project needs the MAUI workload: they target plain `net10.0` and reference `KHost.Mobile.Abstractions`, `.Common`, `.Infrastructure`, `.Clients` and `.UI` — none of which knows MAUI exists. The stores' only device dependency — the app-data folder — is abstracted behind `IAppDataDirectory`, which the integration tests point at a throwaway temp directory.
 
 > This used to require ~56 hand-maintained `<Compile Include>` links, one per file, because the models and stores lived in the MAUI head and a `net10.0` project can't reference a MAUI project. Pulling them out into Abstractions and Infrastructure is what removed that list. **If you find yourself adding a `<Compile Include>` to a test project, the type is in the wrong project** — move it down a layer instead.
 
@@ -94,7 +94,7 @@ Referencing the cached file directly would therefore need a **per-platform servi
 
 Instead, the cover bytes are streamed to the WebView via a `DotNetStreamReference` and turned into a `blob:` object URL in `wwwroot/js/album-art.js` — **one implementation that behaves identically on every platform**, so it's verifiable once. The card's CSS background then holds a short `blob:` URL rather than a base64 `data:` copy of every image. `js/album-art.js` owns the object-URL lifecycle (revoked when a cover is replaced, on a singer switch, and on page teardown). The platform-serving approach remains a valid alternative if the C#↔JS transfer ever becomes a bottleneck.
 
-**A cached cover is written atomically, and it matters more than for the JSON stores.** The cache decides "do I already have this?" with `File.Exists`, so a write torn by an app kill would leave a truncated image that counts as a hit **forever** — the card renders broken and never re-downloads, because nothing ever re-checks a file that exists. Writing through `AtomicFile` (a `.tmp` sibling, then a rename) means a failed write never produces a target file at all, and the next request simply fetches it again. The read path's 0-byte check predates this and stays: it still covers images written before the fix. The JSON stores get the same treatment for a milder reason — there a corrupt file is at least *detected* on parse and quarantined.
+**A cached cover is written atomically, and it matters more than for the JSON stores.** The cache decides "do I already have this?" with `File.Exists`, so a write torn by an app kill would leave a truncated image that counts as a hit **forever** — the card renders broken and never re-downloads, because nothing ever re-checks a file that exists. Writing through `IAtomicFileWriter` (a `.tmp` sibling, then a rename) means a failed write never produces a target file at all, and the next request simply fetches it again. The read path's 0-byte check predates this and stays: it still covers images written before the fix. The JSON stores get the same treatment for a milder reason — there a corrupt file is at least *detected* on parse and quarantined.
 
 **Asking for a cover is what fetches it.** `IAlbumArtService.UriFor(song)` returns the `blob:` URL if it's ready and otherwise *starts the work to get it* — discovering the artwork URL (iTunes, then Deezer when iTunes has no cover), downloading, caching, handing it to the WebView — then raises `Changed` so the surface repaints. The tempting alternative — callers pre-declaring what to load (`LoadAsync(theseSongs)`) — puts the burden in the wrong place: every surface has to remember to do it, and any surface showing a song from *outside* the set it declared (a 🎲 pick, a detail sheet) silently renders a blank card or grows a bespoke workaround. With requests driving the fetching, callers only render what they're given, so **a surface that displays cover art needs no art code at all** — but it does need to subscribe to `Changed`, because covers land after the render that asked for them and the art is a Blazor-rendered inline style.
 
@@ -121,7 +121,7 @@ Deezer is a fallback for catalogue gaps only, consulted when iTunes returned nei
 
 Two smaller calls worth keeping: the suggestion is offered with bracketed asides stripped (`TrackTextNormalizer.StripAsides`), because a typo search surfaces "Creep (Acoustic)" long before "Creep" and writing that version suffix into the user's own title isn't the correction they asked for; and **nothing is filled from a near-miss** — it hasn't been confirmed as the right song, so accepting the correction is what re-runs the lookup and fills year/genre/cover from the now-exact match. Both answers are terminal: `MetadataLookedUp` is already set, so a dismissed suggestion can never be raised again by a later lookup.
 
-**Crash-safe store writes.** Every JSON store writes to a same-directory `.tmp` file and atomically renames it over the target (`AtomicFile.WriteAsync`) — a same-volume rename, so a write interrupted by an app kill or power loss leaves the *last good* file intact instead of a truncated one. (The load path treats a corrupt file as "start empty", which for a direct overwrite would silently lose the whole list.) A file that fails to parse on load is moved aside to a `.corrupt` sibling rather than being overwritten by the next save, so the bad bytes are preserved for recovery.
+**Crash-safe store writes.** Every JSON store writes to a same-directory `.tmp` file and atomically renames it over the target (`IAtomicFileWriter.WriteAsync`) — a same-volume rename, so a write interrupted by an app kill or power loss leaves the *last good* file intact instead of a truncated one. (The load path treats a corrupt file as "start empty", which for a direct overwrite would silently lose the whole list.) A file that fails to parse on load is moved aside to a `.corrupt` sibling rather than being overwritten by the next save, so the bad bytes are preserved for recovery.
 
 **Split button — one control, a default action plus a menu.** `SplitButton` / `SplitButtonItem` (`Components/`) render a primary action segment beside a chevron that drops a menu of related actions — e.g. *Log performance* with alternate ways to log it, or *Find on YouTube* with Spotify / KaraFun / Lyrics behind the chevron to reclaim sheet height. Reusable: pass the default via `OnPrimary` and the extras as `SplitButtonItem` children (each takes `Icon` / `Description` / `Separated`), with `Direction` (Down/Up, for buttons low in a sheet), `Align`, and `Variant` (Primary/Tonal/Secondary) knobs. Dismissal reuses the header ⋮ menu's approach — a transparent full-screen scrim for an outside tap, plus `IBackButtonService` so the Android back button closes the menu instead of navigating — so there's **no bespoke JS**; it's styled with the shared `.btn` variants and `--kh-` tokens.
 
@@ -166,7 +166,7 @@ API, so it would mean per-platform code for a problem a normally-lit screen does
 
 ## 📁 Project structure
 
-AGENTS.md's Solution / project layout table covers the five shipping projects — `KHost.Mobile.Abstractions`, `.Common`, `.Infrastructure`, `.Clients` and `.UI` — and the layering rule between them, in more detail. The two test projects aren't in that table:
+AGENTS.md's Solution / project layout table covers the six shipping projects — `KHost.Mobile`, `.UI`, `.Abstractions`, `.Common`, `.Infrastructure` and `.Clients` — and the layering rule between them, in more detail. The two test projects aren't in that table:
 
 | Project | Role |
 |---|---|
