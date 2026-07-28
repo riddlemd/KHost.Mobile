@@ -27,8 +27,9 @@ internal sealed class JsonFileLyricsCache
     public JsonFileLyricsCache(
         IAppDataDirectory paths,
         ILogger<JsonFileLyricsCache>? logger = null,
-        TimeProvider? timeProvider = null)
-        : base(logger ?? NullLogger<JsonFileLyricsCache>.Instance)
+        TimeProvider? timeProvider = null,
+        IAtomicFile? files = null)
+        : base(logger ?? NullLogger<JsonFileLyricsCache>.Instance, files)
     {
         _filePath = Path.Combine(paths.AppDataDirectory, "lyrics-cache.json");
         _clock = timeProvider ?? TimeProvider.System;

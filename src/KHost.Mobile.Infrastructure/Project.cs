@@ -48,6 +48,10 @@ public static class Project
         // Feeds the settings-backed catalogue region to Clients, which can't read IAppSettings itself.
         services.AddSingleton<ILookupOptions, AppLookupOptions>();
 
+        // Every store's bytes reach disk through this one path, so crash-safety is a property of the
+        // registration rather than of each store remembering to use it.
+        services.AddSingleton<IAtomicFile, AtomicFileWriter>();
+
         // Chained onto every typed client so one seam logs what the native HTTP stack actually sent.
         services.AddTransient<LoggingHttpMessageHandler>();
 

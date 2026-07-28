@@ -34,8 +34,9 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
         IAppDataDirectory paths,
         IAppSession? session = null,
         ILogger<JsonFileTonightStore>? logger = null,
-        TimeProvider? timeProvider = null)
-        : base(logger ?? NullLogger<JsonFileTonightStore>.Instance)
+        TimeProvider? timeProvider = null,
+        IAtomicFile? files = null)
+        : base(logger ?? NullLogger<JsonFileTonightStore>.Instance, files)
     {
         _paths = paths;
         _session = session;

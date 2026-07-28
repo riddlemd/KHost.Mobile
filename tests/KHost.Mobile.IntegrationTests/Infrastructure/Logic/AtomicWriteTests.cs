@@ -1,3 +1,4 @@
+using KHost.Mobile.Abstractions.Services;
 using KHost.Mobile.Infrastructure.Logic;
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
@@ -11,6 +12,8 @@ namespace KHost.Mobile.IntegrationTests.Infrastructure.Logic;
 // JsonFileStore: you'd need JsonSerializer to throw partway through writing a real payload.
 public sealed class AtomicWriteTests : IDisposable
 {
+    private static readonly IAtomicFile Files = new AtomicFileWriter();
+
     private readonly TempAppDataDirectory _dir = new();
 
     public void Dispose() => _dir.Dispose();
@@ -60,11 +63,11 @@ public sealed class AtomicWriteTests : IDisposable
     public async Task An_interrupted_write_leaves_the_previous_good_file_intact()
     {
         var path = _dir.FilePath("atomic-write-test.json");
-        await AtomicFile.WriteAsync(path, s => s.WriteAsync(System.Text.Encoding.UTF8.GetBytes("original")).AsTask());
+        await Files.WriteAsync(path, s => s.WriteAsync(System.Text.Encoding.UTF8.GetBytes("original")).AsTask());
         var original = await File.ReadAllTextAsync(path);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            AtomicFile.WriteAsync(path, async s =>
+            Files.WriteAsync(path, async s =>
             {
                 await s.WriteAsync(System.Text.Encoding.UTF8.GetBytes("half-writ"));
                 throw new InvalidOperationException("simulated crash mid-write");
@@ -81,7 +84,7 @@ public sealed class AtomicWriteTests : IDisposable
     {
         var path = _dir.FilePath("never-written.json");
 
-        AtomicFile.Quarantine(path);   // nothing to move — must not throw or create a .corrupt file
+        Files.Quarantine(path);   // nothing to move — must not throw or create a .corrupt file
 
         Assert.False(File.Exists(path));
         Assert.False(File.Exists(path + ".corrupt"));

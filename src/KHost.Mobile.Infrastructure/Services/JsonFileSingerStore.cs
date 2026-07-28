@@ -21,8 +21,8 @@ internal sealed class JsonFileSingerStore : JsonFileStore<Singer>, ISingerStore
     private readonly string _filePath;
 
     // logger is optional so the integration tests can `new` the store without a logging stack; DI supplies the real one.
-    public JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFileSingerStore>? logger = null)
-        : base(logger ?? NullLogger<JsonFileSingerStore>.Instance)
+    public JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFileSingerStore>? logger = null, IAtomicFile? files = null)
+        : base(logger ?? NullLogger<JsonFileSingerStore>.Instance, files)
     {
         _paths = paths;
         _filePath = Path.Combine(paths.AppDataDirectory, "singers.json");

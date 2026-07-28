@@ -20,8 +20,8 @@ internal sealed class JsonFileVenueStore : JsonFileStore<Venue>, IVenueStore
     private readonly string _filePath;
 
     // logger is optional so the integration tests can `new` the store without a logging stack; DI supplies the real one.
-    public JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFileVenueStore>? logger = null)
-        : base(logger ?? NullLogger<JsonFileVenueStore>.Instance)
+    public JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFileVenueStore>? logger = null, IAtomicFile? files = null)
+        : base(logger ?? NullLogger<JsonFileVenueStore>.Instance, files)
         => _filePath = Path.Combine(paths.AppDataDirectory, "venues.json");
 
     protected override JsonTypeInfo<List<Venue>> TypeInfo => VenueJsonContext.Default.ListVenue;

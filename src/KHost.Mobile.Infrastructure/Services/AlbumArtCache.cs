@@ -14,7 +14,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// the browser caches the decoded image behind its object URL. Downloads hit the artwork CDN, not the rate-limited
 /// iTunes Search API.
 /// </remarks>
-internal sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory httpFactory, ILogger<AlbumArtCache>? logger = null) : IAlbumArtCache
+internal sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory httpFactory, IAtomicFile? files = null, ILogger<AlbumArtCache>? logger = null) : IAlbumArtCache
 {
     private readonly string _dir = Path.Combine(paths.AppDataDirectory, "album-art");
     private readonly SemaphoreSlim _gate = new(1, 1);                       // guards count/clear against the folder
@@ -46,7 +46,7 @@ internal sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory 
                 // Atomic (.tmp + rename) like the JSON stores, and for a sharper reason here: "is it cached?" is
                 // File.Exists, so a torn write would leave a truncated image that counts as a hit FOREVER — the
                 // card renders broken and never re-downloads. A failed atomic write leaves no target file at all.
-                await AtomicFile.WriteAsync(path, stream => stream.WriteAsync(bytes, cancellationToken).AsTask())
+                await (files ?? new AtomicFileWriter()).WriteAsync(path, stream => stream.WriteAsync(bytes, cancellationToken).AsTask())
                     .ConfigureAwait(false);
                 wroteNew = true;
                 _log.LogDebug("Album art downloaded + cached ({Bytes} bytes) for {Url}", bytes.Length, url);
