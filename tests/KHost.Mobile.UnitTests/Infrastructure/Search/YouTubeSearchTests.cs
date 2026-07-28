@@ -7,12 +7,14 @@ namespace KHost.Mobile.UnitTests.Infrastructure.Search;
 // SpotifySearch deliberately doesn't — see SpotifySearchTests for why.
 public class YouTubeSearchTests
 {
+    private static readonly SongLinks Links = new();
+
     [Fact]
     public void Joins_title_and_artist_with_a_dash()
     {
         Assert.Equal(
             "https://www.youtube.com/results?search_query=Africa%20-%20Toto",
-            YouTubeSearch.UrlFor("Africa", "Toto"));
+            Links.YouTubeUrlFor("Africa", "Toto"));
     }
 
     [Fact]
@@ -20,10 +22,10 @@ public class YouTubeSearchTests
     {
         Assert.Equal(
             "https://www.youtube.com/results?search_query=Africa",
-            YouTubeSearch.UrlFor("Africa", null));
+            Links.YouTubeUrlFor("Africa", null));
         Assert.Equal(
             "https://www.youtube.com/results?search_query=Africa",
-            YouTubeSearch.UrlFor("Africa", "   "));
+            Links.YouTubeUrlFor("Africa", "   "));
     }
 
     [Fact]
@@ -32,6 +34,6 @@ public class YouTubeSearchTests
         // Surrounding whitespace trimmed; an inner space and an ampersand are percent-escaped.
         Assert.Equal(
             "https://www.youtube.com/results?search_query=Me%20%26%20You%20-%20The%20Band",
-            YouTubeSearch.UrlFor("  Me & You  ", "  The Band  "));
+            Links.YouTubeUrlFor("  Me & You  ", "  The Band  "));
     }
 }

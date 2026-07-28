@@ -1,3 +1,6 @@
+using KHost.Mobile.Abstractions.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Globalization;
 
 namespace KHost.Mobile.Infrastructure.Logic;
@@ -6,15 +9,19 @@ namespace KHost.Mobile.Infrastructure.Logic;
 /// Converts between an instant and the text an <c>&lt;input type="datetime-local"&gt;</c> reads and writes.
 /// The control carries no time zone, so the offset comes from the supplied <see cref="TimeProvider"/>.
 /// </summary>
-public static class LocalDateTimeInput
+internal sealed class DateTimeInput(TimeProvider? timeProvider = null, ILogger<DateTimeInput>? logger = null) : IDateTimeInput
 {
+    // Held for future diagnostics: the seam should exist before it's needed, not be retrofitted.
+    private readonly ILogger _log = logger ?? NullLogger<DateTimeInput>.Instance;
+
     /// <summary>The only shape the control accepts, regardless of the device's display locale.</summary>
     public const string Pattern = "yyyy-MM-ddTHH:mm";
 
     /// <summary>Renders <paramref name="value"/> as local wall-clock text for the control.</summary>
-    public static string Format(DateTimeOffset value, TimeProvider clock)
+    /// <inheritdoc />
+    public string Format(DateTimeOffset value)
     {
-        ArgumentNullException.ThrowIfNull(clock);
+        var clock = timeProvider ?? TimeProvider.System;
         return TimeZoneInfo.ConvertTime(value, clock.LocalTimeZone).ToString(Pattern, CultureInfo.InvariantCulture);
     }
 
@@ -25,9 +32,10 @@ public static class LocalDateTimeInput
     /// The offset is the local zone's offset <em>for the date entered</em>, not for today — so backfilling a
     /// performance from the other side of a daylight-saving change keeps the wall-clock time that was typed.
     /// </remarks>
-    public static bool TryParse(string? text, TimeProvider clock, out DateTimeOffset value)
+    /// <inheritdoc />
+    public bool TryParse(string? text, out DateTimeOffset value)
     {
-        ArgumentNullException.ThrowIfNull(clock);
+        var clock = timeProvider ?? TimeProvider.System;
         value = default;
 
         if (!DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var wall))

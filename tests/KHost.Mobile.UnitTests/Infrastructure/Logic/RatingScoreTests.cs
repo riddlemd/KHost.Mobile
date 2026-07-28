@@ -1,3 +1,4 @@
+using KHost.Mobile.Infrastructure.Search;
 using KHost.Mobile.Abstractions.Models;
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
@@ -8,6 +9,8 @@ namespace KHost.Mobile.UnitTests.Infrastructure.Logic;
 
 public class RatingScoreTests
 {
+    private static readonly RatingScore Scorer = new();
+
     private static readonly DateTimeOffset Now = new(2026, 7, 22, 12, 0, 0, TimeSpan.Zero);
 
     // A song with one rated performance per given how-it-went value, all dated `at` (defaults to now).
@@ -28,7 +31,7 @@ public class RatingScoreTests
     {
         var songs = new[] { new SongListItem(), Song(0, 0) };   // no performances / only unrated ones
 
-        var context = RatingScore.BuildContext(songs, RatingConfig.Default, Now);
+        var context = Scorer.BuildContext(songs, RatingConfig.Default, Now);
 
         Assert.Null(context.PriorMean);
     }
@@ -38,7 +41,7 @@ public class RatingScoreTests
     {
         var songs = new[] { Song(5), Song(4, 4, 3) };   // values 5,4,4,3 → mean 4.0
 
-        var context = RatingScore.BuildContext(songs, RatingConfig.Default, Now);
+        var context = Scorer.BuildContext(songs, RatingConfig.Default, Now);
 
         Assert.Equal(4.0, context.PriorMean!.Value, 6);
     }
@@ -48,7 +51,7 @@ public class RatingScoreTests
     {
         var songs = new[] { Song(5, 0, 0) };   // the two zeros must not drag the mean down
 
-        var context = RatingScore.BuildContext(songs, RatingConfig.Default, Now);
+        var context = Scorer.BuildContext(songs, RatingConfig.Default, Now);
 
         Assert.Equal(5.0, context.PriorMean!.Value, 6);
     }
@@ -60,8 +63,8 @@ public class RatingScoreTests
     {
         var context = new RatingContext(4.0, RatingConfig.Default, Now);
 
-        Assert.Null(RatingScore.StarFor(new SongListItem(), context));
-        Assert.Null(RatingScore.StarFor(Song(0, 0), context));
+        Assert.Null(Scorer.StarFor(new SongListItem(), context));
+        Assert.Null(Scorer.StarFor(Song(0, 0), context));
     }
 
     [Fact]
@@ -69,7 +72,7 @@ public class RatingScoreTests
     {
         var context = new RatingContext(PriorMean: null, RatingConfig.Default, Now);
 
-        Assert.Null(RatingScore.StarFor(Song(5), context));
+        Assert.Null(Scorer.StarFor(Song(5), context));
     }
 
     [Fact]
@@ -78,7 +81,7 @@ public class RatingScoreTests
         var context = new RatingContext(4.0, RatingConfig.Default, Now);   // m = 3
 
         // one 5: (1*5 + 3*4) / (1+3) = 17/4 = 4.25 — pulled down from 5 toward the prior.
-        Assert.Equal(4.25, RatingScore.StarFor(Song(5), context)!.Value, 6);
+        Assert.Equal(4.25, Scorer.StarFor(Song(5), context)!.Value, 6);
     }
 
     [Fact]
@@ -87,7 +90,7 @@ public class RatingScoreTests
         var context = new RatingContext(4.0, RatingConfig.Default, Now);
 
         // ten 4.5s: (10*4.5 + 3*4) / 13 = 57/13 ≈ 4.3846 — barely moved from 4.5.
-        Assert.Equal(57.0 / 13.0, RatingScore.StarFor(Song(4, 5, 4, 5, 4, 5, 4, 5, 4, 5), context)!.Value, 6);
+        Assert.Equal(57.0 / 13.0, Scorer.StarFor(Song(4, 5, 4, 5, 4, 5, 4, 5, 4, 5), context)!.Value, 6);
     }
 
     [Fact]
@@ -96,8 +99,8 @@ public class RatingScoreTests
         // Prior 4.0 is a normally-mixed list. This is the headline scenario the whole feature is about.
         var context = new RatingContext(4.0, RatingConfig.Default, Now);
 
-        var oneLuckyFive = RatingScore.StarFor(Song(5), context)!.Value;                 // 4.25
-        var tenSolid = RatingScore.StarFor(Song(4, 5, 4, 5, 4, 5, 4, 5, 4, 5), context)!.Value;   // ≈4.385
+        var oneLuckyFive = Scorer.StarFor(Song(5), context)!.Value;                 // 4.25
+        var tenSolid = Scorer.StarFor(Song(4, 5, 4, 5, 4, 5, 4, 5, 4, 5), context)!.Value;   // ≈4.385
 
         Assert.True(tenSolid > oneLuckyFive);
     }
@@ -109,8 +112,8 @@ public class RatingScoreTests
         // so confidence-only shrinkage does NOT flip it below a true 4.5.
         var context = new RatingContext(4.8, RatingConfig.Default, Now);
 
-        var oneFive = RatingScore.StarFor(Song(5), context)!.Value;                       // (5+14.4)/4 = 4.85
-        var tenFourFive = RatingScore.StarFor(Song(4, 5, 4, 5, 4, 5, 4, 5, 4, 5), context)!.Value;   // (45+14.4)/13 ≈ 4.569
+        var oneFive = Scorer.StarFor(Song(5), context)!.Value;                       // (5+14.4)/4 = 4.85
+        var tenFourFive = Scorer.StarFor(Song(4, 5, 4, 5, 4, 5, 4, 5, 4, 5), context)!.Value;   // (45+14.4)/13 ≈ 4.569
 
         Assert.True(oneFive > tenFourFive);
     }
@@ -119,8 +122,8 @@ public class RatingScoreTests
     public void StarFor_shrinks_harder_with_a_bigger_prior_weight()
     {
         var song = Song(5);
-        var gentle = RatingScore.StarFor(song, new RatingContext(4.0, RatingConfig.Default, Now))!.Value;      // m=3 → 4.25
-        var aggressive = RatingScore.StarFor(song, new RatingContext(4.0, RatingConfig.Default with { PriorWeight = 9 }, Now))!.Value;
+        var gentle = Scorer.StarFor(song, new RatingContext(4.0, RatingConfig.Default, Now))!.Value;      // m=3 → 4.25
+        var aggressive = Scorer.StarFor(song, new RatingContext(4.0, RatingConfig.Default with { PriorWeight = 9 }, Now))!.Value;
 
         Assert.True(aggressive < gentle);   // more shrinkage pulls the lone 5 further toward 4.0
     }
@@ -133,8 +136,8 @@ public class RatingScoreTests
         var config = RatingConfig.Default;   // recency off
         var context = new RatingContext(3.0, config, Now);
 
-        var recentHigh = RatingScore.StarFor(Song(Now, 5), context)!.Value;
-        var oldHigh = RatingScore.StarFor(Song(Now.AddDays(-3650), 5), context)!.Value;   // 10 years old
+        var recentHigh = Scorer.StarFor(Song(Now, 5), context)!.Value;
+        var oldHigh = Scorer.StarFor(Song(Now.AddDays(-3650), 5), context)!.Value;   // 10 years old
 
         Assert.Equal(recentHigh, oldHigh, 6);   // age is irrelevant when recency is off
     }
@@ -145,8 +148,8 @@ public class RatingScoreTests
         var config = RatingConfig.Default with { RecencyEnabled = true };   // 180-day half-life
         var context = new RatingContext(3.0, config, Now);
 
-        var recentFive = RatingScore.StarFor(Song(Now, 5), context)!.Value;
-        var oldFive = RatingScore.StarFor(Song(Now.AddDays(-360), 5), context)!.Value;   // two half-lives → weight 0.25
+        var recentFive = Scorer.StarFor(Song(Now, 5), context)!.Value;
+        var oldFive = Scorer.StarFor(Song(Now.AddDays(-360), 5), context)!.Value;   // two half-lives → weight 0.25
 
         // The old 5 has a smaller effective count, so it shrinks harder toward the 3.0 prior and scores lower.
         Assert.True(recentFive > oldFive);
@@ -159,7 +162,7 @@ public class RatingScoreTests
         var config = RatingConfig.Default with { RecencyEnabled = true };
         var songs = new[] { Song(Now, 5), Song(Now.AddDays(-720), 1) };   // old 1 is heavily decayed
 
-        var context = RatingScore.BuildContext(songs, config, Now);
+        var context = Scorer.BuildContext(songs, config, Now);
 
         Assert.True(context.PriorMean!.Value > 4.0);   // dominated by the recent 5, not dragged to the midpoint (3.0)
     }

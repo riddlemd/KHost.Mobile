@@ -1,6 +1,8 @@
 using KHost.Mobile.Abstractions.Clients.Metadata;
 using KHost.Mobile.Abstractions.Services;
 using KHost.Mobile.Infrastructure.Diagnostics;
+using KHost.Mobile.Infrastructure.Logic;
+using KHost.Mobile.Infrastructure.Search;
 using KHost.Mobile.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -51,6 +53,18 @@ public static class Project
         // Every store's bytes reach disk through this one path, so crash-safety is a property of the
         // registration rather than of each store remembering to use it.
         services.AddSingleton<IAtomicFile, AtomicFileWriter>();
+
+        // Former statics. They take an ILogger they may not use yet — having the seam costs a constructor
+        // parameter; adding it later would mean touching every call site again.
+        services.AddSingleton<ISongLinks, SongLinks>();
+        services.AddSingleton<IKaraFunVenueIdParser, KaraFunVenueUrlParser>();
+        services.AddSingleton<ITimeFormatter, TimeFormatter>();
+        services.AddSingleton<IAppVersionParser, AppVersionParser>();
+        services.AddSingleton<IDateTimeInput, DateTimeInput>();
+        services.AddSingleton<IRatingScorer, RatingScore>();
+        services.AddSingleton<ISurprisePicker, SurprisePicker>();
+        services.AddSingleton<ISingerProfileCodec, SingerProfileCodec>();
+        services.AddSingleton<ISingerDataFiles, SingerDataFiles>();
 
         // Chained onto every typed client so one seam logs what the native HTTP stack actually sent.
         services.AddTransient<LoggingHttpMessageHandler>();

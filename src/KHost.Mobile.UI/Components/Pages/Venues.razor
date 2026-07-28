@@ -13,6 +13,8 @@
 @inject IAppSettings Settings
 @inject IQrCodeService QrCodes
 @implements IDisposable
+@inject ISongLinks Links2
+@inject ITimeFormatter Time
 
 @* The active venue is a session pointer, not persisted here; performances logged while it's active are tagged with
    it, which is what the per-venue history reads. The detail sheet's Active toggle is the equivalent a screen reader
@@ -151,7 +153,7 @@
                 <div class="venue-stats">
                     <div class="venue-stat"><span class="venue-stat__num">@h.Performances</span><span class="venue-stat__lbl">performance@(h.Performances == 1 ? "" : "s")</span></div>
                     <div class="venue-stat"><span class="venue-stat__num">@(h.Average?.ToString("0.0") ?? "—")</span><span class="venue-stat__lbl">avg here</span></div>
-                    <div class="venue-stat"><span class="venue-stat__num">@(h.LastPerformed?.LocalDateTime.ToString(TimeFormat.ShortDate) ?? "—")</span><span class="venue-stat__lbl">last performance</span></div>
+                    <div class="venue-stat"><span class="venue-stat__num">@(h.LastPerformed?.LocalDateTime.ToString(Time.ShortDatePattern) ?? "—")</span><span class="venue-stat__lbl">last performance</span></div>
                 </div>
 
                 @if (h.GoTo.Count > 0)
@@ -169,7 +171,7 @@
                 <ul class="venue-songlist">
                     @foreach (var r in h.Recent)
                     {
-                        <li><span class="venue-songlist__title">@r.Title</span><span class="venue-songlist__meta">@(r.Rating >= 1 ? $"{r.Rating}★ · " : "")@r.Date.LocalDateTime.ToString(TimeFormat.ShortDate)</span></li>
+                        <li><span class="venue-songlist__title">@r.Title</span><span class="venue-songlist__meta">@(r.Rating >= 1 ? $"{r.Rating}★ · " : "")@r.Date.LocalDateTime.ToString(Time.ShortDatePattern)</span></li>
                     }
                 </ul>
             }
@@ -426,7 +428,7 @@
     private Task OpenCatalogAsync(Venue v) =>
         string.IsNullOrWhiteSpace(v.KaraFunVenueId)
             ? Task.CompletedTask
-            : Links.OpenAsync(KaraFunSearch.CatalogUrlFor(v.KaraFunVenueId));
+            : Links.OpenAsync(Links2.KaraFunCatalogUrlFor(v.KaraFunVenueId));
 
     // Encoding is cheap and the URL only changes with the venue, so it's done on open rather than cached.
     private void ShowCatalogQr(Venue v)
@@ -434,7 +436,7 @@
         if (string.IsNullOrWhiteSpace(v.KaraFunVenueId))
             return;
 
-        var url = KaraFunSearch.CatalogUrlFor(v.KaraFunVenueId);
+        var url = Links2.KaraFunCatalogUrlFor(v.KaraFunVenueId);
         try
         {
             _qrSvg = new MarkupString(QrCodes.ToSvg(url));

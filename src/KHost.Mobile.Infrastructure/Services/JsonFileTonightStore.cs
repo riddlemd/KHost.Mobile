@@ -18,6 +18,8 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// </remarks>
 internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonightStore
 {
+    private readonly ISingerDataFiles _names;
+
     private readonly IAppDataDirectory _paths;
     private readonly IAppSession? _session;
     // GetLocalNow, not GetUtcNow: every stored timestamp in this app is local, and switching would shift every
@@ -35,9 +37,11 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
         IAppSession? session = null,
         ILogger<JsonFileTonightStore>? logger = null,
         TimeProvider? timeProvider = null,
-        IAtomicFile? files = null)
+        IAtomicFile? files = null,
+        ISingerDataFiles? names = null)
         : base(logger ?? NullLogger<JsonFileTonightStore>.Instance, files)
     {
+        _names = names ?? new SingerDataFiles();
         _paths = paths;
         _session = session;
         _clock = timeProvider ?? TimeProvider.System;
@@ -59,7 +63,7 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
 
     protected override string PathFor(Guid? singerId)
     {
-        var name = singerId is null ? SingerDataFiles.LegacyTonight : SingerDataFiles.Tonight(singerId.Value);
+        var name = singerId is null ? SingerDataFiles.LegacyTonight : _names.Tonight(singerId.Value);
         return Path.Combine(_paths.AppDataDirectory, name);
     }
 

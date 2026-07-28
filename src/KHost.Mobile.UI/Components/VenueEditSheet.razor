@@ -3,6 +3,7 @@
 @inject IQrScanner Scanner
 @inject ILocationProvider Geo
 @inject IAppSettings Settings
+@inject IKaraFunVenueIdParser VenueIds
 <Sheet Open="Editing is not null"
        AriaLabel="Edit venue" OnClose="OnClose">
     @if (Editing is not null)
@@ -184,7 +185,7 @@
             if (string.IsNullOrWhiteSpace(scanned))
                 return; // cancelled, permission denied, or nothing read
 
-            if (KaraFunVenueUrlParser.TryParseVenueUrl(scanned, out var id))
+            if (VenueIds.TryParseVenueUrl(scanned, out var id))
                 _karaFunId = id;
             else
                 _scanError = "That QR code isn't a KaraFun venue link.";
@@ -203,7 +204,7 @@
         v.Glyph = string.IsNullOrWhiteSpace(_glyph) ? VenueGlyphs.Default : _glyph.Trim();
         v.Name = _name.Trim();
         // Keep only a parseable venue ID (accepts a pasted link or a bare id); blank clears it.
-        v.KaraFunVenueId = KaraFunVenueUrlParser.TryParseId(_karaFunId, out var parsed) ? parsed : null;
+        v.KaraFunVenueId = VenueIds.TryParseId(_karaFunId, out var parsed) ? parsed : null;
         v.Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim();
         v.IsFavorite = _isFavorite;
         v.ShowInSwitcher = _showInSwitcher;

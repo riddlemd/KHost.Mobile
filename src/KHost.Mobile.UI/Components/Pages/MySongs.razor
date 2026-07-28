@@ -22,6 +22,9 @@
 @inject TimeProvider Clock
 @inject Random Rng
 @implements IDisposable
+@inject IRatingScorer Scorer
+@inject ISongLinks Links2
+@inject ISurprisePicker Surprise
 
 <button type="button" class="mysongs-fab @(Settings.TonightEnabled ? "" : "mysongs-fab--no-nav") @(AnyOverlayOpen ? "is-hidden" : "")"
         data-tut="add" aria-label="Add a song you'd like to sing" @onclick="OpenAdd">
@@ -1314,7 +1317,7 @@ else
     {
         // "Draw only from filtered songs" is the difference between the visible list and the whole library.
         IReadOnlyList<SongListItem> pool = Settings.SurpriseRespectFilters ? Filtered().ToList() : _items;
-        var candidates = SurprisePicker.Narrow(pool, SurpriseOptions, Clock.GetLocalNow().Date);
+        var candidates = Surprise.Narrow(pool, SurpriseOptions, Clock.GetLocalNow().Date);
 
         var pick = Roll(candidates);
         // One reroll so a tap on "Reroll" never lands on the same song twice in a row.
@@ -1330,7 +1333,7 @@ else
     }
 
     private SongListItem? Roll(IReadOnlyList<SongListItem> candidates) =>
-        SurprisePicker.Pick(candidates, SurpriseOptions, Rng.NextDouble(),
+        Surprise.Pick(candidates, SurpriseOptions, Rng.NextDouble(),
             BayesStar, neutralStar: _ratingContext.PriorMean ?? 3.0);
 
     private Task OpenRolledAsync()
@@ -1712,19 +1715,19 @@ else
     private Task OpenYouTubeAsync() =>
         _detailItem is null
             ? Task.CompletedTask
-            : Links.OpenAsync(YouTubeSearch.UrlFor(_detailItem.Title, _detailItem.Artist));
+            : Links.OpenAsync(Links2.YouTubeUrlFor(_detailItem.Title, _detailItem.Artist));
 
     // Opens in the OS browser / Spotify app — never the in-app WebView.
     private Task OpenSpotifyAsync() =>
         _detailItem is null
             ? Task.CompletedTask
-            : Links.OpenAsync(SpotifySearch.UrlFor(_detailItem.Title, _detailItem.Artist));
+            : Links.OpenAsync(Links2.SpotifyUrlFor(_detailItem.Title, _detailItem.Artist));
 
     // The button only renders when _activeVenueKaraFunId is set, so it's always present here.
     private Task OpenKaraFunAsync() =>
         _detailItem is null || string.IsNullOrWhiteSpace(_activeVenueKaraFunId)
             ? Task.CompletedTask
-            : Links.OpenAsync(KaraFunSearch.UrlFor(_activeVenueKaraFunId, _detailItem.Title, _detailItem.Artist));
+            : Links.OpenAsync(Links2.KaraFunUrlFor(_activeVenueKaraFunId, _detailItem.Title, _detailItem.Artist));
 
     // Split-button variant of the KaraFun action: queue for tonight (unless already there), then open KaraFun.
     private async Task AddToTonightAndOpenKaraFunAsync()
@@ -1902,7 +1905,7 @@ else
     // The confidence-weighted "how it went" star (Bayesian shrinkage toward the list average), rebuilt whenever the
     // list reloads. The card star, the sort and the rating filter buckets all read this — keep them on it.
     private RatingContext _ratingContext = new(null, RatingConfig.Default, default);
-    private double? BayesStar(SongListItem item) => RatingScore.StarFor(item, _ratingContext);
+    private double? BayesStar(SongListItem item) => Scorer.StarFor(item, _ratingContext);
 
     // Whole-star value for the red "how it went" display: the rounded Bayesian star (0 when the song has no rating).
     private int RoundedAvg(SongListItem item) =>
@@ -1961,7 +1964,7 @@ else
         _itemsVersion++;         // invalidate the sorted cache and re-wire the art observer
         _usedTagsCache = null;
         // The prior is list-wide, so the context is rebuilt once per load, never per song.
-        _ratingContext = RatingScore.BuildContext(_items,
+        _ratingContext = Scorer.BuildContext(_items,
             RatingConfig.Default with
             {
                 RecencyEnabled = Settings.RecencyWeightedRatings,

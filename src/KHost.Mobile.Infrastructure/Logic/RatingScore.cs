@@ -1,3 +1,6 @@
+using KHost.Mobile.Abstractions.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using KHost.Mobile.Abstractions.Models;
 namespace KHost.Mobile.Infrastructure.Logic;
 
@@ -8,14 +11,17 @@ namespace KHost.Mobile.Infrastructure.Logic;
 /// (exponential half-life). Pure and MAUI-free, derived from the existing <see cref="SongListItem.Performances"/>, so
 /// there's no stored field and no migration.
 /// </summary>
-public static class RatingScore
+internal sealed class RatingScore(ILogger<RatingScore>? logger = null) : IRatingScorer
 {
+    // Held for future diagnostics: the seam should exist before it's needed, not be retrofitted.
+    private readonly ILogger _log = logger ?? NullLogger<RatingScore>.Instance;
+
     /// <summary>
     /// Build the shared context — the prior mean — from the whole list, walking every rated performance once.
     /// <see cref="RatingContext.PriorMean"/> is the (recency-weighted) grand mean of every rated sing, or null when
     /// nothing has been rated yet.
     /// </summary>
-    public static RatingContext BuildContext(IEnumerable<SongListItem> songs, RatingConfig config, DateTimeOffset now)
+    public RatingContext BuildContext(IEnumerable<SongListItem> songs, RatingConfig config, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(songs);
         ArgumentNullException.ThrowIfNull(config);
@@ -44,7 +50,7 @@ public static class RatingScore
     /// the song has no (effective) rated sings, or the whole list has no prior — matching the "no star until rated"
     /// behavior of the old average.
     /// </summary>
-    public static double? StarFor(SongListItem song, RatingContext context)
+    public double? StarFor(SongListItem song, RatingContext context)
     {
         ArgumentNullException.ThrowIfNull(song);
         ArgumentNullException.ThrowIfNull(context);

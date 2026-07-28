@@ -18,6 +18,7 @@
 @inject NavigationManager Nav
 @inject TimeProvider Clock
 @implements IDisposable
+@inject ISingerProfileCodec Codec
 
 <section class="ie">
     <div class="page-head">
@@ -395,7 +396,7 @@
         {
             var singer = _activeSinger ?? new Singer { Name = "Me" };   // session-less fallback
             var songs = await Store.GetAllAsync();
-            var json = SingerProfileCodec.Serialize(SingerProfile.Create(singer, songs));
+            var json = Codec.Serialize(SingerProfile.Create(singer, songs));
             await ShareJsonAsync($"khost-{Slug(singer.Name)}-profile-{Clock.GetLocalNow():yyyy-MM-dd}.json", json, "Export singer profile");
         }
         catch (Exception ex)
@@ -421,18 +422,18 @@
             if (text is null)
                 return;   // cancelled
 
-            switch (SingerProfileCodec.Detect(text))
+            switch (Codec.Detect(text))
             {
-                case SingerProfileCodec.FileKind.Profile:
-                    if (SingerProfileCodec.ParseProfile(text) is { } profile)
+                case ProfileFileKind.Profile:
+                    if (Codec.ParseProfile(text) is { } profile)
                         _pendingProfile = profile;   // open the add-as-new / merge decision sheet
                     else
                         await FlashAsync("That profile file couldn't be read.");
                     break;
 
-                case SingerProfileCodec.FileKind.LegacySongList:
+                case ProfileFileKind.LegacySongList:
                     // An old songs-only export → merge straight into the current singer (fresh ids, as before).
-                    var songs = SingerProfileCodec.ParseLegacySongs(text) ?? [];
+                    var songs = Codec.ParseLegacySongs(text) ?? [];
                     foreach (var s in songs)
                         s.Id = Guid.NewGuid();
                     var added = await Store.ImportAsync(songs, skipDuplicates: true);
@@ -551,7 +552,7 @@
         try
         {
             var venues = await Venues.GetAllAsync();
-            var json = SingerProfileCodec.SerializeVenues(venues);
+            var json = Codec.SerializeVenues(venues);
             await ShareJsonAsync($"khost-venues-{Clock.GetLocalNow():yyyy-MM-dd}.json", json, "Export venues");
         }
         catch (Exception ex)
@@ -577,7 +578,7 @@
             if (text is null)
                 return;   // cancelled
 
-            var incoming = SingerProfileCodec.ParseVenues(text);
+            var incoming = Codec.ParseVenues(text);
             if (incoming is null)
             {
                 await FlashAsync("That file isn't a valid venues export.");

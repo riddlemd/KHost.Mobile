@@ -1,3 +1,4 @@
+using KHost.Mobile.Infrastructure.Logic;
 using KHost.Mobile.Infrastructure.Search;
 using Xunit;
 
@@ -5,6 +6,8 @@ namespace KHost.Mobile.UnitTests.Infrastructure.Search;
 
 public class KaraFunVenueUrlParserTests
 {
+    private static readonly KaraFunVenueUrlParser Parser = new();
+
     [Theory]
     [InlineData("https://www.karafun.com/012345/search?q=a+walk+through+hell")]
     [InlineData("https://www.karafun.com/012345/")]
@@ -16,7 +19,7 @@ public class KaraFunVenueUrlParserTests
     [InlineData("  012345  ")]
     public void TryParseId_extracts_venue_id_keeping_leading_zeros(string input)
     {
-        Assert.True(KaraFunVenueUrlParser.TryParseId(input, out var id));
+        Assert.True(Parser.TryParseId(input, out var id));
         Assert.Equal("012345", id);
     }
 
@@ -29,7 +32,7 @@ public class KaraFunVenueUrlParserTests
     [InlineData("https://open.spotify.com/playlist/012345")]        // right digits, wrong host
     public void TryParseId_rejects_non_venue_input(string? input)
     {
-        Assert.False(KaraFunVenueUrlParser.TryParseId(input, out var id));
+        Assert.False(Parser.TryParseId(input, out var id));
         Assert.Equal(string.Empty, id);
     }
 
@@ -41,7 +44,7 @@ public class KaraFunVenueUrlParserTests
     [InlineData("HTTPS://WWW.KARAFUN.COM/012345")]   // host match is case-insensitive
     public void TryParseVenueUrl_extracts_id_from_a_valid_karafun_url(string input)
     {
-        Assert.True(KaraFunVenueUrlParser.TryParseVenueUrl(input, out var id));
+        Assert.True(Parser.TryParseVenueUrl(input, out var id));
         Assert.Equal("012345", id);
     }
 
@@ -59,7 +62,7 @@ public class KaraFunVenueUrlParserTests
     [InlineData("https://www.karafun.com/karaoke-say-anything")] // no numeric venue segment
     public void TryParseVenueUrl_rejects_non_karafun_or_malformed_urls(string? input)
     {
-        Assert.False(KaraFunVenueUrlParser.TryParseVenueUrl(input, out var id));
+        Assert.False(Parser.TryParseVenueUrl(input, out var id));
         Assert.Equal(string.Empty, id);
     }
 }

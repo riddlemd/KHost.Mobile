@@ -1,7 +1,7 @@
 namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>Reads a KaraFun venue ID out of what a user pasted, or out of a scanned QR code.</summary>
-public interface IKaraFunVenueIds
+public interface IKaraFunVenueIdParser
 {
     /// <summary>Accepts a venue URL or a bare numeric ID.</summary>
     bool TryParseId(string? input, out string id);

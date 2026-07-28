@@ -1,3 +1,6 @@
+using KHost.Mobile.Abstractions.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Diagnostics.CodeAnalysis;
 
 namespace KHost.Mobile.Infrastructure.Logic;
@@ -20,14 +23,18 @@ namespace KHost.Mobile.Infrastructure.Logic;
 /// the GitHub backend, and Clients sits below Infrastructure — sharing it would invert the layering to save
 /// an <c>IndexOfAny</c>.
 /// </remarks>
-public static class AppVersion
+internal sealed class AppVersionParser(ILogger<AppVersionParser>? logger = null) : IAppVersionParser
 {
+    // Held for future diagnostics: the seam should exist before it's needed, not be retrofitted.
+    private readonly ILogger _log = logger ?? NullLogger<AppVersionParser>.Instance;
+
     /// <summary>
     /// Parses <paramref name="displayVersion"/> into <paramref name="version"/>, ignoring any
     /// <c>-prerelease</c>/<c>+build</c> suffix. Returns false when what's left isn't a dotted numeric version
     /// — including for null, empty or whitespace input.
     /// </summary>
-    public static bool TryParse(string? displayVersion, [NotNullWhen(true)] out Version? version)
+    /// <inheritdoc />
+    public bool TryParse(string? displayVersion, [NotNullWhen(true)] out Version? version)
     {
         version = null;
 

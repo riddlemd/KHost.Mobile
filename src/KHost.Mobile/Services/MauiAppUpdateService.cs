@@ -1,5 +1,4 @@
 using KHost.Mobile.Abstractions.Clients.Updates;
-using KHost.Mobile.Infrastructure.Logic;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 using KHost.Mobile.Abstractions.Services;
@@ -12,7 +11,7 @@ namespace KHost.Mobile.Services;
 /// the check <see cref="Task"/> is cached, so the network call happens once per launch no matter how many
 /// components ask.
 /// </remarks>
-public sealed class MauiAppUpdateService(IUpdateLookup updateClient, IAppSettings settings, ILogger<MauiAppUpdateService> logger) : IAppUpdateService
+public sealed class MauiAppUpdateService(IUpdateLookup updateClient, IAppSettings settings, IAppVersionParser versions, ILogger<MauiAppUpdateService> logger) : IAppUpdateService
 {
     private Task<AppUpdateStatus>? _check;
 
@@ -30,7 +29,7 @@ public sealed class MauiAppUpdateService(IUpdateLookup updateClient, IAppSetting
 
         // AppVersion, not the GitHub tag normalizer: this is ApplicationDisplayVersion, so a pre-release
         // suffix on a dev build is tolerated but a "v" prefix is not (see AppVersion's remarks).
-        if (!AppVersion.TryParse(AppInfo.Current.VersionString, out var current))
+        if (!versions.TryParse(AppInfo.Current.VersionString, out var current))
             return AppUpdateStatus.None;
 
         ReleaseInfo? latest;

@@ -1,3 +1,4 @@
+using KHost.Mobile.Infrastructure.Search;
 using KHost.Mobile.Infrastructure.Logic;
 using Xunit;
 
@@ -7,6 +8,8 @@ namespace KHost.Mobile.UnitTests.Infrastructure.Logic;
 // is silent in the app — MauiAppUpdateService just reports "no update" — so the boundaries are pinned.
 public class AppVersionTests
 {
+    private static readonly AppVersionParser Parser = new();
+
     [Theory]
     [InlineData("0.13.0", "0.13.0")]
     [InlineData("1.2", "1.2")]
@@ -14,7 +17,7 @@ public class AppVersionTests
     [InlineData("  0.13.0  ", "0.13.0")]           // trimmed
     public void Parses_a_plain_display_version(string input, string expected)
     {
-        Assert.True(AppVersion.TryParse(input, out var v));
+        Assert.True(Parser.TryParse(input, out var v));
         Assert.Equal(Version.Parse(expected), v);
     }
 
@@ -27,7 +30,7 @@ public class AppVersionTests
     {
         // A suffixed versionName is ordinary on an Android dev build; refusing it would disable the update
         // check on exactly the builds most likely to want it.
-        Assert.True(AppVersion.TryParse(input, out var v));
+        Assert.True(Parser.TryParse(input, out var v));
         Assert.Equal(Version.Parse(expected), v);
     }
 
@@ -36,7 +39,7 @@ public class AppVersionTests
     {
         // "v1.2.3" is a git-tag convention, not a display version — iOS requires CFBundleShortVersionString
         // to be period-separated digits, so this is invalid input rather than something to accommodate.
-        Assert.False(AppVersion.TryParse("v1.2.3", out var v));
+        Assert.False(Parser.TryParse("v1.2.3", out var v));
         Assert.Null(v);
     }
 
@@ -48,7 +51,7 @@ public class AppVersionTests
     [InlineData("-1.2.3")]      // suffix cut leaves nothing
     public void Rejects_what_isnt_a_dotted_numeric_version(string? input)
     {
-        Assert.False(AppVersion.TryParse(input, out var v));
+        Assert.False(Parser.TryParse(input, out var v));
         Assert.Null(v);
     }
 
@@ -56,7 +59,7 @@ public class AppVersionTests
     public void A_suffixed_build_still_compares_against_a_release()
     {
         // The point of tolerating the suffix: 0.14.0-beta must not read as older than 0.13.0.
-        Assert.True(AppVersion.TryParse("0.14.0-beta", out var current));
+        Assert.True(Parser.TryParse("0.14.0-beta", out var current));
         Assert.True(current > Version.Parse("0.13.0"));
         Assert.False(current > Version.Parse("0.14.0"));   // same release, not newer
     }

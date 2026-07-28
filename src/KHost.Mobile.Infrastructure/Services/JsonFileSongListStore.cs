@@ -17,6 +17,8 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// </remarks>
 internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISongListStore
 {
+    private readonly ISingerDataFiles _names;
+
     private readonly IAppDataDirectory _paths;
     private readonly IAppSession? _session;
 
@@ -26,9 +28,11 @@ internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISong
     /// <paramref name="session"/> and <paramref name="logger"/> are optional so the integration tests can <c>new</c>
     /// the store bare; with no session it falls back to the single legacy file. DI supplies both.
     /// </summary>
-    public JsonFileSongListStore(IAppDataDirectory paths, IAppSession? session = null, ILogger<JsonFileSongListStore>? logger = null, IAtomicFile? files = null)
+    public JsonFileSongListStore(IAppDataDirectory paths, IAppSession? session = null, ILogger<JsonFileSongListStore>? logger = null, IAtomicFile? files = null,
+        ISingerDataFiles? names = null)
         : base(logger ?? NullLogger<JsonFileSongListStore>.Instance, files)
     {
+        _names = names ?? new SingerDataFiles();
         _paths = paths;
         _session = session;
         if (_session is not null)
@@ -49,7 +53,7 @@ internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISong
 
     protected override string PathFor(Guid? singerId)
     {
-        var name = singerId is null ? SingerDataFiles.LegacySongList : SingerDataFiles.SongList(singerId.Value);
+        var name = singerId is null ? SingerDataFiles.LegacySongList : _names.SongList(singerId.Value);
         return Path.Combine(_paths.AppDataDirectory, name);
     }
 

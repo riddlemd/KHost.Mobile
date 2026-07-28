@@ -1,3 +1,4 @@
+using KHost.Mobile.Infrastructure.Search;
 using KHost.Mobile.Infrastructure.Logic;
 using Xunit;
 
@@ -5,6 +6,8 @@ namespace KHost.Mobile.UnitTests.Infrastructure.Logic;
 
 public class LocalDateTimeInputTests
 {
+    private static readonly DateTimeInput Input = new();
+
     // A zone with daylight saving, so the "offset for the date entered" rule is actually exercised.
     private static readonly TimeZoneInfo Eastern =
         TimeZoneInfo.FindSystemTimeZoneById(OperatingSystem.IsWindows() ? "Eastern Standard Time" : "America/New_York");
@@ -23,16 +26,16 @@ public class LocalDateTimeInputTests
         // 2026-07-27 18:30 UTC is 14:30 in Eastern daylight time.
         var clock = Clock(new DateTimeOffset(2026, 7, 27, 18, 30, 0, TimeSpan.Zero));
 
-        Assert.Equal("2026-07-27T14:30", LocalDateTimeInput.Format(clock.GetUtcNow(), clock));
+        Assert.Equal("2026-07-27T14:30", new DateTimeInput(clock).Format(clock.GetUtcNow()));
     }
 
     [Fact]
     public void Round_trips_a_value()
     {
         var clock = Clock(new DateTimeOffset(2026, 7, 27, 18, 30, 0, TimeSpan.Zero));
-        var text = LocalDateTimeInput.Format(clock.GetUtcNow(), clock);
+        var text = new DateTimeInput(clock).Format(clock.GetUtcNow());
 
-        Assert.True(LocalDateTimeInput.TryParse(text, clock, out var parsed));
+        Assert.True(new DateTimeInput(clock).TryParse(text, out var parsed));
         Assert.Equal(clock.GetUtcNow(), parsed);
     }
 
@@ -41,7 +44,7 @@ public class LocalDateTimeInputTests
     {
         var clock = Clock(new DateTimeOffset(2026, 7, 27, 18, 30, 0, TimeSpan.Zero));
 
-        Assert.True(LocalDateTimeInput.TryParse("2026-07-20T21:15", clock, out var parsed));
+        Assert.True(new DateTimeInput(clock).TryParse("2026-07-20T21:15", out var parsed));
         Assert.Equal(new DateTime(2026, 7, 20, 21, 15, 0), parsed.DateTime);
     }
 
@@ -51,7 +54,7 @@ public class LocalDateTimeInputTests
         // "Now" is summer (EDT, -04:00); the performance being backfilled is in January (EST, -05:00).
         var clock = Clock(new DateTimeOffset(2026, 7, 27, 18, 30, 0, TimeSpan.Zero));
 
-        Assert.True(LocalDateTimeInput.TryParse("2026-01-15T20:00", clock, out var winter));
+        Assert.True(new DateTimeInput(clock).TryParse("2026-01-15T20:00", out var winter));
 
         Assert.Equal(TimeSpan.FromHours(-5), winter.Offset);
         // The wall-clock time the user typed is what survives, not a time shifted by an hour.
@@ -67,6 +70,6 @@ public class LocalDateTimeInputTests
     {
         var clock = Clock(new DateTimeOffset(2026, 7, 27, 18, 30, 0, TimeSpan.Zero));
 
-        Assert.False(LocalDateTimeInput.TryParse(text, clock, out _));
+        Assert.False(new DateTimeInput(clock).TryParse(text, out _));
     }
 }
