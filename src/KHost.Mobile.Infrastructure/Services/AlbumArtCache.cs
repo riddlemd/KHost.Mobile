@@ -3,7 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using KHost.Mobile.Abstractions.Services;
-using KHost.Mobile.Infrastructure.Logic;
+using KHost.Mobile.Infrastructure.Services;
 namespace KHost.Mobile.Infrastructure.Services;
 
 /// <inheritdoc />

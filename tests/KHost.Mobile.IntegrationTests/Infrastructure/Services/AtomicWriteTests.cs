@@ -1,9 +1,8 @@
 using KHost.Mobile.Abstractions.Services;
-using KHost.Mobile.Infrastructure.Logic;
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
-namespace KHost.Mobile.IntegrationTests.Infrastructure.Logic;
+namespace KHost.Mobile.IntegrationTests.Infrastructure.Services;
 
 // Crash-safety of the durable-JSON writes. The first three go through the real song-list store
 // (session-less → the legacy file) to prove the guarantee holds end to end; the last two call AtomicFile

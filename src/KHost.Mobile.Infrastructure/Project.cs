@@ -1,8 +1,6 @@
 using KHost.Mobile.Abstractions.Clients.Metadata;
 using KHost.Mobile.Abstractions.Services;
 using KHost.Mobile.Infrastructure.Diagnostics;
-using KHost.Mobile.Infrastructure.Logic;
-using KHost.Mobile.Infrastructure.Search;
 using KHost.Mobile.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,7 +1,7 @@
 using KHost.Mobile.Abstractions.Services;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using KHost.Mobile.Infrastructure.Logic;
+using KHost.Mobile.Infrastructure.Services;
 using Microsoft.Extensions.Logging;
 
 namespace KHost.Mobile.Infrastructure.Services;

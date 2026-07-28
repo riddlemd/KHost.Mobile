@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Globalization;
 
-namespace KHost.Mobile.Infrastructure.Logic;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <summary>
 /// Converts between an instant and the text an <c>&lt;input type="datetime-local"&gt;</c> reads and writes.
