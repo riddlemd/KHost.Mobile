@@ -2,7 +2,7 @@ using KHost.Mobile.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace KHost.Mobile.Infrastructure.Search;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <inheritdoc />
 /// <remarks>Pure and host-agnostic — every method is string building, so it's trivially testable.</remarks>

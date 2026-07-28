@@ -1,7 +1,7 @@
-using KHost.Mobile.Infrastructure.Search;
+using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
-namespace KHost.Mobile.UnitTests.Infrastructure.Search;
+namespace KHost.Mobile.UnitTests.Infrastructure.Services;
 
 // The three quick-link URL builders, all pure string logic. Grouped per destination, because the interesting
 // differences are between them: YouTube joins with " - " while Spotify must not, and KaraFun carries the venue

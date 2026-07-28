@@ -1,11 +1,9 @@
-using KHost.Mobile.Infrastructure.Search;
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
 using KHost.Mobile.Abstractions.Models;
-using KHost.Mobile.Infrastructure.Logic;
 
-namespace KHost.Mobile.UnitTests.Infrastructure.Logic;
+namespace KHost.Mobile.UnitTests.Infrastructure.Services;
 
 public class SingerProfileCodecTests
 {

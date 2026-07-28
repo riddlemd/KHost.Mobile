@@ -1,8 +1,7 @@
-using KHost.Mobile.Infrastructure.Search;
-using KHost.Mobile.Infrastructure.Logic;
+using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
-namespace KHost.Mobile.UnitTests.Infrastructure.Logic;
+namespace KHost.Mobile.UnitTests.Infrastructure.Services;
 
 // The app's own ApplicationDisplayVersion, parsed for comparison against the newest release. A failure here
 // is silent in the app — MauiAppUpdateService just reports "no update" — so the boundaries are pinned.

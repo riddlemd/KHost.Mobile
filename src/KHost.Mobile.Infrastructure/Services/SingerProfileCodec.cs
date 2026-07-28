@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.Json;
 using KHost.Mobile.Infrastructure.Serialization;
 using KHost.Mobile.Abstractions.Models;
-namespace KHost.Mobile.Infrastructure.Logic;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <summary>
 /// Pure (no-I/O) serialize/parse for the Import/Export page's file round-trips — a singer profile, a legacy

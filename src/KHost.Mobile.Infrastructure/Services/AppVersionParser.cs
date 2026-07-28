@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Diagnostics.CodeAnalysis;
 
-namespace KHost.Mobile.Infrastructure.Logic;
+namespace KHost.Mobile.Infrastructure.Services;
 
 /// <summary>
 /// Parses the running app's OWN version string — <c>ApplicationDisplayVersion</c>, reaching the app as

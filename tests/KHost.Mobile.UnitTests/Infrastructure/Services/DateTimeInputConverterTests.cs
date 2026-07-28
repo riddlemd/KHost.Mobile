@@ -1,8 +1,7 @@
-using KHost.Mobile.Infrastructure.Search;
-using KHost.Mobile.Infrastructure.Logic;
+using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
-namespace KHost.Mobile.UnitTests.Infrastructure.Logic;
+namespace KHost.Mobile.UnitTests.Infrastructure.Services;
 
 public class DateTimeInputConverterTests
 {
