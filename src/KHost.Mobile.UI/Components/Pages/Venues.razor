@@ -11,6 +11,7 @@
 @inject IBackButtonService BackButton
 @inject IHaptics Haptics
 @inject IAppSettings Settings
+@inject IQrCodeService QrCodes
 @implements IDisposable
 
 @* The active venue is a session pointer, not persisted here; performances logged while it's active are tagged with
@@ -92,7 +93,17 @@
         <div class="venue-detail__actions">
             @if (!string.IsNullOrWhiteSpace(d.KaraFunVenueId))
             {
-                <button class="btn btn-primary" data-tut="venue-karafun" @onclick="() => OpenCatalogAsync(d)">Open KaraFun Catalog</button>
+                @* The tour spotlights [data-tut="venue-karafun"]; it sits on a wrapper so the whole split
+                   button is highlighted rather than one of its two segments. *@
+                <div data-tut="venue-karafun">
+                    <SplitButton Class="kh-split--karafun" PrimaryLabel="Open KaraFun Catalog"
+                                 OnPrimary="() => OpenCatalogAsync(d)" ToggleAriaLabel="More catalog options">
+                        <SplitButtonItem Description="Let someone scan it to open the songbook on their phone"
+                                         OnClick="() => ShowCatalogQr(d)">
+                            Show QR Code
+                        </SplitButtonItem>
+                    </SplitButton>
+                </div>
             }
             @* Flipping Active off clears the active venue (not-at-a-venue), same as picking "Not at a venue" elsewhere. *@
             <label class="setting venue-detail__toggle">
@@ -178,6 +189,10 @@
 @* ---- Add / edit sheet ---- *@
 <VenueEditSheet Editing="_editing" IsNew="_editingIsNew" OnSave="SaveVenueAsync" OnClose="CloseEdit" />
 
+@* Stacked over the venue detail sheet, which stays open behind it — closing the QR returns you to the venue. *@
+<QrCodeSheet Open="_qrVenue is not null" Title="@_qrVenue?.Name" Subtitle="Scan to open the KaraFun songbook"
+             Svg="_qrSvg" Caption="@_qrUrl" AriaLabel="KaraFun catalog QR code" OnClose="CloseQr" />
+
 @* ---- Delete confirm ---- *@
 @if (_confirmDelete is { } del)
 {
@@ -199,6 +214,9 @@
     private Venue? _editing;
     private bool _editingIsNew;
     private Venue? _confirmDelete;
+    private Venue? _qrVenue;
+    private MarkupString _qrSvg;
+    private string? _qrUrl;
     private string _search = string.Empty;
     private BackButtonOverlayGuard? _backGuard;
 
@@ -407,6 +425,35 @@
         string.IsNullOrWhiteSpace(v.KaraFunVenueId)
             ? Task.CompletedTask
             : Links.OpenAsync(KaraFunSearch.CatalogUrlFor(v.KaraFunVenueId));
+
+    // Encoding is cheap and the URL only changes with the venue, so it's done on open rather than cached.
+    private void ShowCatalogQr(Venue v)
+    {
+        if (string.IsNullOrWhiteSpace(v.KaraFunVenueId))
+            return;
+
+        var url = KaraFunSearch.CatalogUrlFor(v.KaraFunVenueId);
+        try
+        {
+            _qrSvg = new MarkupString(QrCodes.ToSvg(url));
+        }
+        catch (Exception ex)
+        {
+            // Degrades to no sheet rather than a broken one; the primary Open action still works.
+            Log.LogWarning(ex, "Couldn't build a QR code for venue {Venue}", v.Id);
+            return;
+        }
+
+        _qrUrl = url;
+        _qrVenue = v;
+    }
+
+    private void CloseQr()
+    {
+        _qrVenue = null;
+        _qrUrl = null;
+        _qrSvg = default;
+    }
 
     private async Task ToggleFavoriteAsync(Venue v)
     {

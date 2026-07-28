@@ -94,6 +94,9 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<ILinkLauncher, MauiLinkLauncher>();
 
+        // Stateless and thread-safe, so one instance serves every caller.
+        builder.Services.AddSingleton<IQrCodeService, QrCodeService>();
+
         builder.Services.AddSingleton<IHaptics, MauiHaptics>();
 
         // Safe-area insets for platforms whose WebView can't see the system bars via CSS env() (Android).
