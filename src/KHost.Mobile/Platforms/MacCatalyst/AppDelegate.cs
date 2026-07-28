@@ -1,5 +1,5 @@
 using Foundation;
-namespace KHost.Mobile.UI;
+namespace KHost.Mobile;
 
 [Register("AppDelegate")]
 public class AppDelegate : MauiUIApplicationDelegate

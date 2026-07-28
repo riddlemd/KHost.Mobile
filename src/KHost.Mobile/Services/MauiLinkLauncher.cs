@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 using KHost.Mobile.Abstractions.Services;
-namespace KHost.Mobile.UI.Services;
+namespace KHost.Mobile.Services;
 
 /// <inheritdoc />
 /// <remarks>

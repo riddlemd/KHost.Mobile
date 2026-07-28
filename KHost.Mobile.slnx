@@ -5,6 +5,7 @@
     <Project Path="src/KHost.Mobile.Infrastructure/KHost.Mobile.Infrastructure.csproj" />
     <Project Path="src/KHost.Mobile.Clients/KHost.Mobile.Clients.csproj" />
     <Project Path="src/KHost.Mobile.UI/KHost.Mobile.UI.csproj" />
+    <Project Path="src/KHost.Mobile/KHost.Mobile.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/KHost.Mobile.UnitTests/KHost.Mobile.UnitTests.csproj" />

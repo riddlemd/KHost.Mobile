@@ -10,7 +10,7 @@ namespace KHost.Mobile.Clients.Deezer;
 /// as <see cref="DeezerCoverArtParser"/>, different question: not "which result is this song" but "does one of
 /// these look like what the user meant to type".
 /// </summary>
-public static class DeezerSuggestionParser
+internal static class DeezerSuggestionParser
 {
     /// <summary>
     /// Returns the closest near-miss among the results, or null when nothing is close enough, the payload is

@@ -14,7 +14,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// the browser caches the decoded image behind its object URL. Downloads hit the artwork CDN, not the rate-limited
 /// iTunes Search API.
 /// </remarks>
-public sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory httpFactory, ILogger<AlbumArtCache>? logger = null) : IAlbumArtCache
+internal sealed class AlbumArtCache(IAppDataDirectory paths, IHttpClientFactory httpFactory, ILogger<AlbumArtCache>? logger = null) : IAlbumArtCache
 {
     private readonly string _dir = Path.Combine(paths.AppDataDirectory, "album-art");
     private readonly SemaphoreSlim _gate = new(1, 1);                       // guards count/clear against the folder

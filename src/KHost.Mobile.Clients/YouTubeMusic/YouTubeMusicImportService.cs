@@ -9,7 +9,7 @@ namespace KHost.Mobile.Clients.YouTubeMusic;
 /// normal browser User-Agent (set per-request, so the injected <see cref="HttpClient"/> needs no special
 /// configuration). No API key — read-only scrape of a public page.
 /// </remarks>
-public sealed class YouTubeMusicImportService(HttpClient httpClient) : IYouTubeMusicImportService
+internal sealed class YouTubeMusicImportService(HttpClient httpClient) : IYouTubeMusicImportService
 {
     private const string PlaylistUrlFormat = "https://music.youtube.com/playlist?list={0}";
 

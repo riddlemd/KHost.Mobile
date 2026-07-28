@@ -1,6 +1,6 @@
 using Microsoft.Maui.Devices;
 using KHost.Mobile.Abstractions.Services;
-namespace KHost.Mobile.UI.Services;
+namespace KHost.Mobile.Services;
 
 /// <inheritdoc />
 /// <remarks>

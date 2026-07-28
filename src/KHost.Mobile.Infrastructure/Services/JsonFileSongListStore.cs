@@ -15,7 +15,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// loaded; every mutation rewrites the file, under a <see cref="SemaphoreSlim"/> so concurrent UI actions can't
 /// corrupt either. A corrupt file is quarantined and treated as an empty list.
 /// </remarks>
-public sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISongListStore
+internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISongListStore
 {
     private readonly IAppDataDirectory _paths;
     private readonly IAppSession? _session;

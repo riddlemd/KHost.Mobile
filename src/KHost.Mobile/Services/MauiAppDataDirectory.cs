@@ -1,6 +1,6 @@
 using Microsoft.Maui.Storage;
 using KHost.Mobile.Abstractions.Services;
-namespace KHost.Mobile.UI.Services;
+namespace KHost.Mobile.Services;
 
 /// <inheritdoc />
 /// <remarks>Backed by MAUI's <see cref="FileSystem.AppDataDirectory"/> — the per-platform private data folder the

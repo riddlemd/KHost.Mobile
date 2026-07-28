@@ -1,6 +1,6 @@
 #if ANDROID || IOS
 using BarcodeScanning;
-namespace KHost.Mobile.UI.Services;
+namespace KHost.Mobile.Services;
 
 /// <summary>
 /// A full-screen modal camera page that resolves with the first QR code it reads, or <c>null</c> if cancelled.

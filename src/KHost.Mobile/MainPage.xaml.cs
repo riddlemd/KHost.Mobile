@@ -1,4 +1,4 @@
-namespace KHost.Mobile.UI;
+namespace KHost.Mobile;
 
 public partial class MainPage : ContentPage
 {

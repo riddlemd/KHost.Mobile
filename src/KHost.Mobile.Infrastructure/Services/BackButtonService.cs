@@ -8,7 +8,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// <para>All access is on the UI thread — components register/unregister from the Blazor renderer thread and the
 /// Android <c>OnBackPressedDispatcher</c> fires on that same main thread — so no locking is needed.</para>
 /// </remarks>
-public sealed class BackButtonService : IBackButtonService
+internal sealed class BackButtonService : IBackButtonService
 {
     private readonly List<Func<bool>> _handlers = [];
 

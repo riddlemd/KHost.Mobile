@@ -15,7 +15,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// <see cref="JsonFileTonightStore"/>. A corrupt file is quarantined and treated as an empty list. Read results
 /// are sorted favorites-first then by name; storage order itself is insertion order.
 /// </remarks>
-public sealed class JsonFileVenueStore : JsonFileStore<Venue>, IVenueStore
+internal sealed class JsonFileVenueStore : JsonFileStore<Venue>, IVenueStore
 {
     private readonly string _filePath;
 

@@ -1,7 +1,7 @@
 using KHost.Mobile.Abstractions.Services;
 using Microsoft.Maui.ApplicationModel;
 
-namespace KHost.Mobile.UI.Services;
+namespace KHost.Mobile.Services;
 
 /// <inheritdoc />
 public sealed class MauiAppVersionInfo : IAppVersionInfo

@@ -11,7 +11,7 @@ namespace KHost.Mobile.Clients.GitHub;
 /// <c>{ tag_name, name, html_url, draft, prerelease, ... }</c>. Pre-releases are kept (all current builds
 /// are previews); drafts are skipped. Returns <c>null</c> when nothing parses.
 /// </summary>
-public static class GitHubReleaseParser
+internal static class GitHubReleaseParser
 {
     public static ReleaseInfo? ParseNewest(string json)
     {

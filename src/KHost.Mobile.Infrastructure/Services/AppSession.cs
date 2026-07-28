@@ -3,7 +3,7 @@ using KHost.Mobile.Abstractions.Services;
 namespace KHost.Mobile.Infrastructure.Services;
 
 /// <summary>In-memory <see cref="IAppSession"/> — plain mutable flags, no persistence. Registered as a singleton.</summary>
-public sealed class AppSession : IAppSession
+internal sealed class AppSession : IAppSession
 {
     /// <inheritdoc />
     public bool LandingResolved { get; set; }

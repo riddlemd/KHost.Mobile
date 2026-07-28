@@ -9,7 +9,7 @@ namespace KHost.Mobile.Clients.Deezer;
 /// covers iTunes' popularity-ranked search misses. Rate limit ~50 req/5s per IP. Cover art only: Deezer's
 /// release dates are the digital-availability date, not the original release, so year/genre stay with iTunes.
 /// </remarks>
-public sealed class DeezerCoverArtLookup(HttpClient httpClient) : ICoverArtLookup
+internal sealed class DeezerCoverArtLookup(HttpClient httpClient) : ICoverArtLookup
 {
     public async Task<string?> FindCoverArtUrlAsync(string title, string artist, CancellationToken cancellationToken = default)
     {

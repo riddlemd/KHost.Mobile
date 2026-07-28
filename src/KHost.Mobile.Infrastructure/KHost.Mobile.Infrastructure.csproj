@@ -29,4 +29,11 @@
     <ProjectReference Include="..\KHost.Mobile.Abstractions\KHost.Mobile.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The stores are internal; the integration suite drives them against a real temp folder, which is the
+         only way to cover the file I/O and serialization they exist for. -->
+    <InternalsVisibleTo Include="KHost.Mobile.UnitTests" />
+    <InternalsVisibleTo Include="KHost.Mobile.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

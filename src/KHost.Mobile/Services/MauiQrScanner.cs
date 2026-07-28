@@ -2,7 +2,7 @@
 using BarcodeScanning;
 using Microsoft.Extensions.Logging;
 using KHost.Mobile.Abstractions.Services;
-namespace KHost.Mobile.UI.Services;
+namespace KHost.Mobile.Services;
 
 /// <inheritdoc />
 /// <remarks>

@@ -15,7 +15,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// <see cref="JsonFileVenueStore"/>. A corrupt file is quarantined and treated as an empty roster. Removing a
 /// singer also deletes their personal data files so they don't orphan on disk.
 /// </remarks>
-public sealed class JsonFileSingerStore : JsonFileStore<Singer>, ISingerStore
+internal sealed class JsonFileSingerStore : JsonFileStore<Singer>, ISingerStore
 {
     private readonly IAppDataDirectory _paths;
     private readonly string _filePath;

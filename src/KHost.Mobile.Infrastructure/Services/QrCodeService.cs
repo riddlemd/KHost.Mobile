@@ -13,7 +13,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// scan at arm's length.
 /// </remarks>
 // logger is optional so a test can `new` the service without a logging stack; DI supplies the real one.
-public sealed class QrCodeService(ILogger<QrCodeService>? logger = null) : IQrCodeService
+internal sealed class QrCodeService(ILogger<QrCodeService>? logger = null) : IQrCodeService
 {
     // The spec's quiet zone. A caller's own padding adds more, but a scanner measures it in modules.
     private const int QuietZoneModules = 4;

@@ -16,7 +16,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// contiguous and rewrites the file, under a <see cref="SemaphoreSlim"/>. A corrupt file is quarantined and
 /// treated as an empty set.
 /// </remarks>
-public sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonightStore
+internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonightStore
 {
     private readonly IAppDataDirectory _paths;
     private readonly IAppSession? _session;

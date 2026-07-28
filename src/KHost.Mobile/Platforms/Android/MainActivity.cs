@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 // MAUI's global usings pull in Microsoft.Maui.Controls.View; alias the Android type to disambiguate.
 using AView = Android.Views.View;
 using KHost.Mobile.Abstractions.Services;
-namespace KHost.Mobile.UI;
+namespace KHost.Mobile;
 
 [Activity(Theme = "@style/Maui.SplashTheme", MainLauncher = true, ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
 public class MainActivity : MauiAppCompatActivity

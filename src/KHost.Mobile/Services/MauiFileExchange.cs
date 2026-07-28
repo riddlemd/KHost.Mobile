@@ -3,7 +3,7 @@ using Microsoft.Maui.ApplicationModel.DataTransfer;
 using Microsoft.Maui.Devices;
 using Microsoft.Maui.Storage;
 
-namespace KHost.Mobile.UI.Services;
+namespace KHost.Mobile.Services;
 
 /// <inheritdoc />
 public sealed class MauiFileExchange : IFileExchange

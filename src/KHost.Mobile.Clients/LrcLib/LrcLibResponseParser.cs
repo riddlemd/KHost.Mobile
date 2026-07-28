@@ -11,7 +11,7 @@ namespace KHost.Mobile.Clients.LrcLib;
 /// Takes the first record that actually carries lyrics (or is flagged instrumental) rather than the first
 /// result outright, so a bare metadata-only hit doesn't win. Returns null when nothing parses.
 /// </summary>
-public static class LrcLibResponseParser
+internal static class LrcLibResponseParser
 {
     public static LyricsResult? ParseFirst(string json)
     {
