@@ -28,9 +28,9 @@ internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISong
     /// <paramref name="session"/> and <paramref name="logger"/> are optional so the integration tests can <c>new</c>
     /// the store bare; with no session it falls back to the single legacy file. DI supplies both.
     /// </summary>
-    public JsonFileSongListStore(IAppDataDirectory paths, IAppSession? session = null, ILogger<JsonFileSongListStore>? logger = null, IAtomicFile? files = null,
+    public JsonFileSongListStore(IAppDataDirectory paths, IAppSession? session = null, ILogger<JsonFileSongListStore>? logger = null, IAtomicFileWriter? writer = null,
         ISingerDataFiles? names = null)
-        : base(logger ?? NullLogger<JsonFileSongListStore>.Instance, files)
+        : base(logger ?? NullLogger<JsonFileSongListStore>.Instance, writer)
     {
         _names = names ?? new SingerDataFiles();
         _paths = paths;

@@ -11,7 +11,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// No <c>ConfigureAwait</c> — the callers are the UI-thread JSON stores relying on the Blazor sync context.
 /// </remarks>
 // logger optional so AtomicWriteTests can `new` it; DI supplies the real one.
-internal sealed class AtomicFileWriter(ILogger<AtomicFileWriter>? logger = null) : IAtomicFile
+internal sealed class AtomicFileWriter(ILogger<AtomicFileWriter>? logger = null) : IAtomicFileWriter
 {
     private readonly ILogger _log = logger ?? NullLogger<AtomicFileWriter>.Instance;
 

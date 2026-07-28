@@ -8,7 +8,7 @@ namespace KHost.Mobile.Abstractions.Services;
 /// That matters because a store's load path treats a corrupt file as "start empty" — with a direct overwrite,
 /// an interrupted write would silently lose the whole list.
 /// </remarks>
-public interface IAtomicFile
+public interface IAtomicFileWriter
 {
     /// <summary>
     /// Writes through a <c>.tmp</c> sibling, then moves it over <paramref name="path"/>. The stream is flushed

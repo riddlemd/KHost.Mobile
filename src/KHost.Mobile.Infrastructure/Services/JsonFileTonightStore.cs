@@ -37,9 +37,9 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
         IAppSession? session = null,
         ILogger<JsonFileTonightStore>? logger = null,
         TimeProvider? timeProvider = null,
-        IAtomicFile? files = null,
+        IAtomicFileWriter? writer = null,
         ISingerDataFiles? names = null)
-        : base(logger ?? NullLogger<JsonFileTonightStore>.Instance, files)
+        : base(logger ?? NullLogger<JsonFileTonightStore>.Instance, writer)
     {
         _names = names ?? new SingerDataFiles();
         _paths = paths;

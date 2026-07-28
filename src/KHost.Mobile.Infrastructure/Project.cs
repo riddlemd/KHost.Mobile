@@ -52,7 +52,7 @@ public static class Project
 
         // Every store's bytes reach disk through this one path, so crash-safety is a property of the
         // registration rather than of each store remembering to use it.
-        services.AddSingleton<IAtomicFile, AtomicFileWriter>();
+        services.AddSingleton<IAtomicFileWriter, AtomicFileWriter>();
 
         // Former statics. They take an ILogger they may not use yet — having the seam costs a constructor
         // parameter; adding it later would mean touching every call site again.
