@@ -1137,8 +1137,13 @@ body.kh-sheet-open { overflow: hidden; }
 
 /* ---- Sung history sheet ------------------------------------------------- */
 /* Sits above the detail sheet (its own backdrop). Scrolls the list when it's long. */
+/* Stacked sheets — one level above the base .sheet/.sheet-backdrop pair (41/40), so the upper sheet's backdrop
+   covers the sheet that opened it. These MUST stay after the base rules: same specificity, so source order is
+   what decides, and a modifier placed earlier in the file silently loses to `.sheet-backdrop`. */
 .sheet--history { z-index: 43; }
 .sheet-backdrop--history { z-index: 42; }
+.sheet--qr { z-index: 43; }
+.sheet-backdrop--qr { z-index: 42; }
 .history { margin-top: 1rem; max-height: 55vh; overflow-y: auto; }
 .history__item { padding: 0.65rem 0.25rem; border-bottom: 1px solid var(--kh-border); }
 .history__item:first-child { border-top: 1px solid var(--kh-border); }

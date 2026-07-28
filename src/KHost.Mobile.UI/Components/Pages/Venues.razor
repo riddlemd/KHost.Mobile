@@ -520,7 +520,9 @@
     // Closes the single top-most overlay, matching the CSS stacking (confirm > edit sheet > detail sheet).
     private bool TryCloseTopOverlay()
     {
+        // Newest overlay first — the QR sheet sits over the detail sheet, so back must close it, not what's under it.
         if (_confirmDelete is not null) { CancelDelete(); return true; }
+        if (_qrVenue is not null) { CloseQr(); return true; }
         if (_editing is not null) { CloseEdit(); return true; }
         if (_detail is not null) { CloseDetail(); return true; }
         return false;
