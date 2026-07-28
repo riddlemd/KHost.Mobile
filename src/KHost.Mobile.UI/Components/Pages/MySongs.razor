@@ -499,7 +499,7 @@ else
 <SongDetailSheet Item="_detailItem"
                  SuggestionLoading="_suggestionLoading" AutoFilledNote="@_autoFilledNote"
                  InTonight="IsInTonight(_detailItem)"
-                 KaraFunAvailable="@(Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
+                 KaraFunAvailable="@(Settings.KaraFunFeaturesEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
                  BayesScore="@(_detailItem is null ? null : BayesStar(_detailItem))"
                  RoundedAverage="@(_detailItem is null ? 0 : RoundedAvg(_detailItem))"
                  UsedTags="UsedTags"

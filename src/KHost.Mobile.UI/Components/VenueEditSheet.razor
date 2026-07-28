@@ -3,6 +3,7 @@
 @using Microsoft.Maui.Devices
 @inject IQrScanner Scanner
 @inject ILocationProvider Geo
+@inject IAppSettings Settings
 <Sheet Open="Editing is not null"
        AriaLabel="Edit venue" OnClose="OnClose">
     @if (Editing is not null)
@@ -17,6 +18,8 @@
             </IconPicker>
         </div>
 
+        @if (Settings.KaraFunFeaturesEnabled)
+        {
         <div class="field">
             <label class="field__label" for="venue-kf">KaraFun venue ID <span class="field__hint">— optional</span></label>
             <div class="kf-venue__input-row">
@@ -35,6 +38,7 @@
                 <div class="field__error">@_scanError</div>
             }
         </div>
+        }
 
         <div class="field">
             <label class="field__label">Location <span class="field__hint">— optional</span></label>

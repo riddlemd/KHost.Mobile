@@ -29,7 +29,7 @@
         <div class="empty-state">
             <div class="empty-state__icon">📍</div>
             <div class="empty-state__title">No venues yet</div>
-            <div>Add the places you sing — then the active one tags your performances and opens its KaraFun catalog. You can scan a venue's KaraFun QR code while adding.</div>
+            <div>Add the places you sing — then the active one tags your performances@(Settings.KaraFunFeaturesEnabled ? ", and opens its KaraFun catalog. You can scan a venue's KaraFun QR code while adding." : ".")</div>
             <button class="btn btn-primary venues__cta" @onclick="OpenAdd">Add your first venue</button>
         </div>
     }
@@ -91,7 +91,7 @@
         </div>
 
         <div class="venue-detail__actions">
-            @if (!string.IsNullOrWhiteSpace(d.KaraFunVenueId))
+            @if (Settings.KaraFunFeaturesEnabled && !string.IsNullOrWhiteSpace(d.KaraFunVenueId))
             {
                 @* The tour spotlights [data-tut="venue-karafun"]; it sits on a wrapper so the whole split
                    button is highlighted rather than one of its two segments. *@
@@ -123,10 +123,13 @@
         </div>
 
         <div class="venue-detail__info">
-            <div class="venue-detail__info-row">
-                <span class="venue-detail__info-label">KaraFun Id</span>
-                <span class="venue-detail__info-value">@(string.IsNullOrWhiteSpace(d.KaraFunVenueId) ? "Not set" : d.KaraFunVenueId)</span>
-            </div>
+            @if (Settings.KaraFunFeaturesEnabled)
+            {
+                <div class="venue-detail__info-row">
+                    <span class="venue-detail__info-label">KaraFun Id</span>
+                    <span class="venue-detail__info-value">@(string.IsNullOrWhiteSpace(d.KaraFunVenueId) ? "Not set" : d.KaraFunVenueId)</span>
+                </div>
+            }
             @if (!string.IsNullOrWhiteSpace(d.Notes))
             {
                 <div class="venue-detail__info-row">

@@ -87,7 +87,7 @@ public sealed class MauiAppSettings : IAppSettings
         set => Preferences.Default.Set(SpotifySearchKey, value);
     }
 
-    public bool KaraFunEnabled
+    public bool KaraFunFeaturesEnabled
     {
         get => Preferences.Default.Get(KaraFunKey, true);
         set => Preferences.Default.Set(KaraFunKey, value);

@@ -13,7 +13,7 @@ internal sealed class FakeAppSettings : IAppSettings
     public string LastActiveSingerId { get; set; } = "";
     public bool YouTubeSearchEnabled { get; set; }
     public bool SpotifySearchEnabled { get; set; }
-    public bool KaraFunEnabled { get; set; }
+    public bool KaraFunFeaturesEnabled { get; set; }
     public bool VenuesSeeded { get; set; }
     public bool LocationAutoDetect { get; set; }
     public int VenueRecheckMinutes { get; set; }

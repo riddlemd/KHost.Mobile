@@ -28,8 +28,12 @@ public interface IAppSettings
     /// <summary>When true, the Spotify quick link is offered for a song.</summary>
     bool SpotifySearchEnabled { get; set; }
 
-    /// <summary>When true, the KaraFun quick link is offered for a song (needs <see cref="KaraFunVenueId"/>).</summary>
-    bool KaraFunEnabled { get; set; }
+    /// <summary>
+    /// When true, every KaraFun surface is offered: the per-song quick link, a venue's catalog button and its QR
+    /// code, and the KaraFun venue ID field (with its QR scan) on the venue editor. Off hides all of them; a
+    /// venue keeps any ID already saved.
+    /// </summary>
+    bool KaraFunFeaturesEnabled { get; set; }
 
     /// <summary>
     /// One-time guard for the legacy <see cref="KaraFunVenueId"/> → seeded-venue migration. Defaults to <c>false</c>:

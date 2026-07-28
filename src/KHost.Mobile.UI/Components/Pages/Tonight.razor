@@ -78,7 +78,7 @@ else
    the row. *@
 <SongDetailSheet Item="_detailItem" AllowEdit="false"
                  InTonight="true"
-                 KaraFunAvailable="@(Settings.KaraFunEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
+                 KaraFunAvailable="@(Settings.KaraFunFeaturesEnabled && !string.IsNullOrWhiteSpace(_activeVenueKaraFunId))"
                  BayesScore="DetailStar"
                  RoundedAverage="@(DetailStar is { } s ? (int)Math.Round(s, MidpointRounding.AwayFromZero) : 0)"
                  OnClose="CloseDetail"
