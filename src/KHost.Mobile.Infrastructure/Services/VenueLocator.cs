@@ -8,7 +8,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// The gating (opt-in + manual pin) lives here so callers — launch, the periodic re-check, and the manual
 /// "re-check now" — can all just call <see cref="ResolveActiveAsync"/>.
 /// </summary>
-public sealed class VenueLocator(
+internal sealed class VenueLocator(
     ILocationProvider location,
     IVenueStore venues,
     IAppSession session,

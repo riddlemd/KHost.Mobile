@@ -13,7 +13,7 @@ namespace KHost.Mobile.Clients.Deezer;
 /// reading of the cover-art response.
 /// <para>Rate limit ~50 req/5s per IP; reached only for a song iTunes couldn't place, once per song.</para>
 /// </remarks>
-public sealed class DeezerSpellingSuggestionLookup(HttpClient httpClient) : ISpellingSuggestionLookup
+internal sealed class DeezerSpellingSuggestionLookup(HttpClient httpClient) : ISpellingSuggestionLookup
 {
     public async Task<TrackSuggestion?> SuggestAsync(string title, string artist, CancellationToken cancellationToken = default)
     {

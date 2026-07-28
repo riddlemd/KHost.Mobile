@@ -11,7 +11,7 @@ namespace KHost.Mobile.Clients.Spotify;
 /// User-Agent (set per-request, so the injected <see cref="HttpClient"/> needs no special configuration).
 /// No API key — read-only scrape of a public page.
 /// </remarks>
-public sealed class SpotifyImportService(HttpClient httpClient) : ISpotifyImportService
+internal sealed class SpotifyImportService(HttpClient httpClient) : ISpotifyImportService
 {
     private const string EmbedUrlFormat = "https://open.spotify.com/embed/playlist/{0}";
 

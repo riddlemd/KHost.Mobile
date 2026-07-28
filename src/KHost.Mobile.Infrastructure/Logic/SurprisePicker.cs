@@ -1,4 +1,6 @@
-using KHost.Mobile.Infrastructure.Models;
+using KHost.Mobile.Abstractions.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using KHost.Mobile.Abstractions.Models;
 namespace KHost.Mobile.Infrastructure.Logic;
 
@@ -6,14 +8,17 @@ namespace KHost.Mobile.Infrastructure.Logic;
 /// Chooses a song at random for "Surprise me". Pure and deterministic given its roll value, so the narrowing rules
 /// and the weighting can be tested without a UI or an RNG.
 /// </summary>
-public static class SurprisePicker
+internal sealed class SurprisePicker(ILogger<SurprisePicker>? logger = null) : ISurprisePicker
 {
+    // Held for future diagnostics: the seam should exist before it's needed, not be retrofitted.
+    private readonly ILogger _log = logger ?? NullLogger<SurprisePicker>.Instance;
+
     /// <summary>
     /// Narrows <paramref name="pool"/> by the option's restrictions. Each restriction is skipped when applying it
     /// would leave nothing to draw from — a picker that can return nothing is worse than one that ignores a
     /// preference, and the caller has no way to explain an empty result in a one-tap flow.
     /// </summary>
-    public static IReadOnlyList<SongListItem> Narrow(
+    public IReadOnlyList<SongListItem> Narrow(
         IReadOnlyList<SongListItem> pool, SurpriseOptions options, DateTime today)
     {
         ArgumentNullException.ThrowIfNull(pool);
@@ -35,7 +40,7 @@ public static class SurprisePicker
     /// </summary>
     /// <param name="starFor">A song's how-it-went star, or null when unrated. Only consulted when weighting.</param>
     /// <param name="neutralStar">Star assigned to unrated songs so they aren't excluded — the list's average.</param>
-    public static SongListItem? Pick(
+    public SongListItem? Pick(
         IReadOnlyList<SongListItem> candidates,
         SurpriseOptions options,
         double roll,

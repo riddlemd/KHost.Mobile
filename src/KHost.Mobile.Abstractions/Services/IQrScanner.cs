@@ -7,6 +7,12 @@ namespace KHost.Mobile.Abstractions.Services;
 public interface IQrScanner
 {
     /// <summary>
+    /// Whether this device can scan at all. Ask this rather than the platform: "is there a camera scanner here"
+    /// is the actual question, and it stays right when a head gains or loses one.
+    /// </summary>
+    bool IsSupported { get; }
+
+    /// <summary>
     /// Opens the camera to scan a single QR code and returns its decoded text — or <c>null</c> if the user
     /// cancelled, denied camera permission, or the platform has no scanner.
     /// </summary>

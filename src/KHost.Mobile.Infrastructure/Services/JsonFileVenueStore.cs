@@ -15,13 +15,13 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// <see cref="JsonFileTonightStore"/>. A corrupt file is quarantined and treated as an empty list. Read results
 /// are sorted favorites-first then by name; storage order itself is insertion order.
 /// </remarks>
-public sealed class JsonFileVenueStore : JsonFileStore<Venue>, IVenueStore
+internal sealed class JsonFileVenueStore : JsonFileStore<Venue>, IVenueStore
 {
     private readonly string _filePath;
 
     // logger is optional so the integration tests can `new` the store without a logging stack; DI supplies the real one.
-    public JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFileVenueStore>? logger = null)
-        : base(logger ?? NullLogger<JsonFileVenueStore>.Instance)
+    public JsonFileVenueStore(IAppDataDirectory paths, ILogger<JsonFileVenueStore>? logger = null, IAtomicFileWriter? writer = null)
+        : base(logger ?? NullLogger<JsonFileVenueStore>.Instance, writer)
         => _filePath = Path.Combine(paths.AppDataDirectory, "venues.json");
 
     protected override JsonTypeInfo<List<Venue>> TypeInfo => VenueJsonContext.Default.ListVenue;

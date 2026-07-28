@@ -1,3 +1,6 @@
+using KHost.Mobile.Abstractions.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.RegularExpressions;
 namespace KHost.Mobile.Infrastructure.Search;
 
@@ -5,8 +8,11 @@ namespace KHost.Mobile.Infrastructure.Search;
 /// Parses a KaraFun venue ID out of a pasted venue URL (or a bare ID). Pure — no network. Accepts the shapes a
 /// user is likely to paste, rejects everything else.
 /// </summary>
-public static partial class KaraFunVenueUrlParser
+internal sealed partial class KaraFunVenueUrlParser(ILogger<KaraFunVenueUrlParser>? logger = null) : IKaraFunVenueUrlParser
 {
+    // Held for future diagnostics: the seam should exist before it's needed, not be retrofitted.
+    private readonly ILogger _log = logger ?? NullLogger<KaraFunVenueUrlParser>.Instance;
+
     // A KaraFun venue link carries the venue as the first path segment: karafun.com/012345/… — a run of digits.
     // The whole run is captured (leading zeros are part of the ID and must be kept — e.g. 012345).
     [GeneratedRegex(@"karafun\.com/(\d+)", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
@@ -25,7 +31,7 @@ public static partial class KaraFunVenueUrlParser
     /// then holds the venue ID exactly as it should appear in the link (leading zeros preserved). False (and an
     /// empty id) for anything else.
     /// </summary>
-    public static bool TryParseId(string? input, out string id)
+    public bool TryParseId(string? input, out string id)
     {
         id = string.Empty;
         if (string.IsNullOrWhiteSpace(input))
@@ -56,7 +62,7 @@ public static partial class KaraFunVenueUrlParser
     /// <see cref="TryParseId"/> it rejects look-alike hosts (e.g. evilkarafun.com) and bare IDs — a QR code should
     /// carry a full venue link, and we don't want an arbitrary scanned string to become a venue.
     /// </summary>
-    public static bool TryParseVenueUrl(string? input, out string id)
+    public bool TryParseVenueUrl(string? input, out string id)
     {
         id = string.Empty;
         if (string.IsNullOrWhiteSpace(input))

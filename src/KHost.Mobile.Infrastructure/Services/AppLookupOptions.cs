@@ -6,7 +6,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// Bridges the app's settings to the Clients library's <see cref="ILookupOptions"/>, which can't reference
 /// <see cref="IAppSettings"/> itself — that library is deliberately dependency-free.
 /// </summary>
-public sealed class AppLookupOptions(IAppSettings settings) : ILookupOptions
+internal sealed class AppLookupOptions(IAppSettings settings) : ILookupOptions
 {
     /// <inheritdoc />
     public string CatalogueRegion => settings.CatalogueRegion;

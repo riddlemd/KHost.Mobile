@@ -1,3 +1,4 @@
+using KHost.Mobile.Abstractions.Services;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using KHost.Mobile.Infrastructure.Logic;
@@ -27,7 +28,15 @@ public abstract class JsonFileStore<TItem, TCache> where TCache : class
     private Guid? _loadedFor;
 
     /// <param name="log">Already resolved by the subclass, so a bare `new` in the tests still gets NullLogger.</param>
-    protected JsonFileStore(ILogger log) => Log = log;
+    /// <param name="writer">Optional so a test can `new` a store bare; DI supplies the logging implementation.</param>
+    protected JsonFileStore(ILogger log, IAtomicFileWriter? writer = null)
+    {
+        Log = log;
+        Writer = writer ?? new AtomicFileWriter();
+    }
+
+    /// <summary>The crash-safe writer every store's bytes go through.</summary>
+    protected IAtomicFileWriter Writer { get; }
 
     /// <summary>Serializes every mutation, so concurrent UI actions can't interleave a load and a save.</summary>
     protected SemaphoreSlim Gate { get; } = new(1, 1);
@@ -111,7 +120,7 @@ public abstract class JsonFileStore<TItem, TCache> where TCache : class
                 // Corrupt file — move the bad bytes aside, then start clean rather than crash the app.
                 // Quarantining rather than overwriting is the only route back to the user's data.
                 Log.LogWarning(ex, "{Label} file at {Path} is corrupt; quarantining it and starting empty", Label, path);
-                if (!AtomicFile.Quarantine(path))
+                if (!Writer.Quarantine(path))
                     Log.LogWarning("Corrupt {Path} could not be quarantined; the next save will overwrite it", path);
                 items = [];
             }
@@ -133,7 +142,7 @@ public abstract class JsonFileStore<TItem, TCache> where TCache : class
         // put one singer's data into another singer's file.
         var path = PathFor(_loadedFor);
         var items = Flatten(cache);
-        await AtomicFile.WriteAsync(path, stream => JsonSerializer.SerializeAsync(stream, items, TypeInfo));
+        await Writer.WriteAsync(path, stream => JsonSerializer.SerializeAsync(stream, items, TypeInfo));
         Log.LogDebug("{Label} saved: {Count} to {Path}", Label, items.Count, path);
     }
 }
@@ -143,7 +152,7 @@ public abstract class JsonFileStore<TItem, TCache> where TCache : class
 /// store except the lyrics cache. Derive from this unless you genuinely need a different cache shape.
 /// </summary>
 /// <typeparam name="T">The element type, both on disk and in memory.</typeparam>
-public abstract class JsonFileStore<T>(ILogger log) : JsonFileStore<T, List<T>>(log)
+public abstract class JsonFileStore<T>(ILogger log, IAtomicFileWriter? writer = null) : JsonFileStore<T, List<T>>(log, writer)
 {
     /// <inheritdoc />
     protected sealed override List<T> Project(List<T> items) => items;

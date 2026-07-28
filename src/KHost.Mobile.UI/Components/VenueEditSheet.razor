@@ -1,9 +1,9 @@
 @* Add / edit a venue. Pass a fresh Venue() to add or a working copy to edit — on save the fields are written onto
    that same instance and handed back through OnSave, so never pass the stored object. *@
-@using Microsoft.Maui.Devices
 @inject IQrScanner Scanner
 @inject ILocationProvider Geo
 @inject IAppSettings Settings
+@inject IKaraFunVenueUrlParser VenueUrls
 <Sheet Open="Editing is not null"
        AriaLabel="Edit venue" OnClose="OnClose">
     @if (Editing is not null)
@@ -25,7 +25,7 @@
             <div class="kf-venue__input-row">
                 <input id="venue-kf" class="input" placeholder="e.g. 012345"
                        @bind="_karaFunId" @bind:event="oninput" />
-                @if (_scanSupported)
+                @if (ScanSupported)
                 {
                     <button type="button" class="kf-venue__scan" @onclick="ScanAsync" disabled="@_scanning"
                             aria-label="Scan QR code" title="Scan QR code">
@@ -120,9 +120,8 @@
     private bool _scanning;
     private string? _scanError;
 
-    // The QR scanner is native to Android/iOS only; hide the button on other heads (where IQrScanner is a no-op).
-    private static bool _scanSupported =>
-        DeviceInfo.Current.Platform == DevicePlatform.Android || DeviceInfo.Current.Platform == DevicePlatform.iOS;
+    // Hide the scan button where there's no scanner to open.
+    private bool ScanSupported => Scanner.IsSupported;
 
     // Clearing _seededFor on close matters as much as the id check: the component stays mounted while hidden, so
     // without it, reopening the SAME venue keeps the last open's buffers and abandoned edits look saved.
@@ -186,7 +185,7 @@
             if (string.IsNullOrWhiteSpace(scanned))
                 return; // cancelled, permission denied, or nothing read
 
-            if (KaraFunVenueUrlParser.TryParseVenueUrl(scanned, out var id))
+            if (VenueUrls.TryParseVenueUrl(scanned, out var id))
                 _karaFunId = id;
             else
                 _scanError = "That QR code isn't a KaraFun venue link.";
@@ -205,7 +204,7 @@
         v.Glyph = string.IsNullOrWhiteSpace(_glyph) ? VenueGlyphs.Default : _glyph.Trim();
         v.Name = _name.Trim();
         // Keep only a parseable venue ID (accepts a pasted link or a bare id); blank clears it.
-        v.KaraFunVenueId = KaraFunVenueUrlParser.TryParseId(_karaFunId, out var parsed) ? parsed : null;
+        v.KaraFunVenueId = VenueUrls.TryParseId(_karaFunId, out var parsed) ? parsed : null;
         v.Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim();
         v.IsFavorite = _isFavorite;
         v.ShowInSwitcher = _showInSwitcher;

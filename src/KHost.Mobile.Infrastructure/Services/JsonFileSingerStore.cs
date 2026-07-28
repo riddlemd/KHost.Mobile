@@ -15,15 +15,19 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// <see cref="JsonFileVenueStore"/>. A corrupt file is quarantined and treated as an empty roster. Removing a
 /// singer also deletes their personal data files so they don't orphan on disk.
 /// </remarks>
-public sealed class JsonFileSingerStore : JsonFileStore<Singer>, ISingerStore
+internal sealed class JsonFileSingerStore : JsonFileStore<Singer>, ISingerStore
 {
+    private readonly ISingerFileNames _names;
+
     private readonly IAppDataDirectory _paths;
     private readonly string _filePath;
 
     // logger is optional so the integration tests can `new` the store without a logging stack; DI supplies the real one.
-    public JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFileSingerStore>? logger = null)
-        : base(logger ?? NullLogger<JsonFileSingerStore>.Instance)
+    public JsonFileSingerStore(IAppDataDirectory paths, ILogger<JsonFileSingerStore>? logger = null, IAtomicFileWriter? writer = null,
+        ISingerFileNames? names = null)
+        : base(logger ?? NullLogger<JsonFileSingerStore>.Instance, writer)
     {
+        _names = names ?? new SingerFileNames();
         _paths = paths;
         _filePath = Path.Combine(paths.AppDataDirectory, "singers.json");
     }
@@ -121,8 +125,8 @@ public sealed class JsonFileSingerStore : JsonFileStore<Singer>, ISingerStore
             changed = true;
             await SaveAsync(singers);
             // The singer is gone from the roster — clean up their personal data files so they don't orphan on disk.
-            DeleteFile(SingerDataFiles.SongList(id));
-            DeleteFile(SingerDataFiles.Tonight(id));
+            DeleteFile(_names.SongList(id));
+            DeleteFile(_names.Tonight(id));
         }
         finally
         {
@@ -147,8 +151,8 @@ public sealed class JsonFileSingerStore : JsonFileStore<Singer>, ISingerStore
             // Empty roster → first launch with the feature (or a fresh install). Create the default singer and fold
             // any pre-existing single-user list into it, so an upgrader keeps their songs as this singer's list.
             active = new Singer { Name = "Me", Color = SingerColors.Default, Order = 0 };
-            MigrateLegacyFile(SingerDataFiles.LegacySongList, SingerDataFiles.SongList(active.Id));
-            MigrateLegacyFile(SingerDataFiles.LegacyTonight, SingerDataFiles.Tonight(active.Id));
+            MigrateLegacyFile(SingerFileNames.LegacySongList, _names.SongList(active.Id));
+            MigrateLegacyFile(SingerFileNames.LegacyTonight, _names.Tonight(active.Id));
             singers.Add(active);
             await SaveAsync(singers);
             seeded = true;

@@ -16,8 +16,10 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// contiguous and rewrites the file, under a <see cref="SemaphoreSlim"/>. A corrupt file is quarantined and
 /// treated as an empty set.
 /// </remarks>
-public sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonightStore
+internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonightStore
 {
+    private readonly ISingerFileNames _names;
+
     private readonly IAppDataDirectory _paths;
     private readonly IAppSession? _session;
     // GetLocalNow, not GetUtcNow: every stored timestamp in this app is local, and switching would shift every
@@ -34,9 +36,12 @@ public sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonight
         IAppDataDirectory paths,
         IAppSession? session = null,
         ILogger<JsonFileTonightStore>? logger = null,
-        TimeProvider? timeProvider = null)
-        : base(logger ?? NullLogger<JsonFileTonightStore>.Instance)
+        TimeProvider? timeProvider = null,
+        IAtomicFileWriter? writer = null,
+        ISingerFileNames? names = null)
+        : base(logger ?? NullLogger<JsonFileTonightStore>.Instance, writer)
     {
+        _names = names ?? new SingerFileNames();
         _paths = paths;
         _session = session;
         _clock = timeProvider ?? TimeProvider.System;
@@ -58,7 +63,7 @@ public sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonight
 
     protected override string PathFor(Guid? singerId)
     {
-        var name = singerId is null ? SingerDataFiles.LegacyTonight : SingerDataFiles.Tonight(singerId.Value);
+        var name = singerId is null ? SingerFileNames.LegacyTonight : _names.Tonight(singerId.Value);
         return Path.Combine(_paths.AppDataDirectory, name);
     }
 

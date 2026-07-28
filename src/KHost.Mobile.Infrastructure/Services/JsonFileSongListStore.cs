@@ -15,8 +15,10 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// loaded; every mutation rewrites the file, under a <see cref="SemaphoreSlim"/> so concurrent UI actions can't
 /// corrupt either. A corrupt file is quarantined and treated as an empty list.
 /// </remarks>
-public sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISongListStore
+internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISongListStore
 {
+    private readonly ISingerFileNames _names;
+
     private readonly IAppDataDirectory _paths;
     private readonly IAppSession? _session;
 
@@ -26,9 +28,11 @@ public sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISongLi
     /// <paramref name="session"/> and <paramref name="logger"/> are optional so the integration tests can <c>new</c>
     /// the store bare; with no session it falls back to the single legacy file. DI supplies both.
     /// </summary>
-    public JsonFileSongListStore(IAppDataDirectory paths, IAppSession? session = null, ILogger<JsonFileSongListStore>? logger = null)
-        : base(logger ?? NullLogger<JsonFileSongListStore>.Instance)
+    public JsonFileSongListStore(IAppDataDirectory paths, IAppSession? session = null, ILogger<JsonFileSongListStore>? logger = null, IAtomicFileWriter? writer = null,
+        ISingerFileNames? names = null)
+        : base(logger ?? NullLogger<JsonFileSongListStore>.Instance, writer)
     {
+        _names = names ?? new SingerFileNames();
         _paths = paths;
         _session = session;
         if (_session is not null)
@@ -49,7 +53,7 @@ public sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISongLi
 
     protected override string PathFor(Guid? singerId)
     {
-        var name = singerId is null ? SingerDataFiles.LegacySongList : SingerDataFiles.SongList(singerId.Value);
+        var name = singerId is null ? SingerFileNames.LegacySongList : _names.SongList(singerId.Value);
         return Path.Combine(_paths.AppDataDirectory, name);
     }
 

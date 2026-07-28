@@ -12,7 +12,7 @@ namespace KHost.Mobile.Clients.Apple;
 /// The top-ranked result is NOT trusted: iTunes free-text matching happily returns covers and unrelated
 /// songs, so only a title+artist match counts — better no data than wrong data.
 /// </summary>
-public static class ITunesResponseParser
+internal static class ITunesResponseParser
 {
     /// <summary>
     /// Returns metadata from the first result whose <c>trackName</c> and <c>artistName</c> both match

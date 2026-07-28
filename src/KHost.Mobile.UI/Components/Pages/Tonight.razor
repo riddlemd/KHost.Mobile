@@ -13,6 +13,8 @@
 @inject ILogger<Tonight> Log
 @inject TimeProvider Clock
 @implements IDisposable
+@inject ISongLinkBuilder Links2
+@inject IRatingScorer Scorer
 
 @if (_loading)
 {
@@ -88,7 +90,7 @@ else
                  OnEnjoymentChanged="UpdateEnjoymentAsync" />
 
 <PerformanceHistorySheet Item="_historyItem"
-                  BayesScore="@(_historyItem is null ? null : RatingScore.StarFor(_historyItem, _ratingContext))"
+                  BayesScore="@(_historyItem is null ? null : Scorer.StarFor(_historyItem, _ratingContext))"
                   OnRatingChanged="e => UpdatePerformanceRatingAsync(e.Index, e.Value)"
                   OnNoteChanged="e => UpdatePerformanceNoteAsync(e.Index, e.Note)"
                   OnDateChanged="e => UpdatePerformanceDateAsync(e.Index, e.Date)"
@@ -380,7 +382,7 @@ else
         _byId = _items.ToDictionary(i => i.Id);
         _itemsVersion++;
         // The star blends a song's record with the whole list's average, so the context is list-wide, not per song.
-        _ratingContext = RatingScore.BuildContext(_items,
+        _ratingContext = Scorer.BuildContext(_items,
             RatingConfig.Default with
             {
                 RecencyEnabled = Settings.RecencyWeightedRatings,
@@ -417,7 +419,7 @@ else
     private void OnArtChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
 
     // Same confidence-weighted star My Songs shows, so a song reads identically in both places.
-    private double? DetailStar => _detailItem is null ? null : RatingScore.StarFor(_detailItem, _ratingContext);
+    private double? DetailStar => _detailItem is null ? null : Scorer.StarFor(_detailItem, _ratingContext);
 
     // The row body is a tap target, so give it the keyboard equivalent a real button would have.
     private void OnRowKeyDown(KeyboardEventArgs e, SongListItem song)
@@ -495,16 +497,16 @@ else
     }
 
     private Task OpenYouTubeAsync() =>
-        _detailItem is null ? Task.CompletedTask : Links.OpenAsync(YouTubeSearch.UrlFor(_detailItem.Title, _detailItem.Artist));
+        _detailItem is null ? Task.CompletedTask : Links.OpenAsync(Links2.YouTubeUrlFor(_detailItem.Title, _detailItem.Artist));
 
     private Task OpenSpotifyAsync() =>
-        _detailItem is null ? Task.CompletedTask : Links.OpenAsync(SpotifySearch.UrlFor(_detailItem.Title, _detailItem.Artist));
+        _detailItem is null ? Task.CompletedTask : Links.OpenAsync(Links2.SpotifyUrlFor(_detailItem.Title, _detailItem.Artist));
 
     // Only rendered when the active venue has a KaraFun ID, so it's always set here.
     private Task OpenKaraFunAsync() =>
         _detailItem is null || _activeVenueKaraFunId is null
             ? Task.CompletedTask
-            : Links.OpenAsync(KaraFunSearch.UrlFor(_activeVenueKaraFunId, _detailItem.Title, _detailItem.Artist));
+            : Links.OpenAsync(Links2.KaraFunUrlFor(_activeVenueKaraFunId, _detailItem.Title, _detailItem.Artist));
 
     private async Task RefreshActiveVenueKaraFunAsync()
     {

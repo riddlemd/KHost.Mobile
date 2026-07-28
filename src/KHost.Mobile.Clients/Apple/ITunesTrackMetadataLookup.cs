@@ -10,7 +10,7 @@ namespace KHost.Mobile.Clients.Apple;
 /// so callers should sanity-check <see cref="TrackMetadata.MatchedArtist"/> before trusting the result,
 /// and it's rate-limited (~20 req/min) — enrich on demand, not in a big parallel burst.
 /// </remarks>
-public sealed class ITunesTrackMetadataLookup(HttpClient httpClient, ILookupOptions? options = null) : ITrackMetadataLookup
+internal sealed class ITunesTrackMetadataLookup(HttpClient httpClient, ILookupOptions? options = null) : ITrackMetadataLookup
 {
     private readonly ILookupOptions _options = options ?? new DefaultLookupOptions();
 

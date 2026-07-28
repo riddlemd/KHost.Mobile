@@ -8,8 +8,10 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// button there, but the KaraFun sheet still resolves <see cref="IQrScanner"/> via DI on every platform — so this
 /// keeps that resolvable and returns <c>null</c> (nothing scanned).
 /// </remarks>
-public sealed class UnsupportedQrScanner : IQrScanner
+internal sealed class UnsupportedQrScanner : IQrScanner
 {
+    public bool IsSupported => false;
+
     public Task<string?> ScanQrCodeAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
 }
 #endif

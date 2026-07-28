@@ -15,7 +15,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// Backed by a single JSON file in the app's private data directory — the same durable-JSON pattern as
 /// <see cref="JsonFileSongListStore"/>. A corrupt file is quarantined and treated as an empty cache.
 /// </remarks>
-public sealed class JsonFileLyricsCache
+internal sealed class JsonFileLyricsCache
     : JsonFileStore<LyricsCacheEntry, Dictionary<string, LyricsCacheEntry>>, ILyricsCache
 {
     private readonly string _filePath;
@@ -27,8 +27,9 @@ public sealed class JsonFileLyricsCache
     public JsonFileLyricsCache(
         IAppDataDirectory paths,
         ILogger<JsonFileLyricsCache>? logger = null,
-        TimeProvider? timeProvider = null)
-        : base(logger ?? NullLogger<JsonFileLyricsCache>.Instance)
+        TimeProvider? timeProvider = null,
+        IAtomicFileWriter? writer = null)
+        : base(logger ?? NullLogger<JsonFileLyricsCache>.Instance, writer)
     {
         _filePath = Path.Combine(paths.AppDataDirectory, "lyrics-cache.json");
         _clock = timeProvider ?? TimeProvider.System;

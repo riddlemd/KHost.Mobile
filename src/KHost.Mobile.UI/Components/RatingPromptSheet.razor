@@ -1,4 +1,5 @@
 @inject TimeProvider Clock
+@inject IDateTimeInputConverter DateInput
 
 @* Shared "Sang it" prompt (My Songs "Log performance" + the Tonight check-off). Presentational only — the host
    owns the @Item state and decides what a commit means.
@@ -70,7 +71,7 @@
             _openFor = Item?.Id;
             _value = 0;
             _note = string.Empty;
-            _when = LocalDateTimeInput.Format(Clock.GetLocalNow(), Clock);
+            _when = DateInput.Format(Clock.GetLocalNow());
         }
     }
 
@@ -78,7 +79,7 @@
 
     // A cleared or unparseable field falls back to now, so a commit never fails on the date.
     private DateTimeOffset When =>
-        LocalDateTimeInput.TryParse(_when, Clock, out var when) ? when : Clock.GetLocalNow();
+        DateInput.TryParse(_when, out var when) ? when : Clock.GetLocalNow();
 
     private Task SaveAsync() => OnCommit.InvokeAsync((_value, _note, When));
 

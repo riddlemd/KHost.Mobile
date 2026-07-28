@@ -1,14 +1,16 @@
-using KHost.Mobile.Infrastructure.Models;
+using KHost.Mobile.Infrastructure.Search;
+using KHost.Mobile.Abstractions.Models;
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
-using KHost.Mobile.Abstractions.Models;
 using KHost.Mobile.Infrastructure.Logic;
 
 namespace KHost.Mobile.UnitTests.Infrastructure.Logic;
 
 public class SurprisePickerTests
 {
+    private static readonly SurprisePicker Picker = new();
+
     private static readonly DateTime Today = new(2026, 7, 25);
 
     private static SongListItem Song(
@@ -31,7 +33,7 @@ public class SurprisePickerTests
     {
         var pool = new[] { Song("a"), Song("b", favorite: true) };
 
-        var result = SurprisePicker.Narrow(pool, Options(), Today);
+        var result = Picker.Narrow(pool, Options(), Today);
 
         Assert.Equal(2, result.Count);
     }
@@ -46,7 +48,7 @@ public class SurprisePickerTests
             Song("never sung"),
         };
 
-        var result = SurprisePicker.Narrow(pool, Options(skipToday: true), Today);
+        var result = Picker.Narrow(pool, Options(skipToday: true), Today);
 
         Assert.Equal(["sung yesterday", "never sung"], result.Select(s => s.Title));
     }
@@ -56,7 +58,7 @@ public class SurprisePickerTests
     {
         var pool = new[] { Song("plain"), Song("starred", favorite: true) };
 
-        var result = SurprisePicker.Narrow(pool, Options(favorites: true), Today);
+        var result = Picker.Narrow(pool, Options(favorites: true), Today);
 
         Assert.Equal("starred", Assert.Single(result).Title);
     }
@@ -66,7 +68,7 @@ public class SurprisePickerTests
     {
         var pool = new[] { Song("fresh"), Song("sung", sungOn: Today.AddDays(-30)) };
 
-        var result = SurprisePicker.Narrow(pool, Options(neverSung: true), Today);
+        var result = Picker.Narrow(pool, Options(neverSung: true), Today);
 
         Assert.Equal("fresh", Assert.Single(result).Title);
     }
@@ -81,7 +83,7 @@ public class SurprisePickerTests
             Song("plain fresh"),
         };
 
-        var result = SurprisePicker.Narrow(pool, Options(skipToday: true, favorites: true), Today);
+        var result = Picker.Narrow(pool, Options(skipToday: true, favorites: true), Today);
 
         Assert.Equal("fav fresh", Assert.Single(result).Title);
     }
@@ -93,7 +95,7 @@ public class SurprisePickerTests
     {
         var pool = new[] { Song("a", sungOn: Today), Song("b", sungOn: Today) };
 
-        var result = SurprisePicker.Narrow(pool, Options(skipToday: true), Today);
+        var result = Picker.Narrow(pool, Options(skipToday: true), Today);
 
         Assert.Equal(2, result.Count);
     }
@@ -103,7 +105,7 @@ public class SurprisePickerTests
     {
         var pool = new[] { Song("a"), Song("b") };
 
-        var result = SurprisePicker.Narrow(pool, Options(favorites: true), Today);
+        var result = Picker.Narrow(pool, Options(favorites: true), Today);
 
         Assert.Equal(2, result.Count);
     }
@@ -113,7 +115,7 @@ public class SurprisePickerTests
     {
         var pool = new[] { Song("a", sungOn: Today.AddDays(-5)), Song("b", sungOn: Today.AddDays(-9)) };
 
-        var result = SurprisePicker.Narrow(pool, Options(neverSung: true), Today);
+        var result = Picker.Narrow(pool, Options(neverSung: true), Today);
 
         Assert.Equal(2, result.Count);
     }
@@ -123,7 +125,7 @@ public class SurprisePickerTests
     [Fact]
     public void Pick_returns_null_for_an_empty_pool()
     {
-        var pick = SurprisePicker.Pick([], Options(), 0.5, _ => 3, neutralStar: 3);
+        var pick = Picker.Pick([], Options(), 0.5, _ => 3, neutralStar: 3);
 
         Assert.Null(pick);
     }
@@ -136,7 +138,7 @@ public class SurprisePickerTests
     {
         var pool = new[] { Song("a"), Song("b"), Song("c") };
 
-        var pick = SurprisePicker.Pick(pool, Options(), roll, _ => 5, neutralStar: 3);
+        var pick = Picker.Pick(pool, Options(), roll, _ => 5, neutralStar: 3);
 
         Assert.Equal(expected, pick!.Title);
     }
@@ -148,9 +150,9 @@ public class SurprisePickerTests
         var stars = (SongListItem s) => (double?)(s.Title == "strong" ? 5 : 1);
 
         // Weights 1 and 5 over a total of 6: the first sixth is "weak", the rest "strong".
-        Assert.Equal("weak", SurprisePicker.Pick(pool, Options(favourWell: true), 0.10, stars, 3)!.Title);
-        Assert.Equal("strong", SurprisePicker.Pick(pool, Options(favourWell: true), 0.20, stars, 3)!.Title);
-        Assert.Equal("strong", SurprisePicker.Pick(pool, Options(favourWell: true), 0.99, stars, 3)!.Title);
+        Assert.Equal("weak", Picker.Pick(pool, Options(favourWell: true), 0.10, stars, 3)!.Title);
+        Assert.Equal("strong", Picker.Pick(pool, Options(favourWell: true), 0.20, stars, 3)!.Title);
+        Assert.Equal("strong", Picker.Pick(pool, Options(favourWell: true), 0.99, stars, 3)!.Title);
     }
 
     [Fact]
@@ -160,8 +162,8 @@ public class SurprisePickerTests
         var stars = (SongListItem s) => s.Title == "rated" ? (double?)4 : null;
 
         // Unrated draws on the neutral 4, so the two are equally weighted and split the range evenly.
-        Assert.Equal("unrated", SurprisePicker.Pick(pool, Options(favourWell: true), 0.25, stars, neutralStar: 4)!.Title);
-        Assert.Equal("rated", SurprisePicker.Pick(pool, Options(favourWell: true), 0.75, stars, neutralStar: 4)!.Title);
+        Assert.Equal("unrated", Picker.Pick(pool, Options(favourWell: true), 0.25, stars, neutralStar: 4)!.Title);
+        Assert.Equal("rated", Picker.Pick(pool, Options(favourWell: true), 0.75, stars, neutralStar: 4)!.Title);
     }
 
     [Fact]
@@ -171,7 +173,7 @@ public class SurprisePickerTests
         var stars = (SongListItem s) => (double?)(s.Title == "great" ? 5 : 0);
 
         // The 0.25 floor over a 5.25 total leaves the zero-rated song a small but real slice.
-        Assert.Equal("zero", SurprisePicker.Pick(pool, Options(favourWell: true), 0.01, stars, 3)!.Title);
+        Assert.Equal("zero", Picker.Pick(pool, Options(favourWell: true), 0.01, stars, 3)!.Title);
     }
 
     [Fact]
@@ -179,7 +181,7 @@ public class SurprisePickerTests
     {
         var pool = new[] { Song("a"), Song("b") };
 
-        var pick = SurprisePicker.Pick(pool, Options(favourWell: true), 1.0, _ => 3, neutralStar: 3);
+        var pick = Picker.Pick(pool, Options(favourWell: true), 1.0, _ => 3, neutralStar: 3);
 
         Assert.NotNull(pick);   // must not index past the end
     }

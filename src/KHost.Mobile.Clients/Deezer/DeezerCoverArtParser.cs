@@ -9,7 +9,7 @@ namespace KHost.Mobile.Clients.Deezer;
 /// <c>{ "data": [ { "title", "artist": { "name" }, "album": { "cover_big", "cover_xl", … } } ] }</c>.
 /// Title AND artist must both match: better no art than the wrong cover.
 /// </summary>
-public static class DeezerCoverArtParser
+internal static class DeezerCoverArtParser
 {
     /// <summary>
     /// Returns the album cover URL from the first result whose <c>title</c> and <c>artist.name</c> match

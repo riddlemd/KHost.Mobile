@@ -9,7 +9,7 @@ namespace KHost.Mobile.Clients.LrcLib;
 /// descriptive <c>User-Agent</c>; that (and the base address) are configured on the injected
 /// <see cref="HttpClient"/> at registration.
 /// </remarks>
-public sealed class LrcLibLyricsClient(HttpClient httpClient) : ILyricsLookup
+internal sealed class LrcLibLyricsClient(HttpClient httpClient) : ILyricsLookup
 {
     public async Task<LyricsResult?> FetchAsync(string title, string artist, CancellationToken cancellationToken = default)
     {

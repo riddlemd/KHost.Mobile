@@ -74,7 +74,7 @@ adb -s emulator-5554 shell am force-stop khost.mobile
 adb -s emulator-5554 shell run-as khost.mobile cat shared_prefs/khost.mobile_preferences.xml > /tmp/kh-prefs.xml
 sed -i '' 's/"settings.tutorial_completed" value="true"/"settings.tutorial_completed" value="false"/' /tmp/kh-prefs.xml   # GNU sed: drop the ''
 cat /tmp/kh-prefs.xml | adb -s emulator-5554 shell "run-as khost.mobile sh -c 'cat > shared_prefs/khost.mobile_preferences.xml'"
-dotnet build src/KHost.Mobile.UI/KHost.Mobile.UI.csproj -f net10.0-android -t:Run "-p:AdbTarget=-s emulator-5554"
+dotnet build src/KHost.Mobile/KHost.Mobile.csproj -f net10.0-android -t:Run "-p:AdbTarget=-s emulator-5554"
 ```
 
 ## Write your own

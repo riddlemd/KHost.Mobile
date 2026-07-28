@@ -1,12 +1,11 @@
 @page "/import-export"
 @layout MainLayout
-@using Microsoft.Maui.Storage
-@using Microsoft.Maui.ApplicationModel.DataTransfer
 @using KHost.Mobile.Abstractions.Clients.Metadata
 @using KHost.Mobile.Abstractions.Clients.Spotify
 @using KHost.Mobile.Abstractions.Clients.YouTubeMusic
 @using Microsoft.Extensions.Logging
 @inject ILogger<ImportExport> Log
+@inject IFileExchange Files
 @inject ISongListStore Store
 @inject ISingerStore Singers
 @inject IVenueStore Venues
@@ -19,6 +18,7 @@
 @inject NavigationManager Nav
 @inject TimeProvider Clock
 @implements IDisposable
+@inject ISingerProfileCodec Codec
 
 <section class="ie">
     <div class="page-head">
@@ -276,14 +276,6 @@
     private SingerProfile? _pendingProfile;
     private bool _profileImportBusy;
 
-    private static readonly FilePickerFileType JsonFileType = new(new Dictionary<DevicePlatform, IEnumerable<string>>
-    {
-        [DevicePlatform.Android] = ["application/json"],
-        [DevicePlatform.iOS] = ["public.json", "public.text"],
-        [DevicePlatform.WinUI] = [".json"],
-        [DevicePlatform.macOS] = ["json"],
-    });
-
     // Playlist import sheet (Spotify or YouTube Music). _importRows is null until a fetch succeeds.
     private enum ImportSource { Spotify, YouTubeMusic }
     private ImportSource _importSource;
@@ -404,7 +396,7 @@
         {
             var singer = _activeSinger ?? new Singer { Name = "Me" };   // session-less fallback
             var songs = await Store.GetAllAsync();
-            var json = SingerProfileCodec.Serialize(SingerProfile.Create(singer, songs));
+            var json = Codec.Serialize(SingerProfile.Create(singer, songs));
             await ShareJsonAsync($"khost-{Slug(singer.Name)}-profile-{Clock.GetLocalNow():yyyy-MM-dd}.json", json, "Export singer profile");
         }
         catch (Exception ex)
@@ -430,18 +422,18 @@
             if (text is null)
                 return;   // cancelled
 
-            switch (SingerProfileCodec.Detect(text))
+            switch (Codec.Detect(text))
             {
-                case SingerProfileCodec.FileKind.Profile:
-                    if (SingerProfileCodec.ParseProfile(text) is { } profile)
+                case ProfileFileKind.Profile:
+                    if (Codec.ParseProfile(text) is { } profile)
                         _pendingProfile = profile;   // open the add-as-new / merge decision sheet
                     else
                         await FlashAsync("That profile file couldn't be read.");
                     break;
 
-                case SingerProfileCodec.FileKind.LegacySongList:
+                case ProfileFileKind.LegacySongList:
                     // An old songs-only export → merge straight into the current singer (fresh ids, as before).
-                    var songs = SingerProfileCodec.ParseLegacySongs(text) ?? [];
+                    var songs = Codec.ParseLegacySongs(text) ?? [];
                     foreach (var s in songs)
                         s.Id = Guid.NewGuid();
                     var added = await Store.ImportAsync(songs, skipDuplicates: true);
@@ -560,7 +552,7 @@
         try
         {
             var venues = await Venues.GetAllAsync();
-            var json = SingerProfileCodec.SerializeVenues(venues);
+            var json = Codec.SerializeVenues(venues);
             await ShareJsonAsync($"khost-venues-{Clock.GetLocalNow():yyyy-MM-dd}.json", json, "Export venues");
         }
         catch (Exception ex)
@@ -586,7 +578,7 @@
             if (text is null)
                 return;   // cancelled
 
-            var incoming = SingerProfileCodec.ParseVenues(text);
+            var incoming = Codec.ParseVenues(text);
             if (incoming is null)
             {
                 await FlashAsync("That file isn't a valid venues export.");
@@ -629,26 +621,10 @@
 
     // ---- Shared file helpers ------------------------------------------------------------------
 
-    // Pick a .json file and read it to text. Returns null if the user cancelled. Uses OpenReadAsync so the
-    // content:// URI works on Android (never .FullPath).
-    private static async Task<string?> ReadPickedTextAsync(string pickerTitle)
-    {
-        var pick = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = pickerTitle, FileTypes = JsonFileType });
-        if (pick is null)
-            return null;
+    // Null when the user cancelled the picker.
+    private Task<string?> ReadPickedTextAsync(string pickerTitle) => Files.PickJsonTextAsync(pickerTitle);
 
-        await using var stream = await pick.OpenReadAsync();
-        using var reader = new StreamReader(stream);
-        return await reader.ReadToEndAsync();
-    }
-
-    // Write json to a cache file and hand it to the OS share sheet (Files, Drive, email, …).
-    private static async Task ShareJsonAsync(string fileName, string json, string title)
-    {
-        var path = Path.Combine(FileSystem.CacheDirectory, fileName);
-        await File.WriteAllTextAsync(path, json);
-        await Share.Default.RequestAsync(new ShareFileRequest { Title = title, File = new ShareFile(path) });
-    }
+    private Task ShareJsonAsync(string fileName, string json, string title) => Files.ShareJsonAsync(fileName, json, title);
 
     // Filename-safe lower-kebab of a singer name (non-alphanumerics → '-'); falls back to "singer" when empty.
     private static string Slug(string name)

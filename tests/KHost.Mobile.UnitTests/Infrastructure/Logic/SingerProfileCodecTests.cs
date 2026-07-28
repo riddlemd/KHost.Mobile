@@ -1,3 +1,4 @@
+using KHost.Mobile.Infrastructure.Search;
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
@@ -8,6 +9,8 @@ namespace KHost.Mobile.UnitTests.Infrastructure.Logic;
 
 public class SingerProfileCodecTests
 {
+    private static readonly SingerProfileCodec Codec = new();
+
     private static SingerProfile SampleProfile()
     {
         var singer = new Singer { Name = "Jordan", Color = "#0d9488", Glyph = "🎸" };
@@ -28,8 +31,8 @@ public class SingerProfileCodecTests
     {
         var original = SampleProfile();
 
-        var json = SingerProfileCodec.Serialize(original);
-        var parsed = SingerProfileCodec.ParseProfile(json);
+        var json = Codec.Serialize(original);
+        var parsed = Codec.ParseProfile(json);
 
         Assert.NotNull(parsed);
         Assert.Equal(SingerProfile.CurrentVersion, parsed!.Version);
@@ -46,26 +49,26 @@ public class SingerProfileCodecTests
     [Fact]
     public void Detects_a_profile_a_legacy_song_array_and_garbage()
     {
-        var profileJson = SingerProfileCodec.Serialize(SampleProfile());
-        Assert.Equal(SingerProfileCodec.FileKind.Profile, SingerProfileCodec.Detect(profileJson));
+        var profileJson = Codec.Serialize(SampleProfile());
+        Assert.Equal(ProfileFileKind.Profile, Codec.Detect(profileJson));
 
         // A legacy songs-only export is a bare JSON array.
-        Assert.Equal(SingerProfileCodec.FileKind.LegacySongList, SingerProfileCodec.Detect("""[{"Title":"X","Artist":"Y"}]"""));
+        Assert.Equal(ProfileFileKind.LegacySongList, Codec.Detect("""[{"Title":"X","Artist":"Y"}]"""));
 
-        Assert.Equal(SingerProfileCodec.FileKind.Invalid, SingerProfileCodec.Detect("not json"));
-        Assert.Equal(SingerProfileCodec.FileKind.Invalid, SingerProfileCodec.Detect("""{"foo":1}"""));
+        Assert.Equal(ProfileFileKind.Invalid, Codec.Detect("not json"));
+        Assert.Equal(ProfileFileKind.Invalid, Codec.Detect("""{"foo":1}"""));
     }
 
     [Fact]
     public void ParseProfile_returns_null_for_a_non_profile()
     {
-        Assert.Null(SingerProfileCodec.ParseProfile("not json"));
+        Assert.Null(Codec.ParseProfile("not json"));
     }
 
     [Fact]
     public void ParseLegacySongs_reads_a_bare_array()
     {
-        var songs = SingerProfileCodec.ParseLegacySongs("""[{"Title":"Africa","Artist":"Toto"}]""");
+        var songs = Codec.ParseLegacySongs("""[{"Title":"Africa","Artist":"Toto"}]""");
         Assert.NotNull(songs);
         Assert.Equal("Africa", Assert.Single(songs!).Title);
     }
@@ -79,8 +82,8 @@ public class SingerProfileCodecTests
             new() { Name = "Lucky Strike", Glyph = "🎳" },
         ];
 
-        var json = SingerProfileCodec.SerializeVenues(venues);
-        var parsed = SingerProfileCodec.ParseVenues(json);
+        var json = Codec.SerializeVenues(venues);
+        var parsed = Codec.ParseVenues(json);
 
         Assert.NotNull(parsed);
         Assert.Equal(2, parsed!.Count);

@@ -4,7 +4,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// <inheritdoc />
 /// <remarks>A plain value holder: the Android activity's inset listener writes, the layout reads. Values only
 /// ever arrive from the UI thread (a window-insets pass), so no synchronization is needed.</remarks>
-public sealed class SafeAreaInsets : ISafeAreaInsets
+internal sealed class SafeAreaInsets : ISafeAreaInsets
 {
     /// <inheritdoc />
     public double Top { get; private set; }
