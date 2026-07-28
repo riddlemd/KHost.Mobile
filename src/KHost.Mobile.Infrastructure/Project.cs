@@ -57,7 +57,7 @@ public static class Project
         // Former statics. They take an ILogger they may not use yet — having the seam costs a constructor
         // parameter; adding it later would mean touching every call site again.
         services.AddSingleton<ISongLinks, SongLinks>();
-        services.AddSingleton<IKaraFunVenueIdParser, KaraFunVenueUrlParser>();
+        services.AddSingleton<IKaraFunVenueUrlParser, KaraFunVenueUrlParser>();
         services.AddSingleton<ITimeFormatter, TimeFormatter>();
         services.AddSingleton<IAppVersionParser, AppVersionParser>();
         services.AddSingleton<IDateTimeInput, DateTimeInput>();

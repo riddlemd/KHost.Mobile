@@ -8,7 +8,7 @@ namespace KHost.Mobile.Infrastructure.Search;
 /// Parses a KaraFun venue ID out of a pasted venue URL (or a bare ID). Pure — no network. Accepts the shapes a
 /// user is likely to paste, rejects everything else.
 /// </summary>
-internal sealed partial class KaraFunVenueUrlParser(ILogger<KaraFunVenueUrlParser>? logger = null) : IKaraFunVenueIdParser
+internal sealed partial class KaraFunVenueUrlParser(ILogger<KaraFunVenueUrlParser>? logger = null) : IKaraFunVenueUrlParser
 {
     // Held for future diagnostics: the seam should exist before it's needed, not be retrofitted.
     private readonly ILogger _log = logger ?? NullLogger<KaraFunVenueUrlParser>.Instance;
