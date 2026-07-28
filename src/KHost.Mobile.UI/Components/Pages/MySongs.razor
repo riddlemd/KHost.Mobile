@@ -1624,7 +1624,7 @@ else
     private void CloseRatingPrompt() => _ratingPromptItem = null;
 
     // Fires on Save, Skip AND swipe-away — all three commit (a skip logs it unrated, 0); only ✕ / backdrop cancel.
-    private async Task OnRatingCommitAsync((int howItWent, string? note) result)
+    private async Task OnRatingCommitAsync((int howItWent, string? note, DateTimeOffset when) result)
     {
         var item = _ratingPromptItem;
         _ratingPromptItem = null;
@@ -1633,7 +1633,7 @@ else
 
         item.Performances.Add(new Performance
         {
-            Date = Clock.GetLocalNow(),
+            Date = result.when,
             HowItWent = Math.Clamp(result.howItWent, 0, 5),
             Note = string.IsNullOrWhiteSpace(result.note) ? null : result.note.Trim(),
             VenueId = Session.ActiveVenueId,   // tag with wherever they are right now (null when not at a venue)
