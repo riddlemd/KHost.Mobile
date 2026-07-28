@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Infrastructure.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>Tunables for the Bayesian how-it-went star. The UI builds this from <see cref="IAppSettings"/>.</summary>
 /// <param name="PriorWeight">The confidence weight <c>m</c>: how many sings a song needs before it's trusted on its

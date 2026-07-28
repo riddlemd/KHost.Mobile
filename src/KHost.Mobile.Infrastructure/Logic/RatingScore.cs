@@ -1,4 +1,3 @@
-using KHost.Mobile.Infrastructure.Models;
 using KHost.Mobile.Abstractions.Models;
 namespace KHost.Mobile.Infrastructure.Logic;
 

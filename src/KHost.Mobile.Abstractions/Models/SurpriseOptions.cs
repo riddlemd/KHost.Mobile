@@ -1,4 +1,4 @@
-namespace KHost.Mobile.Infrastructure.Models;
+namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// The options the "Surprise me" picker draws under. Mirrors the toggles on the picker's options sheet, which

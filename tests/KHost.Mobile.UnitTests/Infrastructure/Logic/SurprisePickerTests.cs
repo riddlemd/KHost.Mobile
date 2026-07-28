@@ -1,8 +1,7 @@
-using KHost.Mobile.Infrastructure.Models;
+using KHost.Mobile.Abstractions.Models;
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
-using KHost.Mobile.Abstractions.Models;
 using KHost.Mobile.Infrastructure.Logic;
 
 namespace KHost.Mobile.UnitTests.Infrastructure.Logic;

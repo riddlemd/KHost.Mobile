@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using KHost.Mobile.Infrastructure.Models;
 using KHost.Mobile.Abstractions.Models;
 
 using KHost.Mobile.Abstractions.Services;
