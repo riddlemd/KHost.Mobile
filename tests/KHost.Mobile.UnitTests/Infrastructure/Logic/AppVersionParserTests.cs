@@ -6,7 +6,7 @@ namespace KHost.Mobile.UnitTests.Infrastructure.Logic;
 
 // The app's own ApplicationDisplayVersion, parsed for comparison against the newest release. A failure here
 // is silent in the app — MauiAppUpdateService just reports "no update" — so the boundaries are pinned.
-public class AppVersionTests
+public class AppVersionParserTests
 {
     private static readonly AppVersionParser Parser = new();
 
