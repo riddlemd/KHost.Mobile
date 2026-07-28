@@ -56,15 +56,15 @@ public static class Project
 
         // Former statics. They take an ILogger they may not use yet — having the seam costs a constructor
         // parameter; adding it later would mean touching every call site again.
-        services.AddSingleton<ISongLinks, SongLinks>();
+        services.AddSingleton<ISongLinkBuilder, SongLinkBuilder>();
         services.AddSingleton<IKaraFunVenueUrlParser, KaraFunVenueUrlParser>();
         services.AddSingleton<ITimeFormatter, TimeFormatter>();
         services.AddSingleton<IAppVersionParser, AppVersionParser>();
-        services.AddSingleton<IDateTimeInput, DateTimeInput>();
-        services.AddSingleton<IRatingScorer, RatingScore>();
+        services.AddSingleton<IDateTimeInputConverter, DateTimeInputConverter>();
+        services.AddSingleton<IRatingScorer, RatingScorer>();
         services.AddSingleton<ISurprisePicker, SurprisePicker>();
         services.AddSingleton<ISingerProfileCodec, SingerProfileCodec>();
-        services.AddSingleton<ISingerDataFiles, SingerDataFiles>();
+        services.AddSingleton<ISingerFileNames, SingerFileNames>();
 
         // Chained onto every typed client so one seam logs what the native HTTP stack actually sent.
         services.AddTransient<LoggingHttpMessageHandler>();

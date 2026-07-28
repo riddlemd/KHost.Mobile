@@ -7,13 +7,13 @@ namespace KHost.Mobile.Infrastructure.Search;
 /// <inheritdoc />
 /// <remarks>Pure and host-agnostic — every method is string building, so it's trivially testable.</remarks>
 // logger optional so a test can `new` it; DI supplies the real one.
-internal sealed class SongLinks(ILogger<SongLinks>? logger = null) : ISongLinks
+internal sealed class SongLinkBuilder(ILogger<SongLinkBuilder>? logger = null) : ISongLinkBuilder
 {
     // KaraFun's venue search expects the q value to carry an "sc_" search-context prefix; without it the page
     // loads but returns no matches. Kept as a constant since this token may be reworked upstream.
     private const string KaraFunQueryPrefix = "sc_";
 
-    private readonly ILogger _log = logger ?? NullLogger<SongLinks>.Instance;
+    private readonly ILogger _log = logger ?? NullLogger<SongLinkBuilder>.Instance;
 
     /// <inheritdoc />
     public string YouTubeUrlFor(string title, string? artist)

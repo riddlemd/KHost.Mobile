@@ -18,7 +18,7 @@ namespace KHost.Mobile.Infrastructure.Services;
 /// </remarks>
 internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonightStore
 {
-    private readonly ISingerDataFiles _names;
+    private readonly ISingerFileNames _names;
 
     private readonly IAppDataDirectory _paths;
     private readonly IAppSession? _session;
@@ -38,10 +38,10 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
         ILogger<JsonFileTonightStore>? logger = null,
         TimeProvider? timeProvider = null,
         IAtomicFileWriter? writer = null,
-        ISingerDataFiles? names = null)
+        ISingerFileNames? names = null)
         : base(logger ?? NullLogger<JsonFileTonightStore>.Instance, writer)
     {
-        _names = names ?? new SingerDataFiles();
+        _names = names ?? new SingerFileNames();
         _paths = paths;
         _session = session;
         _clock = timeProvider ?? TimeProvider.System;
@@ -63,7 +63,7 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
 
     protected override string PathFor(Guid? singerId)
     {
-        var name = singerId is null ? SingerDataFiles.LegacyTonight : _names.Tonight(singerId.Value);
+        var name = singerId is null ? SingerFileNames.LegacyTonight : _names.Tonight(singerId.Value);
         return Path.Combine(_paths.AppDataDirectory, name);
     }
 

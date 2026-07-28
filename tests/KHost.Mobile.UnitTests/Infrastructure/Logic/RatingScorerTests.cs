@@ -7,9 +7,9 @@ using KHost.Mobile.Infrastructure.Logic;
 
 namespace KHost.Mobile.UnitTests.Infrastructure.Logic;
 
-public class RatingScoreTests
+public class RatingScorerTests
 {
-    private static readonly RatingScore Scorer = new();
+    private static readonly RatingScorer Scorer = new();
 
     private static readonly DateTimeOffset Now = new(2026, 7, 22, 12, 0, 0, TimeSpan.Zero);
 

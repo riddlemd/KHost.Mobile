@@ -7,7 +7,7 @@ namespace KHost.Mobile.Infrastructure.Logic;
 /// on the exact names. A singer's files sit in the app data directory suffixed with their id; the legacy
 /// single-user names are what a store falls back to when no singer is active yet.
 /// </summary>
-internal sealed class SingerDataFiles : ISingerDataFiles
+internal sealed class SingerFileNames : ISingerFileNames
 {
     /// <summary>The single-user song-list file name, from before multi-singer support. Migrated into the first
     /// seeded singer's file; also the fallback a store reads when no singer is active.</summary>

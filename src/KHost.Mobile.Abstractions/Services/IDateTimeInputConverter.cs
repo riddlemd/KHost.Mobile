@@ -4,7 +4,7 @@ namespace KHost.Mobile.Abstractions.Services;
 /// Converts between an instant and the text an <c>&lt;input type="datetime-local"&gt;</c> reads and writes. The
 /// control carries no time zone, so the offset comes from the app's clock.
 /// </summary>
-public interface IDateTimeInput
+public interface IDateTimeInputConverter
 {
     /// <summary>Renders an instant as local wall-clock text for the control.</summary>
     string Format(DateTimeOffset value);

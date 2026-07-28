@@ -7,7 +7,7 @@ namespace KHost.Mobile.Abstractions.Models;
 /// kept on a single device (a phone passed around the karaoke table); switching the active singer swaps which
 /// personal data the app shows, while the Venues list stays shared across everyone. Identity is a local
 /// <see cref="Id"/> GUID; that id also namespaces the singer's on-device song-list / tonight files (see
-/// <c>SingerDataFiles</c>). Mutable class per the persisted-entity convention; every field beyond <see cref="Name"/>
+/// <c>SingerFileNames</c>). Mutable class per the persisted-entity convention; every field beyond <see cref="Name"/>
 /// is optional/defaulted so adding more later stays migration-free (mirrors <see cref="Venue"/>).
 /// </summary>
 public sealed class Singer

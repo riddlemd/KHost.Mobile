@@ -3,7 +3,7 @@ namespace KHost.Mobile.Abstractions.Models;
 
 /// <summary>
 /// The list-wide context a star is computed against — chiefly the prior mean <c>C</c> (the whole list's average
-/// how-it-went). Built once per list via <see cref="RatingScore.BuildContext"/> and reused for every song, so the
+/// how-it-went). Built once per list via <see cref="RatingScorer.BuildContext"/> and reused for every song, so the
 /// corpus is only walked once.
 /// </summary>
 /// <param name="PriorMean">The recency-weighted average how-it-went across every rated sing in the list, or null when

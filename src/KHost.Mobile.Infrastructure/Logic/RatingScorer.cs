@@ -11,10 +11,10 @@ namespace KHost.Mobile.Infrastructure.Logic;
 /// (exponential half-life). Pure and MAUI-free, derived from the existing <see cref="SongListItem.Performances"/>, so
 /// there's no stored field and no migration.
 /// </summary>
-internal sealed class RatingScore(ILogger<RatingScore>? logger = null) : IRatingScorer
+internal sealed class RatingScorer(ILogger<RatingScorer>? logger = null) : IRatingScorer
 {
     // Held for future diagnostics: the seam should exist before it's needed, not be retrofitted.
-    private readonly ILogger _log = logger ?? NullLogger<RatingScore>.Instance;
+    private readonly ILogger _log = logger ?? NullLogger<RatingScorer>.Instance;
 
     /// <summary>
     /// Build the shared context — the prior mean — from the whole list, walking every rated performance once.

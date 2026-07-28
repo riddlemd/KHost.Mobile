@@ -9,10 +9,10 @@ namespace KHost.Mobile.Infrastructure.Logic;
 /// Converts between an instant and the text an <c>&lt;input type="datetime-local"&gt;</c> reads and writes.
 /// The control carries no time zone, so the offset comes from the supplied <see cref="TimeProvider"/>.
 /// </summary>
-internal sealed class DateTimeInput(TimeProvider? timeProvider = null, ILogger<DateTimeInput>? logger = null) : IDateTimeInput
+internal sealed class DateTimeInputConverter(TimeProvider? timeProvider = null, ILogger<DateTimeInputConverter>? logger = null) : IDateTimeInputConverter
 {
     // Held for future diagnostics: the seam should exist before it's needed, not be retrofitted.
-    private readonly ILogger _log = logger ?? NullLogger<DateTimeInput>.Instance;
+    private readonly ILogger _log = logger ?? NullLogger<DateTimeInputConverter>.Instance;
 
     /// <summary>The only shape the control accepts, regardless of the device's display locale.</summary>
     public const string Pattern = "yyyy-MM-ddTHH:mm";

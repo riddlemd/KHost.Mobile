@@ -1,7 +1,7 @@
 namespace KHost.Mobile.Abstractions.Services;
 
 /// <summary>Builds the outbound search links a song offers — YouTube, Spotify, and KaraFun at a venue.</summary>
-public interface ISongLinks
+public interface ISongLinkBuilder
 {
     /// <summary>YouTube search URL for "Title Artist".</summary>
     string YouTubeUrlFor(string title, string? artist);

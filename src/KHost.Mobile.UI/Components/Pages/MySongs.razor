@@ -23,7 +23,7 @@
 @inject Random Rng
 @implements IDisposable
 @inject IRatingScorer Scorer
-@inject ISongLinks Links2
+@inject ISongLinkBuilder Links2
 @inject ISurprisePicker Surprise
 
 <button type="button" class="mysongs-fab @(Settings.TonightEnabled ? "" : "mysongs-fab--no-nav") @(AnyOverlayOpen ? "is-hidden" : "")"

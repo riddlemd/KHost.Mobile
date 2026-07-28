@@ -4,7 +4,7 @@ namespace KHost.Mobile.Abstractions.Services;
 /// Names the per-singer data files. The GUID is written <b>dash-less</b> — a dashed name is silently ignored,
 /// since nothing reads it.
 /// </summary>
-public interface ISingerDataFiles
+public interface ISingerFileNames
 {
     /// <summary>That singer's wishlist file.</summary>
     string SongList(Guid singerId);

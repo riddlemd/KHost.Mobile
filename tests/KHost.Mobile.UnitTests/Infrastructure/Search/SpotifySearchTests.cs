@@ -7,7 +7,7 @@ namespace KHost.Mobile.UnitTests.Infrastructure.Search;
 // plain space, never " - ", because a leading dash is Spotify's NOT operator and would exclude the artist.
 public class SpotifySearchTests
 {
-    private static readonly SongLinks Links = new();
+    private static readonly SongLinkBuilder Links = new();
 
     [Fact]
     public void Joins_title_and_artist_with_a_space_not_a_dash()

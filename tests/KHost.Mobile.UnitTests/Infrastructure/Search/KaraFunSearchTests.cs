@@ -6,7 +6,7 @@ namespace KHost.Mobile.UnitTests.Infrastructure.Search;
 
 public class KaraFunSearchTests
 {
-    private static readonly SongLinks Links = new();
+    private static readonly SongLinkBuilder Links = new();
 
     [Fact]
     public void UrlFor_builds_venue_search_url_with_title_and_artist()

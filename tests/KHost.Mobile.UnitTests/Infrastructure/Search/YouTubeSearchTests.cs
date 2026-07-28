@@ -7,7 +7,7 @@ namespace KHost.Mobile.UnitTests.Infrastructure.Search;
 // SpotifySearch deliberately doesn't — see SpotifySearchTests for why.
 public class YouTubeSearchTests
 {
-    private static readonly SongLinks Links = new();
+    private static readonly SongLinkBuilder Links = new();
 
     [Fact]
     public void Joins_title_and_artist_with_a_dash()
