@@ -23,6 +23,8 @@ internal sealed class QrScanPage : ContentPage
             CameraFacing = CameraFacing.Back,
             BarcodeSymbologies = BarcodeFormats.QRCode,
             VibrationOnDetected = true,
+            CaptureQuality = CaptureQuality.Highest,
+            TapToFocusEnabled = true,
         };
         _camera.OnDetectionFinished += OnDetectionFinished;
 
