@@ -12,7 +12,7 @@ Developer-facing docs for **KHost Cue** — the reasoning behind a few non-obvio
   ```
 - **Android**: the Android SDK, a JDK 17+, and an emulator or a connected device. If you have neither SDK nor JDK, .NET Android can fetch both at the versions this project targets:
   ```bash
-  dotnet build KHost.Mobile.UI/KHost.Mobile.UI.csproj -f net10.0-android -t:InstallAndroidDependencies \
+  dotnet build src/KHost.Mobile.UI/KHost.Mobile.UI.csproj -f net10.0-android -t:InstallAndroidDependencies \
     -p:AndroidSdkDirectory=$HOME/Library/Android/sdk -p:JavaSdkDirectory=$HOME/Library/Android/jdk \
     -p:AcceptAndroidSDKLicenses=true
   ```
@@ -20,7 +20,7 @@ Developer-facing docs for **KHost Cue** — the reasoning behind a few non-obvio
 - **iOS**: a paired Mac (iOS cannot be built on Windows).
 - **macOS (Mac Catalyst)**: full **Xcode** — Command Line Tools alone is not enough. Point the toolchain at it with `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
 
-> Restore walks **every** target framework the project declares, even when you build a single head with `-f`, so a build fails until all of them have workloads. `dotnet workload restore KHost.Mobile.UI/KHost.Mobile.UI.csproj` installs exactly the set this project needs.
+> Restore walks **every** target framework the project declares, even when you build a single head with `-f`, so a build fails until all of them have workloads. `dotnet workload restore src/KHost.Mobile.UI/KHost.Mobile.UI.csproj` installs exactly the set this project needs.
 
 ### Build & run
 

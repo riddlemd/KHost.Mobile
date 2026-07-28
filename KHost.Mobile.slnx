@@ -1,9 +1,13 @@
 <Solution>
-  <Project Path="KHost.Mobile.Abstractions/KHost.Mobile.Abstractions.csproj" />
-  <Project Path="KHost.Mobile.Common/KHost.Mobile.Common.csproj" />
-  <Project Path="KHost.Mobile.Infrastructure/KHost.Mobile.Infrastructure.csproj" />
-  <Project Path="KHost.Mobile.Clients/KHost.Mobile.Clients.csproj" />
-  <Project Path="KHost.Mobile.UI/KHost.Mobile.UI.csproj" />
-  <Project Path="KHost.Mobile.UnitTests/KHost.Mobile.UnitTests.csproj" />
-  <Project Path="KHost.Mobile.IntegrationTests/KHost.Mobile.IntegrationTests.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/KHost.Mobile.Abstractions/KHost.Mobile.Abstractions.csproj" />
+    <Project Path="src/KHost.Mobile.Common/KHost.Mobile.Common.csproj" />
+    <Project Path="src/KHost.Mobile.Infrastructure/KHost.Mobile.Infrastructure.csproj" />
+    <Project Path="src/KHost.Mobile.Clients/KHost.Mobile.Clients.csproj" />
+    <Project Path="src/KHost.Mobile.UI/KHost.Mobile.UI.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/KHost.Mobile.UnitTests/KHost.Mobile.UnitTests.csproj" />
+    <Project Path="tests/KHost.Mobile.IntegrationTests/KHost.Mobile.IntegrationTests.csproj" />
+  </Folder>
 </Solution>

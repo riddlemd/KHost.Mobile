@@ -20,10 +20,10 @@
        instead of <Compile Include>-linking the source file by file. Real filesystem I/O is exercised in
        KHost.Mobile.IntegrationTests. -->
   <ItemGroup>
-    <ProjectReference Include="..\KHost.Mobile.Abstractions\KHost.Mobile.Abstractions.csproj" />
-    <ProjectReference Include="..\KHost.Mobile.Common\KHost.Mobile.Common.csproj" />
-    <ProjectReference Include="..\KHost.Mobile.Infrastructure\KHost.Mobile.Infrastructure.csproj" />
-    <ProjectReference Include="..\KHost.Mobile.Clients\KHost.Mobile.Clients.csproj" />
+    <ProjectReference Include="..\..\src\KHost.Mobile.Abstractions\KHost.Mobile.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\KHost.Mobile.Common\KHost.Mobile.Common.csproj" />
+    <ProjectReference Include="..\..\src\KHost.Mobile.Infrastructure\KHost.Mobile.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\KHost.Mobile.Clients\KHost.Mobile.Clients.csproj" />
   </ItemGroup>
 
 </Project>
