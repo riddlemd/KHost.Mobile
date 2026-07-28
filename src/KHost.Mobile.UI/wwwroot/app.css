@@ -645,7 +645,6 @@ button { text-transform: none; color: inherit; }
 .rating-prompt .stars { justify-content: center; margin: 0.4rem 0 0.2rem; font-size: 2rem; }
 .rating-prompt__hint { font-size: 0.8rem; color: var(--kh-text-muted); min-height: 1.1rem; margin-bottom: 0.6rem; }
 .rating-prompt__note { display: block; width: 100%; max-width: 22rem; margin: 0 auto; }
-/* "When" sits on one line with its field, left-aligned inside the otherwise centred prompt. */
 .rating-prompt__when {
     display: flex;
     align-items: center;
@@ -1137,13 +1136,6 @@ body.kh-sheet-open { overflow: hidden; }
 
 /* ---- Sung history sheet ------------------------------------------------- */
 /* Sits above the detail sheet (its own backdrop). Scrolls the list when it's long. */
-/* Stacked sheets — one level above the base .sheet/.sheet-backdrop pair (41/40), so the upper sheet's backdrop
-   covers the sheet that opened it. These MUST stay after the base rules: same specificity, so source order is
-   what decides, and a modifier placed earlier in the file silently loses to `.sheet-backdrop`. */
-.sheet--history { z-index: 43; }
-.sheet-backdrop--history { z-index: 42; }
-.sheet--qr { z-index: 43; }
-.sheet-backdrop--qr { z-index: 42; }
 .history { margin-top: 1rem; max-height: 55vh; overflow-y: auto; }
 .history__item { padding: 0.65rem 0.25rem; border-bottom: 1px solid var(--kh-border); }
 .history__item:first-child { border-top: 1px solid var(--kh-border); }
@@ -1195,10 +1187,11 @@ body.kh-sheet-open { overflow: hidden; }
 
 /* Delete-confirm popup — a centered modal above the history sheet. In-app dialog
    (not native confirm(), which doesn't fire reliably in the WebView). */
-.sheet-backdrop--confirm { z-index: 44; }
+/* Above any stacked sheet — khSheet.restack hands out 41, 43, 45… so this stays clear of that range. */
+.sheet-backdrop--confirm { z-index: 80; }
 .confirm-pop {
     position: fixed;
-    z-index: 45;
+    z-index: 81;   /* one above its own backdrop */
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
@@ -2155,8 +2148,6 @@ body.kh-sheet-open { overflow: hidden; }
 
 /* ---- Year picker sheet -------------------------------------------------- */
 /* Stacks above the filter sheet (41) that opens it. */
-.sheet--year { z-index: 43; }
-.sheet-backdrop--year { z-index: 42; }
 .year-grid {
     --kh-year-row: 2.75rem;
     --kh-year-gap: 0.5rem;

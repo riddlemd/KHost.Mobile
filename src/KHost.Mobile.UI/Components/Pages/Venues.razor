@@ -189,7 +189,6 @@
 @* ---- Add / edit sheet ---- *@
 <VenueEditSheet Editing="_editing" IsNew="_editingIsNew" OnSave="SaveVenueAsync" OnClose="CloseEdit" />
 
-@* Stacked over the venue detail sheet, which stays open behind it — closing the QR returns you to the venue. *@
 <QrCodeSheet Open="_qrVenue is not null" Title="@_qrVenue?.Name" Subtitle="Scan to open the KaraFun songbook"
              Svg="_qrSvg" Caption="@_qrUrl" AriaLabel="KaraFun catalog QR code" OnClose="CloseQr" />
 

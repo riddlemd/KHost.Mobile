@@ -1,7 +1,6 @@
 @* Shows a QR code big enough for someone else's phone to scan off this screen. The code is handed in as
    pre-rendered SVG so this component stays display-only — no encoder dependency in the UI layer. *@
-<Sheet Open="Open" Class="sheet--qr" BackdropClass="sheet-backdrop--qr" AriaLabel="@AriaLabel"
-       ClosePx="150" OnClose="OnClose">
+<Sheet Open="Open" AriaLabel="@AriaLabel" ClosePx="150" OnClose="OnClose">
     <div class="sheet__title">@Title</div>
     @if (!string.IsNullOrWhiteSpace(Subtitle))
     {

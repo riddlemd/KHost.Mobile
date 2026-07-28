@@ -1,6 +1,6 @@
 @* Add / edit a singer. Pass a fresh Singer() to add or a working copy to edit — on save the fields are written
    onto that same instance and handed back through OnSave, so never pass the stored object. *@
-<Sheet Open="Editing is not null" Class="sheet--history" BackdropClass="sheet-backdrop--history"
+<Sheet Open="Editing is not null"
        AriaLabel="Edit singer" OnClose="OnClose">
     @if (Editing is not null)
     {

@@ -5,7 +5,7 @@
 
    A pull-down dismiss here LOGS the sing unrated (same as Skip) rather than discarding it, so it takes the
    OnSwipeDismiss path instead of OnClose. *@
-<Sheet Open="Item is not null" Class="sheet--history rating-prompt" BackdropClass="sheet-backdrop--history"
+<Sheet Open="Item is not null" Class="rating-prompt"
        AriaLabel="How did it go?" OnClose="CancelAsync" OnSwipeDismiss="DismissFromSwipeAsync">
     @if (Item is not null)
     {
@@ -16,8 +16,7 @@
             <StarRating Value="_value" Tone="hot" Sung="true" ValueChanged="v => _value = v" />
             <div class="rating-prompt__hint">@Hint</div>
         }
-        @* Defaults to now; editable so a sing you forgot to log can be dated when it actually happened.
-           The control's own display format follows the device locale, not the app's 12/24-hour setting. *@
+        @* The control's display format follows the device locale, not the app's 12/24-hour setting. *@
         <label class="rating-prompt__when">
             <span class="rating-prompt__when-label">When</span>
             <input class="input input--sm" type="datetime-local" aria-label="Date and time sung"
