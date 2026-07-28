@@ -21,10 +21,10 @@
        IAppDataDirectory, faked here by TempAppDataDirectory. The pure, no-I/O logic (parsers, Genres,
        SongListItem) is unit-tested in KHost.Mobile.UnitTests instead. -->
   <ItemGroup>
-    <ProjectReference Include="..\KHost.Mobile.Abstractions\KHost.Mobile.Abstractions.csproj" />
-    <ProjectReference Include="..\KHost.Mobile.Common\KHost.Mobile.Common.csproj" />
-    <ProjectReference Include="..\KHost.Mobile.Infrastructure\KHost.Mobile.Infrastructure.csproj" />
-    <ProjectReference Include="..\KHost.Mobile.Clients\KHost.Mobile.Clients.csproj" />
+    <ProjectReference Include="..\..\src\KHost.Mobile.Abstractions\KHost.Mobile.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\KHost.Mobile.Common\KHost.Mobile.Common.csproj" />
+    <ProjectReference Include="..\..\src\KHost.Mobile.Infrastructure\KHost.Mobile.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\KHost.Mobile.Clients\KHost.Mobile.Clients.csproj" />
   </ItemGroup>
 
 </Project>

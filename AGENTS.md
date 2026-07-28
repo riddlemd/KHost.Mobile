@@ -23,7 +23,13 @@ repos/
 
 `KHost.Mobile.slnx` (mobile stays in its OWN solution so MAUI workloads never slow the desktop or server builds):
 
-Seven projects — five shipping plus two test — layered so that **only `KHost.Mobile.UI` knows MAUI exists**. Each references only what sits above it:
+Seven projects — five shipping under `src/`, two test under `tests/` — layered so that **only `KHost.Mobile.UI` knows MAUI exists**. Each references only what sits above it:
+
+```
+src/     KHost.Mobile.Abstractions, .Common, .Infrastructure, .Clients, .UI
+tests/   KHost.Mobile.UnitTests, .IntegrationTests
+```
+
 
 | Project | References | Role |
 |---|---|---|
@@ -44,18 +50,18 @@ Seven projects — five shipping plus two test — layered so that **only `KHost
 
 ```bash
 # Android head — THE green signal on Windows (iOS cannot build here; see gotcha).
-dotnet build KHost.Mobile.UI/KHost.Mobile.UI.csproj -f net10.0-android "-p:BaseOutputPath=./obj/_build"
+dotnet build src/KHost.Mobile.UI/KHost.Mobile.UI.csproj -f net10.0-android "-p:BaseOutputPath=./obj/_build"
 
 # Windows / Mac Catalyst heads — fastest UI iteration, no emulator or simulator.
 # Catalyst is DEV-ONLY (layout preview). There is no desktop product; don't treat it as a shipping target.
-dotnet run --project KHost.Mobile.UI -f net10.0-windows10.0.19041.0
-dotnet run --project KHost.Mobile.UI -f net10.0-maccatalyst
+dotnet run --project src/KHost.Mobile.UI -f net10.0-windows10.0.19041.0
+dotnet run --project src/KHost.Mobile.UI -f net10.0-maccatalyst
 
 # Build, deploy AND launch on a connected Android device or emulator.
-dotnet build KHost.Mobile.UI/KHost.Mobile.UI.csproj -f net10.0-android -t:Run "-p:BaseOutputPath=./obj/_build"
+dotnet build src/KHost.Mobile.UI/KHost.Mobile.UI.csproj -f net10.0-android -t:Run "-p:BaseOutputPath=./obj/_build"
 
 # Client library on its own
-dotnet build KHost.Mobile.Clients/KHost.Mobile.Clients.csproj
+dotnet build src/KHost.Mobile.Clients/KHost.Mobile.Clients.csproj
 ```
 
 `-p:BaseOutputPath=./obj/_build` mirrors the KHost repo convention (redirects output so it doesn't lock VS's `bin/`).
@@ -91,7 +97,7 @@ All local data sits behind an interface with a device-backed JSON implementation
 ## Gotchas
 
 - **iOS cannot build on Windows** without a paired Mac. A bare `dotnet build` on the solution surfaces iOS/Apple-toolchain errors that are **not** your code. Build the **Android head explicitly** to verify, and use the **Windows head** for fast UI iteration. iOS is validated when a Mac is in the loop.
-- **`TargetFrameworks` is `android;ios` + `windows` on Windows + `maccatalyst` on macOS** (tizen dropped). Don't re-add heads without a reason. Note that **restore evaluates every TFM even when you pass `-f`**, so a build of any single head fails until *all* the declared workloads are installed — `dotnet workload restore KHost.Mobile.UI/KHost.Mobile.UI.csproj` installs exactly the set the project declares.
+- **`TargetFrameworks` is `android;ios` + `windows` on Windows + `maccatalyst` on macOS** (tizen dropped). Don't re-add heads without a reason. Note that **restore evaluates every TFM even when you pass `-f`**, so a build of any single head fails until *all* the declared workloads are installed — `dotnet workload restore src/KHost.Mobile.UI/KHost.Mobile.UI.csproj` installs exactly the set the project declares.
 - **The Mac Catalyst head needs full Xcode, not Command Line Tools** — three setup gaps (`xcode-select` path, unaccepted license, missing `-runFirstLaunch` components) all surface as errors that look like build breakage but aren't; `ibtoold failed IDE initialization` is the signature. The checks and fixes are in the wiki's [Building & testing](https://github.com/riddlemd/KHost.Mobile/wiki/Building-and-Testing) — note `xcodebuild -version` succeeding is NOT proof the license is accepted.
 - **The Mac Catalyst head is a layout preview, not a product** — see DEVELOPMENT.md → Design notes. Don't add desktop breakpoints, a side rail, or hover affordances "for the desktop app": there isn't one, and a wide window looking wrong is expected.
 - This repo **builds standalone** — no references to any sibling repo. Don't add one.
@@ -159,8 +165,8 @@ The root `.editorconfig` encodes the mechanical rules (4-space indent, file-scop
 ### Housekeeping
 - **Do NOT commit or push unless explicitly asked.**
 - **Both test suites (`KHost.Mobile.UnitTests` + `KHost.Mobile.IntegrationTests`) must pass before any commit or push.** Run them and only proceed once green — never commit or push with a failing (or unrun) suite:
-  - `dotnet test KHost.Mobile.UnitTests/KHost.Mobile.UnitTests.csproj "-p:BaseOutputPath=./obj/_build"` — pure, no-I/O logic (parsers, `Genres`, `SongListItem`).
-  - `dotnet test KHost.Mobile.IntegrationTests/KHost.Mobile.IntegrationTests.csproj "-p:BaseOutputPath=./obj/_build"` — the JSON stores against a real temp folder (real file I/O + serialization) via a fake `IAppDataDirectory`.
+  - `dotnet test tests/KHost.Mobile.UnitTests/KHost.Mobile.UnitTests.csproj "-p:BaseOutputPath=./obj/_build"` — pure, no-I/O logic (parsers, `Genres`, `SongListItem`).
+  - `dotnet test tests/KHost.Mobile.IntegrationTests/KHost.Mobile.IntegrationTests.csproj "-p:BaseOutputPath=./obj/_build"` — the JSON stores against a real temp folder (real file I/O + serialization) via a fake `IAppDataDirectory`.
 - **A test file mirrors its subject's path**: `Clients/Apple/ITunesResponseParser.cs` is tested by `Clients/Apple/ITunesResponseParserTests.cs`, with the namespace following the folder (`KHost.Mobile.UnitTests.Clients.Apple`). New test, no obvious folder? That usually means the type is in the wrong project. Cross-cutting **helpers** (`HttpTestDoubles`, `TempAppDataDirectory`) stay at the project root in the root namespace — nested test namespaces see them without a `using`, since C# resolution walks enclosing namespaces.
 - **Keep the docs in sync with the app.** `README.md` is product-facing — update its feature list (and the screenshot grid where relevant) whenever a user-facing feature is added or its behavior changes, so it never lags the app. **[DEVELOPMENT.md](DEVELOPMENT.md)** holds the developer-facing docs — build/test commands, the screenshot target size, and the **Design notes** section; put design rationale for a non-obvious implementation (a new reusable component, a storage/serving decision, a platform workaround) there, not in the README.
 - **The [wiki](https://github.com/riddlemd/KHost.Mobile/wiki) is a SEPARATE repo (`KHost.Mobile.wiki.git`) — a commit here never touches it, so it goes stale silently.** Clone it, edit the markdown, push. Its user pages describe the app screen by screen and **quote on-screen labels verbatim**, so renaming a button, a setting or its helper text breaks them even when nothing in this repo looks wrong. Two rules that keep it honest:
