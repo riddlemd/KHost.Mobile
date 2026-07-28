@@ -1312,7 +1312,7 @@ else
 
     private Task RollSurpriseAsync()
     {
-        // "Stick to my current filters" is the difference between the visible list and the whole library.
+        // "Draw only from filtered songs" is the difference between the visible list and the whole library.
         IReadOnlyList<SongListItem> pool = Settings.SurpriseRespectFilters ? Filtered().ToList() : _items;
         var candidates = SurprisePicker.Narrow(pool, SurpriseOptions, Clock.GetLocalNow().Date);
 
