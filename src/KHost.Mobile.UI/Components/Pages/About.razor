@@ -1,6 +1,7 @@
 @page "/about"
 @layout MainLayout
 @inject IAppVersionInfo AppVersionInfo
+@inject ILinkLauncher Links
 
 <section class="about">
     <div class="page-head">
@@ -20,9 +21,20 @@
         performance history. Everything lives on your device.
     </p>
 
+    @* Opens externally rather than in the WebView — the policy lives in the project wiki, not in the app. *@
+    <button type="button" class="btn-link about__policy" @onclick="OpenPrivacyPolicyAsync">Privacy policy</button>
+
     <div class="about__meta">
         <span>Built with .NET MAUI Blazor Hybrid</span>
         <span>iOS &amp; Android</span>
     </div>
 
 </section>
+
+@code {
+    private const string PrivacyPolicyUrl = "https://github.com/riddlemd/KHost.Mobile/wiki/Privacy-Policy";
+
+    // Best-effort, like every other outbound link: no network here, and a device with nothing registered to
+    // handle the URL simply does nothing.
+    private Task OpenPrivacyPolicyAsync() => Links.OpenAsync(PrivacyPolicyUrl);
+}
