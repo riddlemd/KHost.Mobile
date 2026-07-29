@@ -45,13 +45,13 @@ public class SingerProfileCodecTests
     }
 
     [Fact]
-    public void Detects_a_profile_a_legacy_song_array_and_garbage()
+    public void Detects_a_profile_and_rejects_everything_else()
     {
         var profileJson = Codec.Serialize(SampleProfile());
         Assert.Equal(ProfileFileKind.Profile, Codec.Detect(profileJson));
 
-        // A legacy songs-only export is a bare JSON array.
-        Assert.Equal(ProfileFileKind.LegacySongList, Codec.Detect("""[{"Title":"X","Artist":"Y"}]"""));
+        // A bare array was the pre-profile export shape; it is not importable.
+        Assert.Equal(ProfileFileKind.Invalid, Codec.Detect("""[{"Title":"X","Artist":"Y"}]"""));
 
         Assert.Equal(ProfileFileKind.Invalid, Codec.Detect("not json"));
         Assert.Equal(ProfileFileKind.Invalid, Codec.Detect("""{"foo":1}"""));
@@ -61,14 +61,6 @@ public class SingerProfileCodecTests
     public void ParseProfile_returns_null_for_a_non_profile()
     {
         Assert.Null(Codec.ParseProfile("not json"));
-    }
-
-    [Fact]
-    public void ParseLegacySongs_reads_a_bare_array()
-    {
-        var songs = Codec.ParseLegacySongs("""[{"Title":"Africa","Artist":"Toto"}]""");
-        Assert.NotNull(songs);
-        Assert.Equal("Africa", Assert.Single(songs!).Title);
     }
 
     [Fact]

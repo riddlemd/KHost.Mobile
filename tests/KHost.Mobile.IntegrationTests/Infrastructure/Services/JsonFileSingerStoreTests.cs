@@ -58,28 +58,6 @@ public sealed class JsonFileSingerStoreTests : IDisposable
         Assert.Single(await store.GetAllAsync());
     }
 
-    [Fact]
-    public async Task EnsureSeededAsync_migrates_the_legacy_single_user_song_list_into_the_seeded_singer()
-    {
-        // A pre-multi-singer install: a single song-list.json at the root with the user's songs.
-        var legacy = new List<SongListItem> { new() { Title = "Africa", Artist = "Toto" } };
-        await File.WriteAllTextAsync(
-            _dir.FilePath("song-list.json"),
-            JsonSerializer.Serialize(legacy, SongListJsonContext.Default.ListSongListItem));
-
-        var store = NewStore();
-        var me = await store.EnsureSeededAsync();
-
-        // The legacy file is moved into the seeded singer's namespaced file.
-        Assert.False(File.Exists(_dir.FilePath("song-list.json")));
-        Assert.True(File.Exists(_dir.FilePath($"song-list-{me.Id:N}.json")));
-
-        // And that file still holds the user's songs, now owned by the seeded singer.
-        var session = new AppSession();
-        session.SetActiveSinger(me.Id);
-        var songs = await new JsonFileSongListStore(_dir, session).GetAllAsync();
-        Assert.Equal("Africa", Assert.Single(songs).Title);
-    }
 
     [Fact]
     public async Task UpdateAsync_persists_edits_and_is_a_no_op_for_an_unknown_id()
@@ -134,24 +112,6 @@ public sealed class JsonFileSingerStoreTests : IDisposable
         Assert.Equal("Keep", Assert.Single(await store.GetAllAsync()).Name);
     }
 
-    [Fact]
-    public async Task EnsureSeededAsync_migrates_the_legacy_tonight_set_into_the_seeded_singer()
-    {
-        // A pre-multi-singer install with a tonight.json at the root (written via the legacy no-session path).
-        await new JsonFileTonightStore(_dir).AddAsync(Guid.NewGuid());
-        Assert.True(File.Exists(_dir.FilePath("tonight.json")));
-
-        var store = NewStore();
-        var me = await store.EnsureSeededAsync();
-
-        // The legacy file is moved into the seeded singer's namespaced file, and its entry survives.
-        Assert.False(File.Exists(_dir.FilePath("tonight.json")));
-        Assert.True(File.Exists(_dir.FilePath($"tonight-{me.Id:N}.json")));
-
-        var session = new AppSession();
-        session.SetActiveSinger(me.Id);
-        Assert.Single(await new JsonFileTonightStore(_dir, session).GetAllAsync());
-    }
 
     [Fact]
     public async Task State_persists_to_disk_and_is_read_back_by_a_fresh_instance()
@@ -224,36 +184,6 @@ public sealed class JsonFileSingerStoreTests : IDisposable
         Assert.Equal(1, fired);
     }
 
-    [Fact]
-    public async Task EnsureSeededAsync_never_touches_an_already_migrated_singers_files_on_a_repeat_call()
-    {
-        // The literal guard in MigrateLegacyFile (skip when the destination already exists) only fires when the
-        // freshly-generated singer id from THIS seed call happens to already have a namespaced file on disk. That id
-        // comes from a fresh Guid.NewGuid() inside EnsureSeededAsync with no way to inject or predict it, so the
-        // exact collision can't be constructed through the public API. This pins the closest observable guarantee:
-        // once a singer is seeded, a second call is a pure no-op that never rewrites that singer's per-singer files,
-        // even if a legacy file has since reappeared on disk.
-        var legacy = new List<SongListItem> { new() { Title = "Africa", Artist = "Toto" } };
-        await File.WriteAllTextAsync(
-            _dir.FilePath("song-list.json"),
-            JsonSerializer.Serialize(legacy, SongListJsonContext.Default.ListSongListItem));
-
-        var store = NewStore();
-        var me = await store.EnsureSeededAsync();
-        var destination = _dir.FilePath($"song-list-{me.Id:N}.json");
-        Assert.True(File.Exists(destination));
-
-        // Overwrite the migrated destination with a sentinel, then drop a legacy file back in — as if a manual
-        // restore reintroduced it after the migration already ran.
-        const string sentinel = "SENTINEL";
-        await File.WriteAllTextAsync(destination, sentinel);
-        await File.WriteAllTextAsync(_dir.FilePath("song-list.json"), sentinel);
-
-        await NewStore().EnsureSeededAsync();   // roster already has a singer → returns early, no migration re-run
-
-        Assert.Equal(sentinel, await File.ReadAllTextAsync(destination));
-        Assert.Equal(sentinel, await File.ReadAllTextAsync(_dir.FilePath("song-list.json")));
-    }
 
     [Fact]
     public async Task Glyph_round_trips_and_drives_the_avatar()

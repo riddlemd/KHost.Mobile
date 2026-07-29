@@ -139,39 +139,7 @@ public sealed class JsonFileSongListStoreTests : IDisposable
         Assert.Equal(2, added);
     }
 
-    [Fact]
-    public async Task ImportAsync_migrates_a_legacy_entry_into_performances()
-    {
-        var store = NewStore();
-        var sungAt = new DateTimeOffset(2024, 5, 1, 0, 0, 0, TimeSpan.Zero);
 
-        await store.ImportAsync([new SongListItem { Title = "Legacy", Artist = "A", SungDates = [sungAt], Confidence = 4 }]);
-
-        var song = Assert.Single(await store.GetAllAsync());
-        var performance = Assert.Single(song.Performances);
-        Assert.Equal(4, performance.HowItWent);
-        Assert.Equal(sungAt, performance.Date);
-        Assert.Empty(song.SungDates);         // legacy fields emptied after migration
-        Assert.Equal(0, song.Confidence);
-        Assert.Equal(SongListItemStatus.Sang, song.Status);
-    }
-
-    [Fact]
-    public async Task GetAllAsync_migrates_a_legacy_file_on_load()
-    {
-        var sungAt = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
-        var legacy = new SongListItem { Title = "Legacy", Artist = "A", SungDates = [sungAt], Confidence = 3 };
-        await File.WriteAllTextAsync(
-            _dir.FilePath("song-list.json"),
-            JsonSerializer.Serialize(new List<SongListItem> { legacy }, SongListJsonContext.Default.ListSongListItem));
-
-        var song = Assert.Single(await NewStore().GetAllAsync());
-
-        var performance = Assert.Single(song.Performances);
-        Assert.Equal(3, performance.HowItWent);
-        Assert.Equal(sungAt, performance.Date);
-        Assert.Empty(song.SungDates);
-    }
 
     [Fact]
     public async Task A_corrupt_file_loads_as_an_empty_list_rather_than_throwing()
@@ -253,44 +221,5 @@ public sealed class JsonFileSongListStoreTests : IDisposable
         Assert.Equal(4, song.Enjoyment);
     }
 
-    [Fact]
-    public async Task GetAllAsync_migrates_a_rated_but_dateless_legacy_entry_anchored_at_AddedAt()
-    {
-        // Confidence set with no SungDates — MigrateToPerformances' "shouldn't normally happen" branch that
-        // anchors a single performance at AddedAt instead of a sung timestamp.
-        var addedAt = new DateTimeOffset(2022, 6, 15, 0, 0, 0, TimeSpan.Zero);
-        var legacy = new SongListItem { Title = "Legacy", Artist = "A", AddedAt = addedAt, SungDates = [], Confidence = 3 };
-        await File.WriteAllTextAsync(
-            _dir.FilePath("song-list.json"),
-            JsonSerializer.Serialize(new List<SongListItem> { legacy }, SongListJsonContext.Default.ListSongListItem));
 
-        var song = Assert.Single(await NewStore().GetAllAsync());
-
-        var performance = Assert.Single(song.Performances);
-        Assert.Equal(addedAt, performance.Date);
-        Assert.Equal(3, performance.HowItWent);
-        Assert.Empty(song.SungDates);
-        Assert.Equal(0, song.Confidence);
-        Assert.Equal(SongListItemStatus.Sang, song.Status);
-    }
-
-    [Fact]
-    public async Task A_legacy_files_migration_is_persisted_not_just_cached_in_memory()
-    {
-        var sungAt = new DateTimeOffset(2024, 3, 1, 0, 0, 0, TimeSpan.Zero);
-        var legacy = new SongListItem { Title = "Legacy", Artist = "A", SungDates = [sungAt], Confidence = 5 };
-        await File.WriteAllTextAsync(
-            _dir.FilePath("song-list.json"),
-            JsonSerializer.Serialize(new List<SongListItem> { legacy }, SongListJsonContext.Default.ListSongListItem));
-
-        await NewStore().GetAllAsync();   // first instance loads, migrates, and writes the migrated shape back to disk
-
-        // A brand-new THIRD instance, sharing only the folder — proves the migration was persisted, not just cached.
-        var song = Assert.Single(await NewStore().GetAllAsync());
-        var performance = Assert.Single(song.Performances);
-        Assert.Equal(5, performance.HowItWent);
-        Assert.Equal(sungAt, performance.Date);
-        Assert.Empty(song.SungDates);
-        Assert.Equal(0, song.Confidence);
-    }
 }

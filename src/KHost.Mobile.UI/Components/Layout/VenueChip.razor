@@ -90,7 +90,6 @@
             notifyStateChanged: StateHasChanged);
         Store.Changed += OnStoreChanged;
         Session.ActiveVenueChanged += OnActiveChanged;
-        await MigrateLegacyVenueAsync();
         await ReloadAsync();
         StartLocationTracking();
     }
@@ -130,19 +129,6 @@
     // VenueLocator short-circuits on this same check, so without it Auto/Pinned would be a choice with no
     // effect. Counts hidden venues too — they're still matched on proximity.
     private bool AnyGeolocatedVenue => _venues.Any(v => v.HasLocation);
-
-    // One-time move of the old single global KaraFun venue ID into a real venue, so upgraders start with one saved.
-    private async Task MigrateLegacyVenueAsync()
-    {
-        if (Settings.VenuesSeeded)
-            return;
-
-        var legacyId = Settings.KaraFunVenueId;
-        if (!string.IsNullOrWhiteSpace(legacyId) && (await Store.GetAllAsync()).Count == 0)
-            await Store.AddAsync(new Venue { Name = "My KaraFun venue", KaraFunVenueId = legacyId.Trim() });
-
-        Settings.VenuesSeeded = true;
-    }
 
     private void OnStoreChanged(object? sender, EventArgs e) => _ = ReloadOnUiAsync();
     private void OnActiveChanged(object? sender, EventArgs e) => _ = ReloadOnUiAsync();

@@ -31,7 +31,7 @@ public interface ISingerStore
     Task RemoveAsync(Guid id);
 
     /// <summary>Ensure at least one singer exists: on a roster that's empty (a fresh install, or the first launch
-    /// after this feature ships) create a default singer and migrate the legacy single-user song-list / tonight
+    /// after this feature ships) create a default singer to own the device's song-list / tonight
     /// files into it, so an upgrader's existing list becomes that singer's list. Idempotent — a no-op once any
     /// singer exists. Returns the singer that should be active when nothing else is remembered (the first one).</summary>
     Task<Singer> EnsureSeededAsync();

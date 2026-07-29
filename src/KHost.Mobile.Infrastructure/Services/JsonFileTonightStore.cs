@@ -30,7 +30,7 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
     /// <summary>
     /// The Tonight set is per-singer: it reads/writes the active singer's file (<see cref="IAppSession.ActiveSingerId"/>).
     /// <paramref name="session"/> and <paramref name="logger"/> are optional so the integration tests can <c>new</c>
-    /// the store bare; with no session it falls back to the single legacy file. DI supplies both.
+    /// the store bare; with no session it falls back to the unsuffixed file. DI supplies both.
     /// </summary>
     public JsonFileTonightStore(
         IAppDataDirectory paths,
@@ -53,7 +53,7 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
     // re-raise Changed — the UI then reloads this singer's set exactly as it would after any mutation.
     private void OnActiveSingerChanged(object? sender, EventArgs e) => RaiseChanged();
 
-    // The given singer's tonight file, or the legacy single-user file when no singer is active (pre-seed, or the
+    // The given singer's tonight file, or the unsuffixed file when no singer is active (pre-seed, or the
     // session-less test path). Takes the singer explicitly — LoadAsync captures ActiveSingerId ONCE and SaveAsync
     // writes to the singer the data was LOADED for, so a singer switch landing mid-operation can't write one
     // singer's set into another singer's file.
@@ -63,7 +63,7 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
 
     protected override string PathFor(Guid? singerId)
     {
-        var name = singerId is null ? SingerFileNames.LegacyTonight : _names.Tonight(singerId.Value);
+        var name = singerId is null ? SingerFileNames.DefaultTonight : _names.Tonight(singerId.Value);
         return Path.Combine(_paths.AppDataDirectory, name);
     }
 

@@ -35,12 +35,6 @@ public interface IAppSettings
     /// </summary>
     bool KaraFunFeaturesEnabled { get; set; }
 
-    /// <summary>
-    /// One-time guard for the legacy <see cref="KaraFunVenueId"/> → seeded-venue migration. Defaults to <c>false</c>:
-    /// the first time the venue feature loads with an old global KaraFun ID set and no saved venues, one venue is
-    /// seeded from it and this flips to <c>true</c> so it never re-seeds.
-    /// </summary>
-    bool VenuesSeeded { get; set; }
 
     /// <summary>
     /// When true, the active venue is auto-selected from the device's location, re-checking every
@@ -56,11 +50,6 @@ public interface IAppSettings
     /// </summary>
     int VenueRecheckMinutes { get; set; }
 
-    /// <summary>
-    /// Legacy single global KaraFun venue ID. KaraFun is now per-venue, so this is no longer set from the UI — it's
-    /// kept only so the one-time upgrade migration can seed a venue from an older install's value.
-    /// </summary>
-    string KaraFunVenueId { get; set; }
 
     /// <summary>When true, LRCLIB lyrics lookup is offered for a song.</summary>
     bool LyricsEnabled { get; set; }

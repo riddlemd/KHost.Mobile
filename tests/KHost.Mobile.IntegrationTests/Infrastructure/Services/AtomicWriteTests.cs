@@ -5,7 +5,7 @@ using Xunit;
 namespace KHost.Mobile.IntegrationTests.Infrastructure.Services;
 
 // Crash-safety of the durable-JSON writes. The first three go through the real song-list store
-// (session-less → the legacy file) to prove the guarantee holds end to end; the last two call AtomicFile
+// (session-less → the unsuffixed file) to prove the guarantee holds end to end; the last two call AtomicFile
 // directly, because what they assert — an interrupted write, and quarantining a file that isn't there —
 // can't be reached through a store. That is why AtomicFile stays its own type rather than folding into
 // JsonFileStore: you'd need JsonSerializer to throw partway through writing a real payload.
