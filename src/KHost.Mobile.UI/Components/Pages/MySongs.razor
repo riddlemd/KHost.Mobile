@@ -216,14 +216,25 @@
             {
                 <div class="field filters__field filters__field--wide">
                     <label class="field__label">Release year</label>
+                    @* Native selects, like the sort field and the genre picker: the OS wheel is what people
+                       already know. Each end lists only the years actually in the library that its own end may
+                       take, so every entry is a pick you can make and none produces an empty result. *@
                     <div class="range-row">
-                        <button type="button" class="input input--sm range-num range-num--btn"
-                                @onclick="() => OpenYearPicker(high: false)"
-                                aria-haspopup="dialog" aria-label="Earliest year">@YearLo</button>
+                        <select class="input input--sm range-num range-num--select" aria-label="Earliest year"
+                                value="@YearLo" @onchange="OnYearLoInput">
+                            @foreach (var year in YearOptions(YearLo, _yearMin, YearHi))
+                            {
+                                <option value="@year" selected="@(year == YearLo)">@year</option>
+                            }
+                        </select>
                         <span class="range-row__dash">–</span>
-                        <button type="button" class="input input--sm range-num range-num--btn"
-                                @onclick="() => OpenYearPicker(high: true)"
-                                aria-haspopup="dialog" aria-label="Latest year">@YearHi</button>
+                        <select class="input input--sm range-num range-num--select" aria-label="Latest year"
+                                value="@YearHi" @onchange="OnYearHiInput">
+                            @foreach (var year in YearOptions(YearHi, YearLo, _yearMax))
+                            {
+                                <option value="@year" selected="@(year == YearHi)">@year</option>
+                            }
+                        </select>
                     </div>
                     <div class="range">
                         <div class="range__fill" style="left:@Pct(YearLo)%;right:@PctFromRight(YearHi)%"></div>
@@ -237,15 +248,6 @@
         </div>
     </div>
 }
-
-<YearPickerSheet Open="_yearPickerOpen"
-                 Title="@(_yearPickerHigh ? "Latest year" : "Earliest year")"
-                 Years="_libraryYears"
-                 Selected="@(_yearPickerHigh ? YearHi : YearLo)"
-                 Min="@(_yearPickerHigh ? YearLo : _yearMin)"
-                 Max="@(_yearPickerHigh ? _yearMax : YearHi)"
-                 OnPick="PickYear"
-                 OnClose="CloseYearPicker" />
 
 @if (_addOpen)
 {
@@ -596,9 +598,7 @@ else
     private int _yearMin;
     private int _yearMax;
     private int _yearDistinctCount;
-    private IReadOnlyList<int> _libraryYears = [];   // distinct release years, ascending — the year grid's options
-    private bool _yearPickerOpen;
-    private bool _yearPickerHigh;   // which bound the open grid is setting: true = latest, false = earliest
+    private IReadOnlyList<int> _libraryYears = [];   // distinct release years, ascending — the dropdowns' options
 
     // Appended, never reordered: the ordinal is what SaveViewState persists.
     private enum SortColumn { Added, Title, Artist, HowItWent, Enjoyment, LastPerformed }
@@ -737,22 +737,22 @@ else
             _filterYearHi = Math.Max(Math.Clamp(v, _yearMin, _yearMax), YearLo);   // never cross the low handle
     }
 
-    private void OpenYearPicker(bool high)
+    // The library's own years within [min, max] — each dropdown passes the other bound, so neither ever lists a
+    // year it couldn't take. Widening still works from either end: lowering the earliest re-opens the years
+    // below it for the latest, and vice versa.
+    //
+    // The slider is the exception that forces the merge: it steps through every year in the span and can land on
+    // one no song uses, and a select handed a value with no matching <option> silently displays its first option
+    // instead of the value.
+    private IReadOnlyList<int> YearOptions(int selected, int min, int max)
     {
-        _yearPickerHigh = high;
-        _yearPickerOpen = true;
-    }
-
-    private void CloseYearPicker() => _yearPickerOpen = false;
-
-    // The grid already disables years that would cross the other handle; the clamp is a backstop.
-    private void PickYear(int year)
-    {
-        if (_yearPickerHigh)
-            _filterYearHi = Math.Max(Math.Clamp(year, _yearMin, _yearMax), YearLo);
-        else
-            _filterYearLo = Math.Min(Math.Clamp(year, _yearMin, _yearMax), YearHi);
-        _yearPickerOpen = false;
+        var years = _libraryYears.Where(y => y >= min && y <= max).ToList();
+        if (!years.Contains(selected))
+        {
+            years.Add(selected);
+            years.Sort();
+        }
+        return years;
     }
 
     // Handle position as a % of the track, for the selected-range fill. Invariant culture so CSS never gets a comma.
@@ -921,12 +921,7 @@ else
 
     private void OpenFilterSheet() => _filterSheetOpen = true;
 
-    // Takes the year grid with it — it's opened from this sheet, so it must never outlive it.
-    private void CloseFilterSheet()
-    {
-        _filterSheetOpen = false;
-        _yearPickerOpen = false;
-    }
+    private void CloseFilterSheet() => _filterSheetOpen = false;
 
     // Pull-down-to-dismiss from khSheet (the filter sheet already animated off-screen).
     [JSInvokable]

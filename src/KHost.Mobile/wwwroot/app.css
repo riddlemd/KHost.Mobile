@@ -2151,49 +2151,24 @@ body.kh-sheet-open { overflow: hidden; }
     margin-bottom: 0.4rem;
 }
 .range-num { width: 5rem; text-align: center; }
-/* The two bounds are buttons that open the year grid, styled to read as the fields they replaced. */
-.range-num--btn { font-family: inherit; cursor: pointer; }
-.range-num--btn:active { border-color: var(--kh-primary); }
-.range-row__dash { color: var(--kh-text-muted); }
-
-/* ---- Year picker sheet -------------------------------------------------- */
-/* Stacks above the filter sheet (41) that opens it. */
-.year-grid {
-    --kh-year-row: 2.75rem;
-    --kh-year-gap: 0.5rem;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(4.25rem, 1fr));
-    grid-auto-rows: var(--kh-year-row);   /* fixed, so the ten-row cap below is exact */
-    gap: var(--kh-year-gap);
-    margin-top: 1rem;
-    /* Ten rows, then scroll the grid rather than the sheet: a full library runs 60+ years, which
-       would otherwise drive the sheet to its 85vh cap and carry the title off the top with it.
-       sheet.js defers to an inner scroller, so pull-down-to-dismiss still works from the top. */
-    max-height: calc(10 * var(--kh-year-row) + 9 * var(--kh-year-gap));
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-}
-.year-grid__item {
+/* Native <select> per bound. appearance:none drops the OS arrow, so the caret is drawn with two gradients —
+   same treatment as the sort field. text-align-last is what centres the closed value in a select. */
+.range-num--select {
     font-family: inherit;
-    font-size: 0.95rem;
-    font-weight: 700;
-    padding: 0 0.25rem;   /* the row height sets the tile height; the button centres its own label */
-    color: var(--kh-text);
-    background-color: var(--kh-surface-2);
-    border: 1px solid var(--kh-border);
-    border-radius: 0.55rem;
     cursor: pointer;
+    padding-right: 1.6rem;
+    text-align-last: center;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--kh-text-muted) 50%),
+        linear-gradient(135deg, var(--kh-text-muted) 50%, transparent 50%);
+    background-position: calc(100% - 12px) center, calc(100% - 7px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
 }
-.year-grid__item:active { transform: scale(0.96); }
-.year-grid__item.is-sel {
-    background-color: var(--kh-primary);
-    border-color: var(--kh-primary);
-    color: var(--kh-primary-contrast);
-}
-/* Out of range against the other handle — dimmed rather than hidden, so the span stays readable. */
-.year-grid__item:disabled { opacity: 0.35; cursor: default; }
-.year-grid__item:disabled:active { transform: none; }
+.range-num--select:active { border-color: var(--kh-primary); }
+.range-row__dash { color: var(--kh-text-muted); }
 
 /* Two overlaid native range inputs. Only the thumbs are interactive (pointer-events),
    so each handle stays independently grabbable regardless of which input is on top. */
