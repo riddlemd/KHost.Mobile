@@ -25,12 +25,17 @@
                there to take. *@
             <div class="history__empty">No performances recorded.</div>
         }
+        @* Always rendered, even empty: the swipe.js registration binds to this element once per open, so
+           dropping it on the last removal would leave the gesture bound to a detached node after an undo. *@
         <div class="history" @ref="_list">
             @foreach (var (perf, index) in item.Performances
                 .Select((p, i) => (p, i))
                 .OrderByDescending(x => x.p.Date))
             {
-                <div class="history__item" data-perf-id="@perf.Id">
+                @* Keyed like every other swipeable list: swipe.js leaves the removed row translated off-screen
+                   at opacity 0, so an unkeyed diff would hand that same node — inline styles and all — to the
+                   next performance, leaving an invisible full-height gap where the deleted row was. *@
+                <div class="history__item" @key="perf.Id" data-perf-id="@perf.Id">
                     <div class="history__top">
                         <span class="history__date">@perf.Date.ToString(Time.DateTimePattern(Settings.Use24HourTime))</span>
                         <StarRating Value="perf.HowItWent" Tone="hot" Sung="true"
@@ -41,8 +46,13 @@
                 </div>
             }
         </div>
-        @* No assistive-tech gesture maps to swipe or long-press, so both actions are spelled out. *@
-        <div class="history__hint">Swipe a row left to remove it · press and hold a date to change it</div>
+        @if (item.Performances.Count > 0)
+        {
+            @* No assistive-tech gesture maps to swipe or long-press, so both actions are spelled out.
+               The undo pill floats over this line, so the hint goes invisible while one is up — hidden rather
+               than removed, or the sheet would jump by its height as the pill comes and goes. *@
+            <div class="history__hint @(_undone is null ? "" : "is-covered")">Swipe a row left to remove it · press and hold a date to change it</div>
+        }
     }
 </Sheet>
 
@@ -50,7 +60,7 @@
    OUTSIDE the Sheet — .snackbar's z-index only outranks it from here. *@
 @if (_undone is not null)
 {
-    <div class="snackbar" role="status">
+    <div class="snackbar snackbar--over-sheet" role="status">
         <span class="snackbar__text">Removed @_undone.Date.ToString(Time.DatePattern)</span>
         <button class="snackbar__action" @onclick="UndoRemoveAsync">Undo</button>
     </div>

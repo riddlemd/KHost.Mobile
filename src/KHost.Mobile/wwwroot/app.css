@@ -741,6 +741,11 @@ button { text-transform: none; color: inherit; }
     to   { opacity: 1; transform: translate(-50%, 0); }
 }
 .snackbar { transform: translateX(-50%); }
+/* Raised from a sheet, which already covers the tab bar — keeping the bar's clearance lifted the pill 4.5rem
+   INTO the sheet, over a row's note, and over the title once the last row was gone. */
+.snackbar--over-sheet {
+    bottom: calc(max(env(safe-area-inset-bottom), var(--kh-inset-bottom, 0px)) + 0.85rem);
+}
 
 /* Options sheet for the picker, stacked above nothing else — it's opened straight from the FAB. */
 .surprise-sheet__roll { margin-top: 1.15rem; }
@@ -1170,9 +1175,11 @@ body.kh-sheet-open { overflow: hidden; }
 .history__date { cursor: pointer; }
 .history__date::selection { background: transparent; }   /* a long press must not start a text selection */
 .history__item.is-holding { background: var(--kh-surface-2); }
+/* The deep bottom padding is deliberate: this state is only ever reached by removing the last performance, so
+   the undo pill is floating over the sheet's bottom edge — without the room it lands on this one line. */
 .history__empty {
     margin-top: 1rem;
-    padding: 1.1rem 0;
+    padding: 1.1rem 0 3.4rem;
     text-align: center;
     color: var(--kh-text-muted);
     font-size: 0.85rem;
@@ -1183,6 +1190,8 @@ body.kh-sheet-open { overflow: hidden; }
     color: var(--kh-text-muted);
     text-align: center;
 }
+/* Keeps its space so the sheet doesn't resize under the pill floating over it. */
+.history__hint.is-covered { visibility: hidden; }
 .confirm-pop__input { margin: 0.9rem 0 0.2rem; width: 100%; }
 
 /* Delete-confirm popup — a centered modal above the history sheet. In-app dialog

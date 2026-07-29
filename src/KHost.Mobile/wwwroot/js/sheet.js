@@ -44,22 +44,26 @@ window.khSheet = {
             return sheet;
         };
 
-        const begin = (clientY, target) => {
+        const begin = (clientX, clientY, target) => {
             if (onControl(target)) return;
-            s = { y: clientY, top: scrollerFor(target).scrollTop, dy: 0, dragging: false };
-            sheet.style.transition = 'none';
+            s = { x: clientX, y: clientY, top: scrollerFor(target).scrollTop, dy: 0, dragging: false };
         };
 
         // Returns true when it consumed the move (caller should preventDefault for touch).
-        const move = (clientY) => {
+        const move = (clientX, clientY) => {
             if (!s) return false;
+            const dx = clientX - s.x;
             const dy = clientY - s.y;
             if (!s.dragging) {
-                if (Math.abs(dy) < DECIDE_PX) return false;
+                if (Math.abs(dx) < DECIDE_PX && Math.abs(dy) < DECIDE_PX) return false;
+                // A horizontally-dominant gesture belongs to swipe.js's swipe-to-remove, not to us. Without
+                // this the few px of downward drift in a row swipe folded the sheet's top down mid-delete.
+                if (Math.abs(dx) >= Math.abs(dy)) { s = null; return false; }
                 // Take over ONLY for a downward pull that starts at the top; otherwise hand back to
                 // native scrolling (upward, or the sheet's own content is scrolled).
                 if (dy < 0 || s.top > 0) { s = null; return false; }
                 s.dragging = true;
+                sheet.style.transition = 'none';
             }
             s.dy = Math.max(0, dy);   // down only; upward travel is ignored
             sheet.style.transform = `${REST} translateY(${s.dy}px)`;
@@ -83,17 +87,17 @@ window.khSheet = {
 
         // --- Touch (the real target): non-passive so we can cancel native scroll. ---
         sheet.addEventListener('touchstart', (e) => {
-            begin(e.touches[0].clientY, e.target);
+            begin(e.touches[0].clientX, e.touches[0].clientY, e.target);
         }, { passive: true });
         sheet.addEventListener('touchmove', (e) => {
-            if (move(e.touches[0].clientY) && e.cancelable) e.preventDefault();
+            if (move(e.touches[0].clientX, e.touches[0].clientY) && e.cancelable) e.preventDefault();
         }, { passive: false });
         sheet.addEventListener('touchend', end);
         sheet.addEventListener('touchcancel', end);
 
         // --- Mouse fallback (desktop / Windows head). Ignore touch-synthesised pointer events. ---
-        sheet.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') begin(e.clientY, e.target); });
-        sheet.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') move(e.clientY); });
+        sheet.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') begin(e.clientX, e.clientY, e.target); });
+        sheet.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') move(e.clientX, e.clientY); });
         sheet.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') end(); });
     },
 
