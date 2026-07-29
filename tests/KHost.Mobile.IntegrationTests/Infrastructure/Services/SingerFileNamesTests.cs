@@ -21,10 +21,9 @@ public class SingerFileNamesTests
     }
 
     [Fact]
-    public void Legacy_single_user_names_are_stable()
+    public void Unsuffixed_names_are_used_when_no_singer_is_active()
     {
-        // These exact names are what pre-multi-singer installs wrote and what the seed migration looks for.
-        Assert.Equal("song-list.json", SingerFileNames.LegacySongList);
-        Assert.Equal("tonight.json", SingerFileNames.LegacyTonight);
+        Assert.Equal("song-list.json", SingerFileNames.DefaultSongList);
+        Assert.Equal("tonight.json", SingerFileNames.DefaultTonight);
     }
 }

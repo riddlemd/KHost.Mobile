@@ -26,7 +26,7 @@ internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISong
     /// <summary>
     /// The song list is per-singer: it reads/writes the active singer's file (<see cref="IAppSession.ActiveSingerId"/>).
     /// <paramref name="session"/> and <paramref name="logger"/> are optional so the integration tests can <c>new</c>
-    /// the store bare; with no session it falls back to the single legacy file. DI supplies both.
+    /// the store bare; with no session it falls back to the unsuffixed file. DI supplies both.
     /// </summary>
     public JsonFileSongListStore(IAppDataDirectory paths, IAppSession? session = null, ILogger<JsonFileSongListStore>? logger = null, IAtomicFileWriter? writer = null,
         ISingerFileNames? names = null)
@@ -43,7 +43,7 @@ internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISong
     // re-raise Changed — the UI then reloads this singer's list exactly as it would after any mutation.
     private void OnActiveSingerChanged(object? sender, EventArgs e) => RaiseChanged();
 
-    // The given singer's song-list file, or the legacy single-user file when no singer is active (pre-seed, or the
+    // The given singer's song-list file, or the unsuffixed file when no singer is active (pre-seed, or the
     // session-less test path). Takes the singer explicitly — LoadAsync captures ActiveSingerId ONCE and SaveAsync
     // writes to the singer the data was LOADED for, so a singer switch landing mid-operation (between LoadAsync's
     // await and the save) can't write one singer's list into another singer's file.
@@ -53,7 +53,7 @@ internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISong
 
     protected override string PathFor(Guid? singerId)
     {
-        var name = singerId is null ? SingerFileNames.LegacySongList : _names.SongList(singerId.Value);
+        var name = singerId is null ? SingerFileNames.DefaultSongList : _names.SongList(singerId.Value);
         return Path.Combine(_paths.AppDataDirectory, name);
     }
 
@@ -243,7 +243,6 @@ internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISong
                 if (seen is not null && !seen.Add(DedupeKey(item)))
                     continue;   // already in the list, or a duplicate earlier in this batch
 
-                MigrateToPerformances(item);   // fold a legacy-format import (old Cue export) into Performances
                 items.Add(item);
                 added++;
             }
@@ -277,7 +276,6 @@ internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISong
                 if (item is null || string.IsNullOrWhiteSpace(item.Title))
                     continue;
 
-                MigrateToPerformances(item);   // fold a legacy-format profile into Performances if needed
                 var index = items.FindIndex(i => i.Id == item.Id);
                 if (index < 0)
                     items.Add(item);            // new id → append
@@ -306,38 +304,4 @@ internal sealed class JsonFileSongListStore : JsonFileStore<SongListItem>, ISong
     private static string DedupeKey(SongListItem item)
         => $"{item.Title.Trim()}{item.Artist.Trim()}";
 
-    // The one-time migration from the pre-per-performance shape (SungDates + a single Confidence). The base
-    // persists the result when this returns true, so later launches read the already-migrated file.
-    protected override Task<bool> OnLoadedAsync(List<SongListItem> items)
-    {
-        var migrated = false;
-        foreach (var item in items)
-            migrated |= MigrateToPerformances(item);
-        return Task.FromResult(migrated);
-    }
-
-    private static bool MigrateToPerformances(SongListItem item)
-    {
-        if (item.Performances.Count > 0)
-            return false;
-        if (item.SungDates.Count == 0 && item.Confidence == 0)
-            return false;
-
-        var rating = Math.Clamp(item.Confidence, 0, 5);
-        if (item.SungDates.Count > 0)
-        {
-            foreach (var date in item.SungDates)
-                item.Performances.Add(new Performance { Date = date, HowItWent = rating });
-        }
-        else
-        {
-            // Rated with no recorded date (shouldn't normally happen) — anchor a single performance at AddedAt.
-            item.Performances.Add(new Performance { Date = item.AddedAt, HowItWent = rating });
-        }
-
-        item.Status = item.Performances.Count > 0 ? SongListItemStatus.Sang : SongListItemStatus.WantToSing;
-        item.SungDates = [];
-        item.Confidence = 0;
-        return true;
-    }
 }

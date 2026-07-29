@@ -15,8 +15,6 @@ public sealed class MauiAppSettings : IAppSettings
     private const string YouTubeSearchKey = "settings.youtube_search";
     private const string SpotifySearchKey = "settings.spotify_search";
     private const string KaraFunKey = "settings.karafun";
-    private const string KaraFunVenueIdKey = "settings.karafun_venue_id";
-    private const string VenuesSeededKey = "settings.venues_seeded";
     private const string LocationAutoDetectKey = "settings.location_autodetect";
     private const string VenueRecheckMinutesKey = "settings.venue_recheck_minutes";
     private const string LyricsKey = "settings.lyrics";
@@ -91,20 +89,6 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(KaraFunKey, true);
         set => Preferences.Default.Set(KaraFunKey, value);
-    }
-
-    // Empty string default means "no venue set yet".
-    public string KaraFunVenueId
-    {
-        get => Preferences.Default.Get(KaraFunVenueIdKey, string.Empty);
-        set => Preferences.Default.Set(KaraFunVenueIdKey, value);
-    }
-
-    // Defaults to false (not true like the feature flags): a fresh install hasn't run the legacy-ID migration yet.
-    public bool VenuesSeeded
-    {
-        get => Preferences.Default.Get(VenuesSeededKey, false);
-        set => Preferences.Default.Set(VenuesSeededKey, value);
     }
 
     public bool LocationAutoDetect

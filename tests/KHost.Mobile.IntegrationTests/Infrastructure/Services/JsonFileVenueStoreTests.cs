@@ -157,7 +157,7 @@ public sealed class JsonFileVenueStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task A_legacy_file_without_ShowInSwitcher_defaults_it_to_true()
+    public async Task A_file_without_ShowInSwitcher_defaults_it_to_true()
     {
         // A venue file written before the field existed must keep the venue listed, not silently hide it.
         await File.WriteAllTextAsync(

@@ -87,7 +87,7 @@ public sealed class PerSingerStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task With_no_session_the_store_uses_the_legacy_file()
+    public async Task With_no_session_the_store_uses_the_unsuffixed_file()
     {
         // The session-less path (integration tests / pre-seed) must still read/write the original single file.
         var store = new JsonFileSongListStore(_dir);

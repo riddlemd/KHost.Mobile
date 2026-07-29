@@ -67,13 +67,6 @@ public abstract class JsonFileStore<TItem, TCache> where TCache : class
     /// </summary>
     protected virtual Guid? CurrentKey => null;
 
-    /// <summary>
-    /// Hook run once per load, on the deserialized items and <b>before</b> <see cref="Project"/> — so a mutation
-    /// here reaches the cache. Return true to have the result written straight back; used for one-time on-disk
-    /// migrations. Default does nothing.
-    /// </summary>
-    protected virtual Task<bool> OnLoadedAsync(List<TItem> items) => Task.FromResult(false);
-
     /// <inheritdoc cref="IVenueStore.Changed" />
     public event EventHandler? Changed;
 
@@ -126,11 +119,7 @@ public abstract class JsonFileStore<TItem, TCache> where TCache : class
             }
         }
 
-        var migrated = await OnLoadedAsync(items);
         _cache = Project(items);
-        if (migrated)
-            await SaveAsync(_cache);
-
         return _cache;
     }
 

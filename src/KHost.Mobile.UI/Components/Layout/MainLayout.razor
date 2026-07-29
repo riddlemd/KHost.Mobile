@@ -97,7 +97,7 @@ else
             notifyStateChanged: StateHasChanged);
     }
 
-    // Singer bootstrap: EnsureSeededAsync also seeds the default singer and migrates any legacy single-user files
+    // Singer bootstrap: EnsureSeededAsync seeds the default singer on a fresh install
     // on first run. The active singer must be set before the shell (and its personal pages) render.
     protected override async Task OnInitializedAsync()
     {

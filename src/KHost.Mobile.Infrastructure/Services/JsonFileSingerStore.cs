@@ -148,15 +148,12 @@ internal sealed class JsonFileSingerStore : JsonFileStore<Singer>, ISingerStore
             if (singers.Count > 0)
                 return Ordered(singers)[0];
 
-            // Empty roster → first launch with the feature (or a fresh install). Create the default singer and fold
-            // any pre-existing single-user list into it, so an upgrader keeps their songs as this singer's list.
+            // Empty roster → a fresh install. Create the default singer to own this device's list.
             active = new Singer { Name = "Me", Color = SingerColors.Default, Order = 0 };
-            MigrateLegacyFile(SingerFileNames.LegacySongList, _names.SongList(active.Id));
-            MigrateLegacyFile(SingerFileNames.LegacyTonight, _names.Tonight(active.Id));
             singers.Add(active);
             await SaveAsync(singers);
             seeded = true;
-            Log.LogInformation("Seeded the default singer {SingerId} and migrated any legacy single-user files", active.Id);
+            Log.LogInformation("Seeded the default singer {SingerId}", active.Id);
         }
         finally
         {
@@ -166,31 +163,6 @@ internal sealed class JsonFileSingerStore : JsonFileStore<Singer>, ISingerStore
         if (seeded)
             RaiseChanged();
         return active;
-    }
-
-    // Move a legacy single-user file into a singer's namespaced file, once. Only runs when the source exists and the
-    // destination doesn't (so it never clobbers an already-migrated file). Best-effort: a failed move just means the
-    // upgrader starts that singer empty rather than crashing the seed. Callers hold Gate.
-    private void MigrateLegacyFile(string legacyName, string singerName)
-    {
-        var src = Path.Combine(_paths.AppDataDirectory, legacyName);
-        var dst = Path.Combine(_paths.AppDataDirectory, singerName);
-        if (!File.Exists(src) || File.Exists(dst))
-            return;
-
-        try
-        {
-            File.Move(src, dst);
-            Log.LogInformation("Migrated legacy {Legacy} into {Singer}", legacyName, singerName);
-        }
-        catch (IOException ex)
-        {
-            Log.LogWarning(ex, "Couldn't migrate legacy {Legacy}; the singer will start empty", legacyName);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            Log.LogWarning(ex, "Couldn't migrate legacy {Legacy}; the singer will start empty", legacyName);
-        }
     }
 
     // Best-effort delete of a removed singer's data file. A locked/absent file is harmless — don't fail the remove.

@@ -431,15 +431,6 @@
                         await FlashAsync("That profile file couldn't be read.");
                     break;
 
-                case ProfileFileKind.LegacySongList:
-                    // An old songs-only export → merge straight into the current singer (fresh ids, as before).
-                    var songs = Codec.ParseLegacySongs(text) ?? [];
-                    foreach (var s in songs)
-                        s.Id = Guid.NewGuid();
-                    var added = await Store.ImportAsync(songs, skipDuplicates: true);
-                    await FlashAsync($"Imported {added} song{(added == 1 ? "" : "s")} from file");
-                    break;
-
                 default:
                     await FlashAsync("That file isn't a KHost Cue profile.");
                     break;

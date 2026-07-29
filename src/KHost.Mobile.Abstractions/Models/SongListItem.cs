@@ -28,7 +28,7 @@ public sealed class Performance
     public DateTimeOffset Date { get; set; }
 
     /// <summary>"How it went" for this specific sing: 1 (shaky) to 5 (nailed it). 0 means logged-but-not-yet-rated
-    /// (the singer skipped the rating, or it came from a pre-per-performance migration) and is excluded from the average.</summary>
+    /// (the singer skipped the rating) and is excluded from the average.</summary>
     public int HowItWent { get; set; }
 
     /// <summary>An optional note about this specific performance (e.g. "crowd loved it", "forgot the bridge"). Null when unset.</summary>
@@ -80,8 +80,7 @@ public sealed class SongListItem
 
     /// <summary>Every time the song was sung, each with its own "how it went" rating. This is the sung-state source of
     /// truth: <see cref="Status"/> is <see cref="SongListItemStatus.Sang"/> exactly when this list is non-empty. Empty
-    /// by default. Files written before per-performance ratings existed are migrated into this list on load (see
-    /// <see cref="SungDates"/>/<see cref="Confidence"/>).</summary>
+    /// by default.</summary>
     public List<Performance> Performances { get; set; } = [];
 
     /// <summary>The song's "how it went" star rating: the average of the rated performances (<see cref="Performance.HowItWent"/>
@@ -100,13 +99,7 @@ public sealed class SongListItem
     [JsonIgnore]
     public DateTimeOffset? LastSungAt => Performances.Count > 0 ? Performances.Max(p => p.Date) : null;
 
-    /// <summary>LEGACY (read/migrate only). Pre-per-performance list of sung timestamps. New writes leave this empty;
-    /// the store migrates any values into <see cref="Performances"/> on load. Kept only so old files still deserialize.</summary>
-    public List<DateTimeOffset> SungDates { get; set; } = [];
 
-    /// <summary>LEGACY (read/migrate only). The old single "how it went" rating (0-5). Folded into each migrated
-    /// <see cref="Performance.HowItWent"/> on load, then left at 0. Kept only so old files still deserialize.</summary>
-    public int Confidence { get; set; }
 
     /// <summary>Reserved external-catalogue id — always null today. Persisted, so keep the property for schema stability.</summary>
     public Guid? LibrarySongId { get; set; }
