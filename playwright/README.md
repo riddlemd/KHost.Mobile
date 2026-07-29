@@ -40,9 +40,9 @@ Requires Node 20+ and the Android platform tools (`adb`) on `PATH`. The emulator
 ## Attach
 
 ```bash
-# 1. App running and foregrounded, screen awake:
+# 1. App running and foregrounded, screen awake (am start, never `adb shell monkey` — see Gotchas):
 adb shell input keyevent KEYCODE_WAKEUP
-adb shell monkey -p khost.mobile -c android.intent.category.LAUNCHER 1
+adb shell am start -n "$(adb shell cmd package resolve-activity --brief khost.mobile | tail -1)"
 
 # 2. Forward the WebView's devtools socket to tcp:9333:
 PID=$(adb shell pidof khost.mobile)

@@ -48,8 +48,16 @@ async function swipeLeft(selector) {
 }
 
 let added = false;
+let sort = null;
 try {
     await home();
+
+    // Adding a song flips the persisted sort to "Added" so the new row is visible — capture the
+    // real state first so cleanup can put it back.
+    sort = {
+        column: await page.locator('#song-sort').inputValue(),
+        dir: (await page.locator('.sort-bar__dir').innerText()).trim(),
+    };
 
     // --- add the misspelled song ---
     await page.click('.mysongs-fab:not(.mysongs-fab--surprise)', TAP);
@@ -97,6 +105,14 @@ try {
         await search('Rapsody');
         console.log(`  cleanup: ${await cards()} card(s) matching "Rapsody" remain (want 0)`);
         await search('');
+        if (sort) {
+            await page.selectOption('#song-sort', sort.column);
+            await pause(600);
+            // Picking a column resets the direction, so restore it separately.
+            const dir = (await page.locator('.sort-bar__dir').innerText()).trim();
+            if (dir !== sort.dir) { await page.locator('.sort-bar__dir').click(TAP); await pause(600); }
+            console.log(`  cleanup: sort restored to ${sort.column} ${sort.dir}`);
+        }
     } catch (e) {
         console.log('  !! CLEANUP FAILED — remove the song by hand:', e.message);
     }
