@@ -72,6 +72,11 @@ internal sealed class JsonFileSingerStore : JsonFileStore<Singer>, ISingerStore
         try
         {
             var singers = await LoadAsync();
+            // An id arriving from outside can collide — an imported profile carries the id it was exported with.
+            // Two singers sharing an id would share a data file and be indistinguishable in the roster, so the
+            // newcomer gets a fresh one. Adding is never an overwrite.
+            if (singers.Any(s => s.Id == singer.Id))
+                singer.Id = Guid.NewGuid();
             // Append: sit past the current max order so a new singer lands at the end of the roster/switcher.
             singer.Order = singers.Count == 0 ? 0 : singers.Max(s => s.Order) + 1;
             singers.Add(singer);
