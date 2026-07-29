@@ -460,10 +460,10 @@
         try
         {
             var singer = profile.Singer;
-            if (await Singers.GetAsync(singer.Id) is null)
-                await Singers.AddAsync(singer);      // AddAsync keeps a provided (non-blank) id
-            else
-                await Singers.UpdateAsync(singer);
+            // Always an add, never an update: a profile exported from this device carries the id it had, and
+            // updating that singer instead would silently rewrite them. AddAsync re-keys a colliding id, so a
+            // restore after a reinstall (empty roster, no collision) still keeps the original.
+            await Singers.AddAsync(singer);
 
             Session.SetActiveSinger(singer.Id);      // the song store now targets this singer's file
             Settings.LastActiveSingerId = singer.Id.ToString();

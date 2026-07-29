@@ -15,6 +15,35 @@ public sealed class JsonFileSingerStoreTests : IDisposable
     public void Dispose() => _dir.Dispose();
 
     [Fact]
+    public async Task AddAsync_re_keys_an_id_that_is_already_taken()
+    {
+        // An imported profile carries the id it was exported with. Keeping it would give two singers one id —
+        // and one data file — so the newcomer is re-keyed instead. Adding must never overwrite.
+        var store = NewStore();
+        var existing = await store.AddAsync(new Singer { Name = "Me" });
+
+        var imported = await store.AddAsync(new Singer { Id = existing.Id, Name = "Michael" });
+
+        Assert.NotEqual(existing.Id, imported.Id);
+        var all = await store.GetAllAsync();
+        Assert.Equal(2, all.Count);
+        Assert.Equal("Me", all.Single(s => s.Id == existing.Id).Name);      // untouched
+        Assert.Equal("Michael", all.Single(s => s.Id == imported.Id).Name);
+    }
+
+    [Fact]
+    public async Task AddAsync_keeps_a_free_id_so_a_restore_stays_itself()
+    {
+        // The reinstall path: an empty roster means no collision, so the exported identity survives intact.
+        var store = NewStore();
+        var id = Guid.NewGuid();
+
+        var restored = await store.AddAsync(new Singer { Id = id, Name = "Michael" });
+
+        Assert.Equal(id, restored.Id);
+    }
+
+    [Fact]
     public async Task AddAsync_assigns_an_id_and_appends_order()
     {
         var store = NewStore();
