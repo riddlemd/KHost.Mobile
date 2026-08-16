@@ -136,14 +136,14 @@
         {
             _selfRef ??= DotNetObjectReference.Create(this);
             // tapMethod is explicitly null: a history row has nothing to open, and the default would call
-            // OpenDetail with a performance id.
+            // OpenDetailAsync with a performance id.
             await JS.InvokeVoidAsync("khSwipe.register", _list, _selfRef,
                 new
                 {
                     idAttr = "data-perf-id",
                     swipingClass = "history__item--swiping",
                     tapMethod = (string?)null,
-                    removeMethod = nameof(RemoveById),
+                    removeMethod = nameof(RemoveByIdAsync),
                     holdMethod = nameof(EditDateById),
                 });
             _bound = true;
@@ -169,7 +169,7 @@
 
     /// <summary>Swipe-left from swipe.js — removes it and offers an undo.</summary>
     [JSInvokable]
-    public async Task RemoveById(string id)
+    public async Task RemoveByIdAsync(string id)
     {
         var index = IndexOf(id);
         if (index < 0 || Item is null)
@@ -180,13 +180,13 @@
         _undoneIndex = index;
         _undoCts?.Cancel();
         _undoCts = new CancellationTokenSource();
-        _ = DismissUndoAfterDelay(_undoCts.Token);
+        _ = DismissUndoAfterDelayAsync(_undoCts.Token);
 
         await OnRemove.InvokeAsync(index);
         StateHasChanged();
     }
 
-    private async Task DismissUndoAfterDelay(CancellationToken token)
+    private async Task DismissUndoAfterDelayAsync(CancellationToken token)
     {
         try { await Task.Delay(UndoWindowMs, token); }
         catch (TaskCanceledException) { return; }   // superseded by another removal, an undo, or a close

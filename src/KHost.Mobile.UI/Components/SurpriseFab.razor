@@ -34,16 +34,16 @@
         if (_bound) return;
         _selfRef ??= DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync("khPressHold.register", _el, _selfRef,
-            new { tapMethod = nameof(Tap), holdMethod = nameof(Hold) });
+            new { tapMethod = nameof(TapAsync), holdMethod = nameof(HoldAsync) });
         _bound = true;
     }
 
     [JSInvokable]
-    public Task Tap() => OnRoll.InvokeAsync();
+    public Task TapAsync() => OnRoll.InvokeAsync();
 
     /// <summary>Confirms the hold with a haptic tick — the only cue that a hold registered.</summary>
     [JSInvokable]
-    public Task Hold()
+    public Task HoldAsync()
     {
         Haptics.LongPress();
         return OnOptions.InvokeAsync();

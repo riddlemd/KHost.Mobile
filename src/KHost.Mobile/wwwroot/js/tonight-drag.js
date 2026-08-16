@@ -73,7 +73,7 @@ window.khTonight = {
                     .map(r => r.getAttribute('data-song-id'));
                 ids.splice(d.targetIndex, 0, d.row.getAttribute('data-song-id'));
                 cleanup();
-                dotNetRef.invokeMethodAsync('ReorderTonight', ids);
+                dotNetRef.invokeMethodAsync('ReorderTonightAsync', ids);
             } else {
                 cleanup();   // dropped in place — just snap everything back
             }

@@ -316,7 +316,7 @@
 
     // Tap (a stationary pointerup) from swipe.js opens the row's detail sheet; called from JS, so render explicitly.
     [JSInvokable]
-    public Task OpenDetailById(string id)
+    public Task OpenDetailByIdAsync(string id)
     {
         if (Guid.TryParse(id, out var guid))
         {
@@ -333,7 +333,7 @@
     // Press-and-hold from swipe.js sets the row's venue active — the haptic tick is the only signal the hold
     // registered before the row re-renders. Called from JS, so render explicitly.
     [JSInvokable]
-    public Task SetActiveById(string id)
+    public Task SetActiveByIdAsync(string id)
     {
         if (Guid.TryParse(id, out var guid))
         {
@@ -350,7 +350,7 @@
 
     // A commit-swipe from swipe.js removes the venue immediately and offers a few-second undo (mirrors My Songs).
     [JSInvokable]
-    public async Task RemoveById(string id)
+    public async Task RemoveByIdAsync(string id)
     {
         if (!Guid.TryParse(id, out var guid))
             return;
@@ -373,10 +373,10 @@
         _undoCts = new CancellationTokenSource();
         _undoVenue = venue;
         _undoWasActive = wasActive;
-        _ = DismissUndoAfterDelay(_undoCts.Token);
+        _ = DismissUndoAfterDelayAsync(_undoCts.Token);
     }
 
-    private async Task DismissUndoAfterDelay(CancellationToken token)
+    private async Task DismissUndoAfterDelayAsync(CancellationToken token)
     {
         try { await Task.Delay(UndoWindowMs, token); }
         catch (TaskCanceledException) { return; }   // superseded by a newer removal or an Undo
@@ -409,7 +409,7 @@
         {
             _selfRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("khSwipe.register", _swipeRoot, _selfRef,
-                new { idAttr = "data-venue-id", swipingClass = "venue-row--swiping", tapMethod = "OpenDetailById", removeMethod = "RemoveById", holdMethod = "SetActiveById" });
+                new { idAttr = "data-venue-id", swipingClass = "venue-row--swiping", tapMethod = nameof(OpenDetailByIdAsync), removeMethod = nameof(RemoveByIdAsync), holdMethod = nameof(SetActiveByIdAsync) });
             _swipeBound = true;
         }
         else if (!listShown)

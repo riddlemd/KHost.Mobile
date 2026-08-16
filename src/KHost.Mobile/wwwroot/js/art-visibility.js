@@ -15,7 +15,7 @@ window.khArtVisibility = {
     // Idempotent: safe to call on every render — later calls pick up elements added since.
     register(dotNetRef, options) {
         this._ref = dotNetRef;
-        this._method = options?.method ?? 'VisibleArtChanged';
+        this._method = options?.method ?? 'VisibleArtChangedAsync';
 
         if (!this._observer) {
             this._observer = new IntersectionObserver((entries) => {

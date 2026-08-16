@@ -15,7 +15,7 @@
         <div class="song-card song-card--roll @(art.HasArt ? "song-card--art" : "") @(art.Loading ? "kh-art-loading" : "")"
              data-art-song="@item.Id" style="@art.Style"
              role="button" tabindex="0" aria-label="Open @item.Title"
-             @onclick="OnOpen" @onkeydown="OpenOnEnterOrSpace">
+             @onclick="OnOpen" @onkeydown="OpenOnEnterOrSpaceAsync">
             <div class="song-card__title">@item.Title</div>
             @if (!string.IsNullOrWhiteSpace(item.Artist))
             {
@@ -107,6 +107,6 @@
     [Parameter] public EventCallback OnClose { get; set; }
 
     // The card is a div playing the part of a button, so it has to answer the keys a real one would.
-    private Task OpenOnEnterOrSpace(KeyboardEventArgs e)
+    private Task OpenOnEnterOrSpaceAsync(KeyboardEventArgs e)
         => e.Key is "Enter" or " " ? OnOpen.InvokeAsync() : Task.CompletedTask;
 }

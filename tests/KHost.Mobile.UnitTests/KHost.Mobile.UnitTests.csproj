@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\src\KHost.Mobile.Common\KHost.Mobile.Common.csproj" />
     <ProjectReference Include="..\..\src\KHost.Mobile.Infrastructure\KHost.Mobile.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\KHost.Mobile.Clients\KHost.Mobile.Clients.csproj" />
+    <ProjectReference Include="..\..\src\KHost.Mobile.UI\KHost.Mobile.UI.csproj" />
   </ItemGroup>
 
 </Project>

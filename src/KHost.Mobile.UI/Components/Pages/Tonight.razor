@@ -351,7 +351,7 @@ else
 
     // Drag-to-reorder callback from khTonight: the new top-to-bottom order of song ids.
     [JSInvokable]
-    public async Task ReorderTonight(string[] orderedIds)
+    public async Task ReorderTonightAsync(string[] orderedIds)
     {
         var guids = orderedIds
             .Select(s => Guid.TryParse(s, out var g) ? g : (Guid?)null)

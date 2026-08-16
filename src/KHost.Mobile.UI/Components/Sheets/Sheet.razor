@@ -60,7 +60,7 @@
         {
             _selfRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("khSheet.register", _el, _selfRef,
-                new { closeMethod = nameof(CloseFromSwipe), closePx = ClosePx });
+                new { closeMethod = nameof(CloseFromSwipeAsync), closePx = ClosePx });
             _bound = true;
         }
         else if (!Open)
@@ -75,7 +75,7 @@
 
     // The swipe already animated the panel off-screen; just report it.
     [JSInvokable]
-    public async Task CloseFromSwipe()
+    public async Task CloseFromSwipeAsync()
     {
         await (OnSwipeDismiss.HasDelegate ? OnSwipeDismiss : OnClose).InvokeAsync();
         StateHasChanged();

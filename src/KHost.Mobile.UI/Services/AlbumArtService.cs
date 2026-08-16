@@ -158,7 +158,7 @@ public sealed class AlbumArtService(
         _selfRef ??= DotNetObjectReference.Create(this);
         try
         {
-            await js.InvokeVoidAsync("khArtVisibility.register", _selfRef, new { method = nameof(VisibleArtChanged) });
+            await js.InvokeVoidAsync("khArtVisibility.register", _selfRef, new { method = nameof(VisibleArtChangedAsync) });
         }
         catch (JSException ex)
         {
@@ -168,7 +168,7 @@ public sealed class AlbumArtService(
 
     /// <summary>Called by the viewport observer with the ids currently on screen.</summary>
     [JSInvokable]
-    public Task VisibleArtChanged(string[] songIds)
+    public Task VisibleArtChangedAsync(string[] songIds)
     {
         var ids = new List<Guid>(songIds.Length);
         foreach (var id in songIds)

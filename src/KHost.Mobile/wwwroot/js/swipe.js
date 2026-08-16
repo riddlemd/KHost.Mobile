@@ -12,8 +12,8 @@ window.khSwipe = {
         const swipingClass = opts.swipingClass || 'song-row--swiping';
         // An explicit null opts out of the tap entirely (the sung-history rows have nothing to open); omitting
         // the key keeps the original song-table default.
-        const tapMethod = Object.hasOwn(opts, 'tapMethod') ? opts.tapMethod : 'OpenDetail';
-        const removeMethod = opts.removeMethod || 'RemoveById';
+        const tapMethod = Object.hasOwn(opts, 'tapMethod') ? opts.tapMethod : 'OpenDetailAsync';
+        const removeMethod = opts.removeMethod || 'RemoveByIdAsync';
         const holdMethod = opts.holdMethod || null;
         const holdingClass = opts.holdingClass || 'is-holding';
         const swipeEnabled = opts.swipeEnabled !== false;

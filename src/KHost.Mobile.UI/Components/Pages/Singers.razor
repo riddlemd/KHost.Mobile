@@ -102,14 +102,14 @@
         {
             _selfRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("khSwipe.register", _gestureRoot, _selfRef,
-                new { idAttr = "data-singer-id", tapMethod = "OpenEditById", holdMethod = "SetActiveById", swipeEnabled = false });
+                new { idAttr = "data-singer-id", tapMethod = nameof(OpenEditByIdAsync), holdMethod = nameof(SetActiveByIdAsync), swipeEnabled = false });
             _gesturesBound = true;
         }
     }
 
     // Tap (a stationary pointerup) from swipe.js. Called from JS, so render explicitly.
     [JSInvokable]
-    public Task OpenEditById(string id)
+    public Task OpenEditByIdAsync(string id)
     {
         if (Guid.TryParse(id, out var guid))
         {
@@ -126,7 +126,7 @@
     // Press-and-hold from swipe.js switches singer — the haptic tick is what confirms the hold took, since the
     // row's re-render is the only other feedback.
     [JSInvokable]
-    public Task SetActiveById(string id)
+    public Task SetActiveByIdAsync(string id)
     {
         if (Guid.TryParse(id, out var guid))
         {

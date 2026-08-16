@@ -1221,7 +1221,7 @@ else
     }
 
     [JSInvokable]
-    public async Task RemoveById(string id)
+    public async Task RemoveByIdAsync(string id)
     {
         if (!Guid.TryParse(id, out var guid))
             return;
@@ -1260,11 +1260,11 @@ else
         _undoCts?.Cancel();
         _undoCts = new CancellationTokenSource();
         _undoItem = item;
-        _ = DismissUndoAfterDelay(_undoCts.Token);
+        _ = DismissUndoAfterDelayAsync(_undoCts.Token);
         StateHasChanged();
     }
 
-    private async Task DismissUndoAfterDelay(CancellationToken token)
+    private async Task DismissUndoAfterDelayAsync(CancellationToken token)
     {
         try { await Task.Delay(UndoWindowMs, token); }
         catch (TaskCanceledException) { return; }   // superseded by a newer removal or an Undo
@@ -1336,7 +1336,7 @@ else
         if (_rollPick is not { } pick)
             return Task.CompletedTask;
         _rollPick = null;
-        return OpenDetail(pick.Id.ToString());
+        return OpenDetailAsync(pick.Id.ToString());
     }
 
     // The sheet stays open showing it as added, so a reroll can queue several in a row without reopening.
@@ -1349,7 +1349,7 @@ else
 
     // A tap on a row (routed from swipe.js) opens that song's detail sheet.
     [JSInvokable]
-    public Task OpenDetail(string id)
+    public Task OpenDetailAsync(string id)
     {
         if (Guid.TryParse(id, out var guid))
         {
