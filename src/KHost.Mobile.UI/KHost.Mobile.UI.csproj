@@ -11,6 +11,23 @@
         <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     </PropertyGroup>
 
+    <!-- The code-behind analogue of Components/_Imports.razor: a .razor.cs is a normal C# file and inherits none
+         of the markup's @using, so the same set is global here rather than repeated in 30-odd partials. -->
+    <ItemGroup>
+        <Using Include="KHost.Mobile.Abstractions.Models" />
+        <Using Include="KHost.Mobile.Abstractions.Services" />
+        <Using Include="KHost.Mobile.Infrastructure.Services" />
+        <Using Include="KHost.Mobile.UI.Components" />
+        <Using Include="KHost.Mobile.UI.Components.Icons" />
+        <Using Include="KHost.Mobile.UI.Components.Layout" />
+        <Using Include="KHost.Mobile.UI.Components.Sheets" />
+        <Using Include="KHost.Mobile.UI.Services" />
+        <Using Include="Microsoft.AspNetCore.Components" />
+        <Using Include="Microsoft.AspNetCore.Components.Routing" />
+        <Using Include="Microsoft.AspNetCore.Components.Web" />
+        <Using Include="Microsoft.JSInterop" />
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />

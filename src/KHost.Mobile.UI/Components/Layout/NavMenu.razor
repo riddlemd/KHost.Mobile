@@ -1,7 +1,6 @@
 @using Microsoft.Extensions.Logging
 @inject ITonightStore Tonight
 @inject ILogger<NavMenu> Log
-@implements IDisposable
 
 @* Bottom tab bar. Only rendered when Tonight is enabled (MainLayout gates it), so both tabs are always live here. *@
 <nav class="app-nav">
@@ -20,34 +19,3 @@
         My Songs
     </NavLink>
 </nav>
-
-@code {
-    private int _remaining;
-
-    protected override async Task OnInitializedAsync()
-    {
-        Tonight.Changed += OnTonightChanged;
-        await RefreshAsync();
-    }
-
-    private void OnTonightChanged(object? sender, EventArgs e) => _ = RefreshOnUiAsync();
-
-    private async Task RefreshOnUiAsync()
-    {
-        try { await InvokeAsync(RefreshAsync); }
-        catch (Exception ex)
-        {
-            // best-effort: a stale badge is harmless
-            Log.LogWarning(ex, "Tonight badge refresh failed");
-        }
-    }
-
-    private async Task RefreshAsync()
-    {
-        var set = await Tonight.GetAllAsync();
-        _remaining = set.Count(e => !e.Completed);
-        await InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose() => Tonight.Changed -= OnTonightChanged;
-}
