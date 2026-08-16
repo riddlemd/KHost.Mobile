@@ -11,8 +11,7 @@
         <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     </PropertyGroup>
 
-    <!-- The code-behind analogue of Components/_Imports.razor: a .razor.cs is a normal C# file and inherits none
-         of the markup's @using, so the same set is global here rather than repeated in 30-odd partials. -->
+    <!-- Mirrors Components/_Imports.razor, which a .razor.cs does NOT inherit — add a shared namespace to both. -->
     <ItemGroup>
         <Using Include="KHost.Mobile.Abstractions.Models" />
         <Using Include="KHost.Mobile.Abstractions.Services" />

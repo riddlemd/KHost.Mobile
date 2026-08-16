@@ -6,9 +6,8 @@ using Xunit;
 
 namespace KHost.Mobile.UnitTests;
 
-// .editorconfig's async_methods_end_in_async rule matches on `required_modifiers = async`, and naming rules have
-// no return-type predicate — so a Task-returning method written without the `async` keyword (a passthrough like
-// `Task Foo() => Bar.InvokeAsync();`) is invisible to it. That is the whole gap this test covers.
+// Naming rules have no return-type predicate, so .editorconfig's async_methods_end_in_async keys off the `async`
+// keyword and never sees a passthrough like `Task Foo() => Bar.InvokeAsync();`.
 public sealed class AsyncNamingConventionTests
 {
     private static readonly Assembly[] Assemblies =
@@ -27,9 +26,11 @@ public sealed class AsyncNamingConventionTests
         var offenders = Assemblies
             .SelectMany(a => a.GetTypes())
             .Where(t => !IsCompilerGenerated(t))
+            // DeclaredOnly or every inherited ComponentBase/framework method gets flagged too.
             .SelectMany(t => t.GetMethods(
                 BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static |
                 BindingFlags.DeclaredOnly))
+            // '<' catches local functions and async state machines, which reflection surfaces as real methods.
             .Where(m => !m.IsSpecialName && !IsCompilerGenerated(m) && !m.Name.Contains('<'))
             .Where(ReturnsTask)
             .Where(m => !m.Name.EndsWith("Async", StringComparison.Ordinal))
