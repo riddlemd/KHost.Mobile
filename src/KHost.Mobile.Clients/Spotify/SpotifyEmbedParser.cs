@@ -33,7 +33,20 @@ public static partial class SpotifyEmbedParser
             throw new SpotifyImportException(
                 "Couldn't read the playlist — Spotify may have changed its embed format.");
 
-        using var doc = JsonDocument.Parse(match.Groups[1].Value);
+        // A matched-but-unparseable blob (truncated response, changed shape) is the same failure to a caller as a
+        // missing one — it must not escape as a raw JsonException past the import UI's catch.
+        JsonDocument doc;
+        try
+        {
+            doc = JsonDocument.Parse(match.Groups[1].Value);
+        }
+        catch (JsonException ex)
+        {
+            throw new SpotifyImportException(
+                "Couldn't read the playlist — Spotify may have changed its embed format.", ex);
+        }
+
+        using var _ = doc;
 
         if (!TryFindArray(doc.RootElement, "trackList", out var trackList))
             throw new SpotifyImportException("No tracks were found for that playlist.");

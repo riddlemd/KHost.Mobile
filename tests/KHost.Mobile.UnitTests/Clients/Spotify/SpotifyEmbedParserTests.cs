@@ -18,6 +18,16 @@ public class SpotifyEmbedParserTests
          + "</script>\n</body></html>";
 
     [Fact]
+    public void A_truncated_data_blob_fails_as_an_import_error_not_a_raw_json_error()
+    {
+        // The contract is that a bad page shape surfaces as SpotifyImportException — the import UI catches that
+        // and nothing else, so a raw JsonException escapes to the user as an unhandled crash.
+        const string html = """<script id="__NEXT_DATA__" type="application/json">{"props":{"trac</script>""";
+
+        Assert.Throws<SpotifyImportException>(() => SpotifyEmbedParser.Parse(html));
+    }
+
+    [Fact]
     public void Parse_reads_name_title_artist_and_track_id()
     {
         var html = HtmlWith("""
