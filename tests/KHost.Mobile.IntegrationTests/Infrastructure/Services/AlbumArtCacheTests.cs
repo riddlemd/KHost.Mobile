@@ -82,7 +82,7 @@ public sealed class AlbumArtCacheTests : IDisposable
         await cache.ClearAsync();
 
         Assert.Equal(0, await cache.CountAsync());
-        Assert.True(changed >= 1);
+        Assert.Equal(1, changed);   // once for the clear, not once per deleted file
     }
 
     [Fact]
@@ -123,6 +123,32 @@ public sealed class AlbumArtCacheTests : IDisposable
     }
 
     // ---- test doubles --------------------------------------------------------------------------
+
+    [Fact]
+    public async Task An_empty_body_is_not_cached_as_a_permanent_hit()
+    {
+        // "Is it cached?" is File.Exists, so writing a 0-byte file would count as a hit forever and the card
+        // would render broken without ever re-downloading.
+        var cache = NewCache(new StubHandler([]));
+
+        Assert.Null(await cache.OpenArtStreamAsync("https://example.com/empty.jpg"));
+        Assert.Equal(0, await cache.CountAsync());
+    }
+
+    [Fact]
+    public async Task Cancellation_propagates_rather_than_degrading_to_no_art()
+    {
+        // Every other failure degrades to null; a cancelled navigation must stay distinguishable from a genuine
+        // "this song has no cover", or the caller can't tell whether retrying is worth it.
+        var cache = NewCache(new StubHandler([1, 2, 3, 4]));
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => cache.OpenArtStreamAsync("https://example.com/one.jpg", cts.Token));
+
+        Assert.Equal(0, await cache.CountAsync());
+    }
 
     private sealed class StubHandler(byte[] payload, HttpStatusCode status = HttpStatusCode.OK) : HttpMessageHandler
     {

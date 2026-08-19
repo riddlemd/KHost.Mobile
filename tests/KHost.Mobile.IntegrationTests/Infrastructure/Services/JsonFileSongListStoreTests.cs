@@ -86,10 +86,10 @@ public sealed class JsonFileSongListStoreTests : IDisposable
 
         item.Title = "Edited";
         await store.UpdateAsync(item);
-        Assert.Equal("Edited", (await store.GetAllAsync())[0].Title);
+        Assert.Equal("Edited", (await NewStore().GetAllAsync())[0].Title);   // a fresh instance, so this is disk
 
         await store.UpdateAsync(new SongListItem { Title = "Ghost" });   // never added → no-op
-        Assert.Single(await store.GetAllAsync());
+        Assert.Single(await NewStore().GetAllAsync());
     }
 
     [Fact]
@@ -221,5 +221,92 @@ public sealed class JsonFileSongListStoreTests : IDisposable
         Assert.Equal(4, song.Enjoyment);
     }
 
+    [Fact]
+    public async Task Reads_the_PascalCase_property_names_already_on_devices()
+    {
+        // A naming policy added to SongListJsonContext would round-trip through itself in every other test
+        // while orphaning every song-list.json already on a device.
+        await File.WriteAllTextAsync(
+            _dir.FilePath("song-list.json"),
+            """
+            [ { "Id": "d1000001-0000-4000-8000-000000000001", "Title": "Africa", "Artist": "Toto",
+                "Genre": "Rock", "Year": 1982, "Status": 1, "IsFavorite": true, "Enjoyment": 4,
+                "Tags": [ "closer" ],
+                "Performances": [ { "Id": "e1000001-0000-4000-8000-000000000002",
+                                    "Date": "2026-03-04T20:15:00-05:00", "HowItWent": 5, "Note": "nailed it" } ] } ]
+            """);
 
+        var song = Assert.Single(await NewStore().GetAllAsync());
+        Assert.Equal("Africa", song.Title);
+        Assert.Equal("Toto", song.Artist);
+        Assert.Equal(1982, song.Year);
+        Assert.True(song.IsFavorite);
+        Assert.Equal(4, song.Enjoyment);
+        Assert.Equal(["closer"], song.Tags);
+        var performance = Assert.Single(song.Performances);
+        Assert.Equal(5, performance.HowItWent);
+        Assert.Equal("nailed it", performance.Note);
+    }
+
+    [Fact]
+    public async Task UpdateRangeAsync_replaces_known_ids_skips_unknown_ones_and_fires_once()
+    {
+        // Appending an unknown id would duplicate songs; firing unconditionally would re-render the list on
+        // every artwork-lookup poll.
+        var store = NewStore();
+        var africa = await store.AddAsync("Africa", "Toto");
+        await store.AddAsync("Rosanna", "Toto");
+        var fired = 0;
+        store.Changed += (_, _) => fired++;
+
+        africa.Genre = "Rock";
+        await store.UpdateRangeAsync([africa, new SongListItem { Title = "Ghost", Artist = "Nobody" }]);
+
+        var all = await NewStore().GetAllAsync();
+        Assert.Equal(2, all.Count);                                    // the unknown id was skipped, not appended
+        Assert.Equal("Rock", all.Single(s => s.Title == "Africa").Genre);
+        Assert.Equal(1, fired);
+    }
+
+    [Fact]
+    public async Task UpdateRangeAsync_with_nothing_it_knows_neither_saves_nor_fires()
+    {
+        var store = NewStore();
+        await store.AddAsync("Africa", "Toto");
+        var fired = 0;
+        store.Changed += (_, _) => fired++;
+
+        await store.UpdateRangeAsync([new SongListItem { Title = "Ghost", Artist = "Nobody" }]);
+
+        Assert.Equal(0, fired);
+    }
+
+    [Fact]
+    public async Task Import_dedupe_does_not_collide_on_a_different_title_artist_split()
+    {
+        // The dedupe key joins title and artist with a separator for exactly this reason — plain concatenation
+        // would make "AB"/"C" and "A"/"BC" the same song and silently drop the second on import.
+        var store = NewStore();
+
+        var added = await store.ImportAsync([
+            new SongListItem { Title = "AB", Artist = "C" },
+            new SongListItem { Title = "A", Artist = "BC" },
+        ]);
+
+        Assert.Equal(2, added);
+        Assert.Equal(2, (await NewStore().GetAllAsync()).Count);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_hands_back_a_copy_so_a_caller_cannot_edit_the_cache()
+    {
+        // The UI sorts and filters what it gets back; if that were the cached list, the next save would persist
+        // whatever the component did to it.
+        var store = NewStore();
+        await store.AddAsync("Africa", "Toto");
+
+        (await store.GetAllAsync() as List<SongListItem>)!.Clear();
+
+        Assert.Single(await store.GetAllAsync());
+    }
 }

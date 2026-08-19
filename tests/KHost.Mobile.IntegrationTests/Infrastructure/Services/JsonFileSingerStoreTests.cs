@@ -69,7 +69,7 @@ public sealed class JsonFileSingerStoreTests : IDisposable
         var names = (await store.GetAllAsync()).Select(s => s.Name).ToArray();
 
         Assert.Equal(["Second", "First"], names);
-        Assert.Equal(first.Id, (await store.GetAsync(first.Id))!.Id);
+        Assert.Equal("First", (await store.GetAsync(first.Id))!.Name);   // GetAsync is by id, not by position
     }
 
     [Fact]
@@ -78,7 +78,8 @@ public sealed class JsonFileSingerStoreTests : IDisposable
         var store = NewStore();
 
         var seeded = await store.EnsureSeededAsync();
-        Assert.False(string.IsNullOrWhiteSpace(seeded.Name));
+        Assert.Equal("Me", seeded.Name);                     // the name a fresh install shows in the switcher
+        Assert.Equal(SingerColors.Default, seeded.Color);
         Assert.Single(await store.GetAllAsync());
 
         // Second call is a no-op — still exactly one, same id.
@@ -155,15 +156,7 @@ public sealed class JsonFileSingerStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task A_corrupt_file_loads_as_an_empty_roster_rather_than_throwing()
-    {
-        await File.WriteAllTextAsync(_dir.FilePath("singers.json"), "}not valid{");
-
-        Assert.Empty(await NewStore().GetAllAsync());
-    }
-
-    [Fact]
-    public async Task A_corrupt_file_is_quarantined_to_a_dot_corrupt_sibling()
+    public async Task A_corrupt_file_loads_as_an_empty_roster_and_is_quarantined_to_a_dot_corrupt_sibling()
     {
         var path = _dir.FilePath("singers.json");
         await File.WriteAllTextAsync(path, "}not valid{");   // e.g. a pre-atomic-write interrupted save
@@ -228,5 +221,35 @@ public sealed class JsonFileSingerStoreTests : IDisposable
         var freshLetter = await NewStore().GetAsync(withLetter.Id);
         Assert.Null(freshLetter!.Glyph);
         Assert.Equal("J", freshLetter.Avatar);          // falls back to the name's first letter
+    }
+
+    [Fact]
+    public async Task Reads_the_PascalCase_property_names_already_on_devices()
+    {
+        // The roster keys every per-singer file on disk; if it stops binding, every singer's songs go with it.
+        await File.WriteAllTextAsync(
+            _dir.FilePath("singers.json"),
+            """
+            [ { "Id": "f1000001-0000-4000-8000-000000000001", "Name": "Mike", "Color": "#7c3aed",
+                "Glyph": "🦄", "Order": 3 } ]
+            """);
+
+        var singer = Assert.Single(await NewStore().GetAllAsync());
+        Assert.Equal(Guid.Parse("f1000001-0000-4000-8000-000000000001"), singer.Id);
+        Assert.Equal("Mike", singer.Name);
+        Assert.Equal("#7c3aed", singer.Color);
+        Assert.Equal("🦄", singer.Glyph);
+        Assert.Equal(3, singer.Order);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_hands_back_a_copy_so_a_caller_cannot_edit_the_cache()
+    {
+        var store = NewStore();
+        await store.AddAsync(new Singer { Name = "Mike" });
+
+        (await store.GetAllAsync() as List<Singer>)!.Clear();
+
+        Assert.Single(await store.GetAllAsync());
     }
 }

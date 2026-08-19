@@ -1,3 +1,5 @@
+using KHost.Mobile.Abstractions.Models;
+using KHost.Mobile.Abstractions.Services;
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
@@ -94,5 +96,57 @@ public sealed class PerSingerStoreTests : IDisposable
         await store.AddAsync("Africa", "Toto");
 
         Assert.True(File.Exists(_dir.FilePath("song-list.json")));
+    }
+
+    [Fact]
+    public async Task A_singer_switch_landing_mid_operation_still_saves_to_the_singer_the_cache_was_loaded_for()
+    {
+        var mike = Guid.NewGuid();
+        var sam = Guid.NewGuid();
+        var store = new JsonFileSongListStore(_dir, new SwitchingSession(mike, sam));
+
+        await store.AddAsync("Bohemian Rhapsody", "Queen");
+
+        // The save must follow the key the load used, or the switch puts Mike's song in Sam's file.
+        Assert.True(File.Exists(_dir.FilePath($"song-list-{mike:N}.json")));
+        Assert.False(File.Exists(_dir.FilePath($"song-list-{sam:N}.json")));
+    }
+
+    [Fact]
+    public async Task A_singer_switch_landing_mid_operation_still_saves_the_tonight_set_to_the_loaded_singer()
+    {
+        var mike = Guid.NewGuid();
+        var sam = Guid.NewGuid();
+        var store = new JsonFileTonightStore(_dir, new SwitchingSession(mike, sam));
+
+        await store.AddAsync(Guid.NewGuid());
+
+        Assert.True(File.Exists(_dir.FilePath($"tonight-{mike:N}.json")));
+        Assert.False(File.Exists(_dir.FilePath($"tonight-{sam:N}.json")));
+    }
+
+    // One singer to the first reader, another to every reader after: a switch landing between load and save,
+    // without the timing that makes a real one impossible to reproduce.
+    private sealed class SwitchingSession(Guid first, Guid then) : IAppSession
+    {
+        private int _reads;
+
+        public Guid? ActiveSingerId => _reads++ == 0 ? first : then;
+
+        public bool LandingResolved { get; set; }
+        public bool TutorialResolved { get; set; }
+        public Guid? ActiveVenueId => null;
+        public bool ActiveVenuePinned => false;
+        public Guid? TutorialVenueDetailId => null;
+
+        public event EventHandler? ActiveVenueChanged;
+        public event EventHandler? ActiveSingerChanged;
+        public event EventHandler? TutorialVenueDetailChanged;
+
+        public void SetActiveVenue(Guid? venueId, bool pinned = false) => ActiveVenueChanged?.Invoke(this, EventArgs.Empty);
+        public void SetActiveSinger(Guid? singerId) => ActiveSingerChanged?.Invoke(this, EventArgs.Empty);
+        public void SetTutorialVenueDetail(Guid? venueId) => TutorialVenueDetailChanged?.Invoke(this, EventArgs.Empty);
+        public void ClearMySongsView(Guid singerId) { }
+        public MySongsViewState MySongsViewFor(Guid? singerId) => new();
     }
 }

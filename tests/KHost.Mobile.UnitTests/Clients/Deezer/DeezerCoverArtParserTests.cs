@@ -30,6 +30,32 @@ public class DeezerCoverArtParserTests
         Assert.Equal("https://cdn/500.jpg", url);   // prefers cover_big
     }
 
+    [Theory]
+    // Each pair is "what the album carries" → "which rung must win". The ends of the chain are covered above;
+    // these pin the order in between, where a swap in the field list serves a lower resolution unnoticed.
+    [InlineData("""{ "cover_xl": "https://cdn/1000.jpg", "cover_medium": "https://cdn/250.jpg" }""", "https://cdn/1000.jpg")]
+    [InlineData("""{ "cover_medium": "https://cdn/250.jpg", "cover_small": "https://cdn/56.jpg" }""", "https://cdn/250.jpg")]
+    [InlineData("""{ "cover_small": "https://cdn/56.jpg", "cover": "https://cdn/plain.jpg" }""", "https://cdn/56.jpg")]
+    public void Picks_the_largest_cover_the_album_actually_carries(string album, string expected)
+    {
+        var json = $$"""
+        { "data": [ { "title": "Song", "artist": { "name": "Band" }, "album": {{album}} } ] }
+        """;
+
+        Assert.Equal(expected, DeezerCoverArtParser.ParseCoverArtUrl(json, "Song", "Band"));
+    }
+
+    [Fact]
+    public void An_album_with_only_blank_cover_fields_yields_no_url()
+    {
+        // An empty string is not a usable URL — it would render as a broken image rather than the placeholder.
+        const string json = """
+        { "data": [ { "title": "Song", "artist": { "name": "Band" }, "album": { "cover_big": "", "cover": "" } } ] }
+        """;
+
+        Assert.Null(DeezerCoverArtParser.ParseCoverArtUrl(json, "Song", "Band"));
+    }
+
     [Fact]
     public void Falls_back_to_a_smaller_cover_when_big_is_absent()
     {

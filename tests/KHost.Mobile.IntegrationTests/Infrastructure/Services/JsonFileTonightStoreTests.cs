@@ -146,28 +146,28 @@ public sealed class JsonFileTonightStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task A_corrupt_file_loads_as_an_empty_set_rather_than_throwing()
+    public async Task Reads_the_PascalCase_property_names_already_on_devices()
     {
-        await File.WriteAllTextAsync(_dir.FilePath("tonight.json"), "}not valid{");
-
-        Assert.Empty(await NewStore().GetAllAsync());
-    }
-
-    [Fact]
-    public async Task Deserializes_a_hand_written_file()
-    {
-        var song = Guid.NewGuid();
-        var seeded = new List<TonightEntry> { new() { SongId = song, Order = 0, AddedAt = DateTimeOffset.Now } };
+        // Literal JSON, not a re-serialized list: a naming policy added to TonightJsonContext would still
+        // round-trip through itself while orphaning every tonight.json already written to a device.
         await File.WriteAllTextAsync(
             _dir.FilePath("tonight.json"),
-            JsonSerializer.Serialize(seeded, TonightJsonContext.Default.ListTonightEntry));
+            """
+            [ { "SongId": "b1000001-0000-4000-8000-000000000001", "Order": 0, "Completed": true,
+                "CompletedAt": "2026-03-04T22:15:00-05:00",
+                "CompletedPerformanceId": "c1000001-0000-4000-8000-000000000002",
+                "AddedAt": "2026-03-04T20:15:00-05:00" } ]
+            """);
 
         var entry = Assert.Single(await NewStore().GetAllAsync());
-        Assert.Equal(song, entry.SongId);
+        Assert.Equal(Guid.Parse("b1000001-0000-4000-8000-000000000001"), entry.SongId);
+        Assert.True(entry.Completed);
+        Assert.Equal(Guid.Parse("c1000001-0000-4000-8000-000000000002"), entry.CompletedPerformanceId);
+        Assert.Equal(new DateTimeOffset(2026, 3, 4, 20, 15, 0, TimeSpan.FromHours(-5)), entry.AddedAt);
     }
 
     [Fact]
-    public async Task A_corrupt_file_is_quarantined_to_a_dot_corrupt_sibling()
+    public async Task A_corrupt_file_loads_as_an_empty_set_and_is_quarantined_to_a_dot_corrupt_sibling()
     {
         var path = _dir.FilePath("tonight.json");
         await File.WriteAllTextAsync(path, "}not valid{");   // e.g. a pre-atomic-write interrupted save
@@ -220,5 +220,24 @@ public sealed class JsonFileTonightStoreTests : IDisposable
         await store.AddAsync(Guid.NewGuid());
 
         Assert.True(File.Exists(_dir.FilePath($"tonight-{singer:N}.json")));
+    }
+
+    [Fact]
+    public async Task ReorderAsync_sinks_songs_it_was_not_told_about_without_dropping_them()
+    {
+        // A partial list (a filtered view, or a drag-reorder bug) must not lose entries from tonight's set.
+        var store = NewStore();
+        var a = Guid.NewGuid();
+        var b = Guid.NewGuid();
+        var c = Guid.NewGuid();
+        await store.AddAsync(a);
+        await store.AddAsync(b);
+        await store.AddAsync(c);
+
+        await store.ReorderAsync([c]);
+
+        var reloaded = await NewStore().GetAllAsync();
+        Assert.Equal([c, a, b], reloaded.Select(e => e.SongId).ToArray());   // the unmentioned two keep their order
+        Assert.Equal([0, 1, 2], reloaded.Select(e => e.Order).ToArray());    // and the set is renumbered contiguously
     }
 }

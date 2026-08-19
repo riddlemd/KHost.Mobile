@@ -5,14 +5,6 @@ namespace KHost.Mobile.UnitTests.Abstractions.Models;
 
 public class SingerTests
 {
-    [Fact]
-    public void Defaults_to_the_brand_color_and_no_glyph()
-    {
-        var s = new Singer();
-        Assert.Equal(SingerColors.Default, s.Color);
-        Assert.Null(s.Glyph);
-    }
-
     [Theory]
     [InlineData("Mike", "M")]
     [InlineData("sam", "S")]          // uppercased

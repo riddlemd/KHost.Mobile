@@ -197,6 +197,29 @@ public class YouTubeMusicPlaylistParserTests
     }
 
     [Fact]
+    public void Parse_leaves_a_title_that_carries_neither_known_suffix_untouched()
+    {
+        // A localized page (or a YouTube rename) ends in neither suffix; the name must survive whole rather than
+        // getting trimmed at some other boundary.
+        var result = YouTubeMusicPlaylistParser.Parse(Page(TwoTracksJson, "Totally Different Format"));
+
+        Assert.Equal("Totally Different Format", result.Name);
+    }
+
+    [Fact]
+    public void Parse_still_returns_the_tracks_when_the_page_has_no_title_element()
+    {
+        // A missing title is cosmetic; only a missing data blob is fatal. Conflating them would fail the import.
+        var html = "<html><head></head><body>"
+                 + "<script>initialData.push({data: '" + TwoTracksJson + "'});</script></body></html>";
+
+        var result = YouTubeMusicPlaylistParser.Parse(html);
+
+        Assert.Null(result.Name);
+        Assert.Equal(2, result.Tracks.Count);
+    }
+
+    [Fact]
     public void JsUnescape_drops_the_backslash_before_an_unrecognized_escape_like_ampersand()
     {
         // "\&" isn't one of the recognized escapes (x/u/n/t/r/b/f), so the default case keeps just the

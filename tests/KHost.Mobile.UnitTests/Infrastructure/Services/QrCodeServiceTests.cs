@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using KHost.Mobile.Infrastructure.Services;
 using Xunit;
 
@@ -21,19 +23,35 @@ public class QrCodeServiceTests
     [Fact]
     public void Scales_with_css_rather_than_a_fixed_pixel_size()
     {
-        // The sheet sizes the code; a hardcoded width/height here would fight it.
+        // The sheet sizes the code; a width/height on the root <svg> would fight it.
         var svg = Qr.ToSvg(CatalogUrl);
 
-        Assert.Contains("viewBox", svg, StringComparison.Ordinal);
+        var root = svg[svg.IndexOf("<svg", StringComparison.Ordinal)..(svg.IndexOf('>', svg.IndexOf("<svg", StringComparison.Ordinal)) + 1)];
+        Assert.Contains("viewBox", root, StringComparison.Ordinal);
+        Assert.DoesNotContain("width=", root, StringComparison.Ordinal);
+        Assert.DoesNotContain("height=", root, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Encodes_the_quiet_zone_the_spec_requires()
+    public void Pads_the_symbol_with_the_four_module_quiet_zone_the_spec_requires()
     {
-        // A 31-byte URL lands on version 3 (29 modules); 4 modules of quiet zone each side makes the viewBox 37.
-        var svg = Qr.ToSvg(CatalogUrl);
+        // Assert the padding, not the symbol size: which version a URL lands on is the encoder's call.
+        var side = ViewBoxSide(Qr.ToSvg(CatalogUrl));
+        var modules = side - (2 * 4);
 
-        Assert.Contains("viewBox=\"0 0 37 37\"", svg, StringComparison.Ordinal);
+        // Every QR version is an odd module count from 21 (v1) to 177 (v40).
+        Assert.InRange(modules, 21, 177);
+        Assert.Equal(1, modules % 2);
+    }
+
+    [Fact]
+    public void A_longer_url_grows_the_symbol_but_not_the_quiet_zone()
+    {
+        var small = ViewBoxSide(Qr.ToSvg(CatalogUrl));
+        var large = ViewBoxSide(Qr.ToSvg(CatalogUrl + new string('x', 300)));
+
+        Assert.True(large > small, $"a 300-char-longer URL should need a bigger symbol ({large} vs {small})");
+        Assert.Equal(1, (large - (2 * 4)) % 2);
     }
 
     [Fact]
@@ -63,5 +81,13 @@ public class QrCodeServiceTests
     public void Rejects_blank_text(string text)
     {
         Assert.Throws<ArgumentException>(() => Qr.ToSvg(text));
+    }
+
+    private static int ViewBoxSide(string svg)
+    {
+        var match = Regex.Match(svg, @"viewBox=""0 0 (\d+) (\d+)""");
+        Assert.True(match.Success, "no square, module-unit viewBox on the SVG");
+        Assert.Equal(match.Groups[1].Value, match.Groups[2].Value);
+        return int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
     }
 }

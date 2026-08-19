@@ -23,6 +23,27 @@ public class LrcLibLyricsClientTests
     }
 
     [Fact]
+    public async Task Searches_for_artist_and_title_together_url_encoded()
+    {
+        var handler = new StubHandler(HttpStatusCode.OK, "[]");
+
+        await Client(handler).FetchAsync("Africa & Rain", "Toto");
+
+        // An unescaped & would truncate the query at the query string.
+        Assert.Equal("https://lrclib.net/api/search?q=Toto%20Africa%20%26%20Rain", handler.LastRequest!.RequestUri!.AbsoluteUri);   // ToString() would unescape
+    }
+
+    [Fact]
+    public async Task A_blank_artist_searches_on_the_title_alone()
+    {
+        var handler = new StubHandler(HttpStatusCode.OK, "[]");
+
+        await Client(handler).FetchAsync("Africa", "  ");
+
+        Assert.Equal("https://lrclib.net/api/search?q=Africa", handler.LastRequest!.RequestUri!.AbsoluteUri);
+    }
+
+    [Fact]
     public async Task Not_found_returns_null_rather_than_throwing()
     {
         // 404 is the COMMON outcome of a lyrics lookup — "no lyrics" is a result, not an error.

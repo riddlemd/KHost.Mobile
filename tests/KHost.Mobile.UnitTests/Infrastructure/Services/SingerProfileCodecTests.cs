@@ -81,4 +81,62 @@ public class SingerProfileCodecTests
         Assert.Equal("The Mint", parsed[0].Name);
         Assert.Equal("012345", parsed[0].KaraFunVenueId);
     }
+
+    [Fact]
+    public void ParseVenues_returns_null_for_a_file_that_is_not_a_venue_export()
+    {
+        // The import screen shows "not a valid export" off a null; throwing instead surfaces as a crash.
+        Assert.Null(Codec.ParseVenues("not json"));
+        Assert.Null(Codec.ParseVenues("""{"not":"an array"}"""));
+    }
+
+    [Fact]
+    public void Every_stored_field_of_a_song_survives_the_export_file()
+    {
+        // The profile IS the user's backup — a field dropped from the wire is data they can't get back.
+        var singer = new Singer { Name = "Jordan" };
+        var venue = Guid.NewGuid();
+        var song = new SongListItem
+        {
+            Title = "Africa",
+            Artist = "Toto",
+            Genre = "Rock",
+            Year = 1982,
+            Notes = "key of B",
+            Tags = ["closer", "crowd-pleaser"],
+            IsFavorite = true,
+            Enjoyment = 4,
+            Status = SongListItemStatus.Sang,
+            MetadataLookedUp = true,
+            ArtworkLookedUp = true,
+            Performances =
+            [
+                new Performance
+                {
+                    Date = new DateTimeOffset(2026, 3, 4, 20, 15, 0, TimeSpan.FromHours(-5)),
+                    HowItWent = 5,
+                    Note = "nailed it",
+                    VenueId = venue,
+                },
+            ],
+        };
+
+        var parsed = Codec.ParseProfile(Codec.Serialize(SingerProfile.Create(singer, [song])));
+
+        var restored = Assert.Single(parsed!.Songs);
+        Assert.Equal("key of B", restored.Notes);
+        Assert.Equal(["closer", "crowd-pleaser"], restored.Tags);
+        Assert.Equal(4, restored.Enjoyment);
+        Assert.True(restored.IsFavorite);
+        Assert.Equal(SongListItemStatus.Sang, restored.Status);
+        Assert.True(restored.MetadataLookedUp);
+        Assert.True(restored.ArtworkLookedUp);
+
+        var performance = Assert.Single(restored.Performances);
+        Assert.Equal(song.Performances[0].Id, performance.Id);
+        Assert.Equal(new DateTimeOffset(2026, 3, 4, 20, 15, 0, TimeSpan.FromHours(-5)), performance.Date);
+        Assert.Equal(5, performance.HowItWent);
+        Assert.Equal("nailed it", performance.Note);
+        Assert.Equal(venue, performance.VenueId);   // the venue tag, so restored history still resolves
+    }
 }

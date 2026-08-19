@@ -2,6 +2,7 @@ using System.Text.Json;
 using KHost.Mobile.Abstractions.Clients.Lyrics;
 using KHost.Mobile.Infrastructure.Serialization;
 using KHost.Mobile.Infrastructure.Services;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 using KHost.Mobile.Abstractions.Models;
@@ -54,6 +55,20 @@ public sealed class JsonFileLyricsCacheTests : IDisposable
     }
 
     [Fact]
+    public async Task A_title_artist_split_does_not_collide_with_a_different_split_of_the_same_text()
+    {
+        // The key joins title and artist with a separator for exactly this reason — concatenating them plainly
+        // would make "AB"/"C" and "A"/"BC" the same entry.
+        var cache = NewCache();
+        await cache.SetAsync("AB", "C", Lyrics("first song"));
+        await cache.SetAsync("A", "BC", Lyrics("different song"));
+
+        Assert.Equal(2, await cache.CountAsync());
+        Assert.Equal("first song", (await cache.GetAsync("AB", "C"))!.Result!.PlainLyrics);
+        Assert.Equal("different song", (await cache.GetAsync("A", "BC"))!.Result!.PlainLyrics);
+    }
+
+    [Fact]
     public async Task SetAsync_upserts_the_same_key()
     {
         var cache = NewCache();
@@ -96,29 +111,47 @@ public sealed class JsonFileLyricsCacheTests : IDisposable
     [Fact]
     public async Task Loading_collapses_duplicate_keys_and_drops_blank_keyed_entries()
     {
+        // The stored key is title + U+001F + artist, so this is what a GetAsync("dup", "") lookup computes.
+        const string Key = "dup\u001f";
         var seeded = new List<LyricsCacheEntry>
         {
-            new() { Key = "dup", Title = "A", Found = true, MatchedTitle = "First" },
-            new() { Key = "dup", Title = "A", Found = true, MatchedTitle = "Second" },   // same key, last wins
-            new() { Key = "", Title = "orphan" },                                          // blank key → dropped
+            new() { Key = Key, Title = "dup", Artist = "", Found = true, MatchedTitle = "First" },
+            new() { Key = Key, Title = "dup", Artist = "", Found = true, MatchedTitle = "Second" },
+            new() { Key = "", Title = "orphan" },   // blank key → dropped
         };
         await File.WriteAllTextAsync(
             _dir.FilePath("lyrics-cache.json"),
             JsonSerializer.Serialize(seeded, LyricsCacheJsonContext.Default.ListLyricsCacheEntry));
 
-        Assert.Equal(1, await NewCache().CountAsync());
+        var cache = NewCache();
+
+        Assert.Equal(1, await cache.CountAsync());
+        var hit = await cache.GetAsync("dup", "");
+        Assert.Equal("Second", hit!.Result!.MatchedTitle);   // last wins, not first
     }
 
     [Fact]
-    public async Task A_corrupt_file_loads_as_an_empty_cache_rather_than_throwing()
+    public async Task Stamps_CachedAt_in_local_time_not_UTC()
     {
-        await File.WriteAllTextAsync(_dir.FilePath("lyrics-cache.json"), "not json at all}");
+        // A zone whose offset is non-zero at the instant under test, so local and UTC are distinguishable.
+        var clock = new FakeTimeProvider(new DateTimeOffset(2026, 3, 4, 20, 15, 0, TimeSpan.Zero));
+        clock.SetLocalTimeZone(TimeZoneInfo.CreateCustomTimeZone("t", TimeSpan.FromHours(-5), "t", "t"));
+        var cache = new JsonFileLyricsCache(_dir, timeProvider: clock);
 
-        Assert.Equal(0, await NewCache().CountAsync());
+        await cache.SetAsync("Song", "Artist", Lyrics("words"));
+
+        // Read the raw file: CachedAt is a housekeeping stamp the ILyricsCache surface doesn't expose.
+        var stored = JsonSerializer.Deserialize(
+            await File.ReadAllTextAsync(_dir.FilePath("lyrics-cache.json")),
+            LyricsCacheJsonContext.Default.ListLyricsCacheEntry)!;
+
+        var entry = Assert.Single(stored);
+        Assert.Equal(TimeSpan.FromHours(-5), entry.CachedAt.Offset);
+        Assert.Equal(clock.GetUtcNow(), entry.CachedAt.ToUniversalTime());
     }
 
     [Fact]
-    public async Task A_corrupt_file_is_quarantined_to_a_dot_corrupt_sibling()
+    public async Task A_corrupt_file_loads_as_an_empty_cache_and_is_quarantined_to_a_dot_corrupt_sibling()
     {
         var path = _dir.FilePath("lyrics-cache.json");
         await File.WriteAllTextAsync(path, "not json at all}");   // e.g. a pre-atomic-write interrupted save

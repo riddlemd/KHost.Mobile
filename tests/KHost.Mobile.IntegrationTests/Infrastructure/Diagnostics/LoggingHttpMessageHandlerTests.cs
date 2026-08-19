@@ -60,12 +60,71 @@ public sealed class LoggingHttpMessageHandlerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);   // the response itself is returned regardless
     }
 
+    [Fact]
+    public async Task A_transport_failure_is_logged_and_still_reaches_the_caller()
+    {
+        // Every Clients backend maps HttpRequestException to its own domain exception; if this handler swallowed
+        // it, every network-failure message in the app would break at once.
+        var log = new CapturingLogger();
+        var transportFailure = new HttpRequestException("connection failed");
+        var handler = new LoggingHttpMessageHandler(log)
+        {
+            InnerHandler = new ThrowingHandler(transportFailure),
+        };
+        using var invoker = new HttpMessageInvoker(handler);
+
+        var thrown = await Assert.ThrowsAsync<HttpRequestException>(
+            () => invoker.SendAsync(new HttpRequestMessage(HttpMethod.Get, Url), CancellationToken.None));
+
+        Assert.Same(transportFailure, thrown);   // rethrown as-is, not wrapped
+        Assert.Contains(log.Messages, m => m.Contains("threw after"));
+    }
+
+    [Fact]
+    public async Task With_debug_logging_off_the_body_is_never_read()
+    {
+        // Release builds filter Debug out; buffering every response body there would cost memory for a log line
+        // nothing will ever emit.
+        var log = new CapturingLogger { DebugEnabled = false };
+        var handler = new LoggingHttpMessageHandler(log)
+        {
+            InnerHandler = new StubHandler(new ThrowOnReadContent()),
+        };
+        using var invoker = new HttpMessageInvoker(handler);
+
+        var response = await invoker.SendAsync(new HttpRequestMessage(HttpMethod.Get, Url), CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.DoesNotContain(log.Messages, m => m.Contains("HTTP body"));
+    }
+
     // ---- test doubles --------------------------------------------------------------------------
 
     private sealed class StubHandler(HttpContent content) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+    }
+
+    private sealed class ThrowingHandler(Exception failure) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromException<HttpResponseMessage>(failure);
+    }
+
+    // Textual by declaration, so only the IsEnabled(Debug) guard stands between the handler and reading it.
+    private sealed class ThrowOnReadContent : HttpContent
+    {
+        public ThrowOnReadContent() => Headers.ContentType = new("application/json");
+
+        protected override Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext? context)
+            => throw new InvalidOperationException("the body was read with Debug logging off");
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = -1;
+            return false;
+        }
     }
 
     // Streams bytes without ever declaring a Content-Length, like a chunked/decompressed response.
@@ -96,7 +155,9 @@ public sealed class LoggingHttpMessageHandlerTests
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
-        public bool IsEnabled(LogLevel logLevel) => true;
+        public bool DebugEnabled { get; init; } = true;
+
+        public bool IsEnabled(LogLevel logLevel) => logLevel != LogLevel.Debug || DebugEnabled;
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
             Func<TState, Exception?, string> formatter) => Messages.Add(formatter(state, exception));

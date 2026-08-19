@@ -122,11 +122,13 @@ public class AppSessionTests
     {
         var session = new AppSession();
         var singer = Guid.NewGuid();
+        var other = Guid.NewGuid();
 
         var first = session.MySongsViewFor(singer);
         var second = session.MySongsViewFor(singer);
 
-        Assert.Same(first, second);
+        Assert.Same(first, second);                              // same singer → sort/filter state sticks
+        Assert.NotSame(first, session.MySongsViewFor(other));     // another singer must not inherit it
     }
 
     [Fact]

@@ -10,6 +10,14 @@ public class ITunesTrackMetadataLookupTests
 {
     private static ITunesTrackMetadataLookup Lookup(HttpMessageHandler handler) => new(new HttpClient(handler));
 
+    private static ITunesTrackMetadataLookup Lookup(HttpMessageHandler handler, string region) =>
+        new(new HttpClient(handler), new FixedRegion(region));
+
+    private sealed class FixedRegion(string region) : ILookupOptions
+    {
+        public string CatalogueRegion => region;
+    }
+
     [Fact]
     public async Task A_blank_title_returns_nothing_without_calling_the_network()
     {
@@ -28,6 +36,39 @@ public class ITunesTrackMetadataLookupTests
         await Lookup(handler).LookupAsync("Africa", "Toto");
 
         Assert.Contains("term=toto%20africa", handler.LastRequest!.RequestUri!.AbsoluteUri);   // ToString() would unescape
+    }
+
+    [Fact]
+    public async Task A_blank_artist_searches_on_the_title_alone()
+    {
+        // Adding a song before you know who recorded it is a normal flow; the term must not carry a stray space
+        // or an empty artist segment.
+        var handler = new StubHandler(HttpStatusCode.OK, """{"resultCount":0,"results":[]}""");
+
+        await Lookup(handler).LookupAsync("Africa", "  ");
+
+        Assert.Contains("term=africa&", handler.LastRequest!.RequestUri!.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task Searches_the_catalogue_region_the_settings_choose()
+    {
+        // iTunes catalogues differ by country — a local-language artist is simply absent from another's.
+        var handler = new StubHandler(HttpStatusCode.OK, """{"resultCount":0,"results":[]}""");
+
+        await Lookup(handler, "GB").LookupAsync("Africa", "Toto");
+
+        Assert.Contains("country=GB", handler.LastRequest!.RequestUri!.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task A_blank_region_falls_back_to_the_US_catalogue()
+    {
+        var handler = new StubHandler(HttpStatusCode.OK, """{"resultCount":0,"results":[]}""");
+
+        await Lookup(handler, "   ").LookupAsync("Africa", "Toto");
+
+        Assert.Contains("country=US", handler.LastRequest!.RequestUri!.AbsoluteUri);
     }
 
     [Fact]
