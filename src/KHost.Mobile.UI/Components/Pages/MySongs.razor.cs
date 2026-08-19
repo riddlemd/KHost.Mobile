@@ -806,109 +806,37 @@ public sealed partial class MySongs : IDisposable
         return Task.CompletedTask;
     }
 
-    // Artist is required: the parser rejects an artist-less result, so a call without one can only come back empty.
-    // Deliberately NOT gated on genre/year still being blank — the lookup also decides whether the title looks
-    // misspelled, and a song can have complete metadata and a wrong title.
-    private bool ShouldLookUp(SongListItem item) =>
-        Settings.AutoFillMetadata &&
-        !item.MetadataLookedUp &&
-        !string.IsNullOrWhiteSpace(item.Title) &&
-        !string.IsNullOrWhiteSpace(item.Artist);
-
     // Whether a lookup could still fill something the user can see. Drives the detail sheet's spinner only —
     // a lookup that can only produce a spelling suggestion shouldn't make the genre/year rows read as pending.
     private static bool WouldFillFields(SongListItem item) =>
         string.IsNullOrWhiteSpace(item.Genre) || !item.Year.HasValue;
 
-    // Runs at most once per song (gated on MetadataLookedUp) and fills blanks straight from the match. A transient
-    // failure returns null WITHOUT stamping the flag, so a later add/open can retry.
+    // Nothing is written until a result comes back, so a lookup abandoned mid-flight leaves the song untouched.
     private async Task<string?> TryAutoFillMetadataAsync(SongListItem item, CancellationToken token)
     {
-        if (!ShouldLookUp(item))
+        var result = await Enricher.EnrichAsync(
+            new SongLookupState(item.Title, item.Artist, item.Genre, item.Year, item.MetadataLookedUp), token);
+        if (result is null)
             return null;
 
-        Log.LogDebug("Auto-fill lookup start: “{Title}” — “{Artist}”", item.Title, item.Artist);
-        TrackLookupResult lookup;
-        try
-        {
-            lookup = await Metadata.LookupAsync(item.Title, item.Artist, token);
-        }
-        catch (MetadataLookupException ex)
-        {
-            // network/rate-limit failure — leave the flag unset to retry later
-            Log.LogWarning(ex, "Auto-fill lookup failed for “{Title}” — “{Artist}”; will retry later", item.Title, item.Artist);
-            return null;
-        }
-
-        if (token.IsCancellationRequested)
-            return null;
-
-        var meta = lookup.Match;
-        Log.LogDebug("Auto-fill lookup done: “{Title}” — “{Artist}” → matched {Matched}, year={Year}, genre={Genre}, cover={HasCover}",
-            item.Title, item.Artist,
-            meta is null ? "(no match)" : $"“{meta.MatchedTitle} — {meta.MatchedArtist}”",
-            meta?.Year, meta?.Genre, meta?.ArtworkUrl is not null);
-
-        var filled = new List<string>();
-        if (string.IsNullOrWhiteSpace(item.Genre) && Genres.Map(meta?.Genre) is string g)
-        {
-            item.Genre = g;
-            filled.Add("Genre");
-        }
-        if (!item.Year.HasValue && meta?.Year is int y)
-        {
-            item.Year = y;
-            filled.Add("Year");
-        }
-
-        // The iTunes match carries the cover for free — capture it so enabling album art later is instant. When
-        // iTunes has none and album art is on, fall back to Deezer (art only — never its unreliable year/genre).
-        var artUrl = meta?.ArtworkUrl;
-        var artLookedUp = true;
-        if (artUrl is null && Settings.AlbumArtEnabled)
-        {
-            try
-            {
-                artUrl = await ArtFallback.FindCoverArtUrlAsync(item.Title, item.Artist, token);
-                Log.LogDebug("iTunes had no cover for “{Title}” — “{Artist}”; Deezer fallback → {Result}",
-                    item.Title, item.Artist, artUrl is null ? "no cover found" : "cover found");
-            }
-            catch (CoverArtLookupException ex)
-            {
-                artLookedUp = false;   // transient Deezer failure — leave art unflagged so it retries later
-                Log.LogWarning(ex, "Deezer cover fallback failed for “{Title}” — “{Artist}”; will retry later", item.Title, item.Artist);
-            }
-        }
-        // iTunes offers its near-miss from the call already made; Deezer costs an extra one, so it's asked only
-        // when iTunes had nothing AND the exact-title cover search came up empty — a cover found by exact
-        // title+artist proves the spelling is already right.
-        // Level 0 drops the suggestion without skipping the lookup: auto-fill still wants the year/genre/art.
-        var suggestion = Settings.SpellingSuggestionLevel == 0 ? null : lookup.Suggestion;
-        if (Settings.SpellingSuggestionLevel > 0 && suggestion is null && meta is null && artUrl is null)
-        {
-            suggestion = await Spelling.SuggestAsync(item.Title, item.Artist, token);
-            if (token.IsCancellationRequested)
-                return null;
-        }
-
-        item.SuggestedTitle = suggestion?.Title;
-        item.SuggestedArtist = suggestion?.Artist;
-        if (suggestion is { } s)
-            Log.LogInformation("No match for “{Title}” — “{Artist}”; {Source} suggests “{SuggestedTitle}” — “{SuggestedArtist}”",
-                item.Title, item.Artist, lookup.Suggestion is null ? "Deezer" : "iTunes", s.Title, s.Artist);
-
-        if (item.ArtworkUrl is null && artUrl is not null)
-            item.ArtworkUrl = artUrl;
-        item.ArtworkLookedUp = artLookedUp;   // hit or miss across both sources (unless Deezer failed transiently)
+        if (result.Genre is not null)
+            item.Genre = result.Genre;
+        if (result.Year is not null)
+            item.Year = result.Year;
+        item.SuggestedTitle = result.Suggestion?.Title;
+        item.SuggestedArtist = result.Suggestion?.Artist;
+        if (item.ArtworkUrl is null && result.ArtworkUrl is not null)
+            item.ArtworkUrl = result.ArtworkUrl;
+        item.ArtworkLookedUp = result.ArtworkLookedUp;   // hit or miss across both sources (unless Deezer failed transiently)
         item.MetadataLookedUp = true;   // metadata attempt is done regardless of the art fallback
         await Store.UpdateAsync(item);   // persist flag + any fills; Store.Changed → RefreshAsync
 
-        return filled.Count > 0
-            ? $"✨ Auto-filled {JoinFields(filled)} from “{meta!.MatchedTitle} — {meta.MatchedArtist}”."
+        return result.FilledFields.Count > 0
+            ? $"✨ Auto-filled {JoinFields(result.FilledFields)} from “{result.Match!.MatchedTitle} — {result.Match.MatchedArtist}”."
             : null;
     }
 
-    // Detail-sheet entry point: the fill/persist lives in TryAutoFillMetadataAsync, this only drives the sheet's
+    // Detail-sheet entry point: the lookup itself lives in ISongEnricher, this only drives the sheet's
     // spinner + note. The cover is the art service's job, driven by the sheet rendering.
     private async Task LoadDetailSuggestionAsync(SongListItem? item)
     {
@@ -919,7 +847,7 @@ public sealed partial class MySongs : IDisposable
         if (item is null)
             return;
 
-        if (!ShouldLookUp(item))
+        if (!Enricher.ShouldEnrich(item.Title, item.Artist, item.MetadataLookedUp))
             return;
 
         _suggestCts = new CancellationTokenSource();
