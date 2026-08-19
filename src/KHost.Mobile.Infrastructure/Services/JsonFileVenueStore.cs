@@ -64,6 +64,10 @@ internal sealed class JsonFileVenueStore : JsonFileStore<Venue>, IVenueStore
         try
         {
             var venues = await LoadAsync();
+            // An imported file carries the ids it was exported with. Two venues sharing one are indistinguishable
+            // to UpdateAsync (edits the first) and RemoveAsync (deletes both), so the newcomer gets a fresh id.
+            if (venues.Any(v => v.Id == venue.Id))
+                venue.Id = Guid.NewGuid();
             venues.Add(venue);
             await SaveAsync(venues);
         }
