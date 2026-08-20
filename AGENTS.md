@@ -55,6 +55,7 @@ dotnet test tests/KHost.Mobile.IntegrationTests/KHost.Mobile.IntegrationTests.cs
 To drive the running app's WebView, use the tools in `playwright/` — `device/` (full Playwright) for a physical device, `emulator/` (raw CDP; the emulator's older WebView rejects Playwright's connect). **`playwright/README.md` is the canonical how-to.**
 
 - **A physical device is someone's actual phone: drive the app, change nothing else.** Never `adb shell monkey` (a random-input fuzzer that can flip device settings like auto-rotate) — use `foreground()` from `device/khdrive.mjs`. No `adb shell settings put`, orientation, or developer-option changes unless the request was explicitly about that. And back up device data before every deploy (above).
+- **A screenshot bound for `docs/screenshots/` is shot against seeded sample data — never a real library**, and you look at every PNG before committing it. The venue sheet prints a venue's KaraFun Id in the clear, and that folder is public; it has already leaked a real one. (DEVELOPMENT.md → Screenshots.)
 
 ## Local features
 
