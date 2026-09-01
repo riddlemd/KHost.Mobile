@@ -76,21 +76,21 @@ public class SongLinkBuilderTests
     public void KaraFun_builds_venue_search_url_with_title_and_artist()
     {
         var url = Links.KaraFunUrlFor("012345", "A Walk Through Hell", "Say Anything");
-        Assert.Equal("https://www.karafun.com/012345/search?q=sc_A%20Walk%20Through%20Hell%20Say%20Anything", url);
+        Assert.Equal("https://www.karafun.com/012345/search?q=A%20Walk%20Through%20Hell%20Say%20Anything", url);
     }
 
     [Fact]
     public void KaraFun_omits_artist_when_blank()
     {
         var url = Links.KaraFunUrlFor("012345", "Bohemian Rhapsody", "");
-        Assert.Equal("https://www.karafun.com/012345/search?q=sc_Bohemian%20Rhapsody", url);
+        Assert.Equal("https://www.karafun.com/012345/search?q=Bohemian%20Rhapsody", url);
     }
 
     [Fact]
     public void KaraFun_trims_pieces_and_encodes_reserved_characters()
     {
         var url = Links.KaraFunUrlFor(" 012345 ", "  Song & Co  ", "  A/B  ");
-        Assert.Equal("https://www.karafun.com/012345/search?q=sc_Song%20%26%20Co%20A%2FB", url);
+        Assert.Equal("https://www.karafun.com/012345/search?q=Song%20%26%20Co%20A%2FB", url);
     }
 
     [Fact]

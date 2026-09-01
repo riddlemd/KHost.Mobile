@@ -9,10 +9,6 @@ namespace KHost.Mobile.Infrastructure.Services;
 // logger optional so a test can `new` it; DI supplies the real one.
 internal sealed class SongLinkBuilder(ILogger<SongLinkBuilder>? logger = null) : ISongLinkBuilder
 {
-    // KaraFun's venue search expects the q value to carry an "sc_" search-context prefix; without it the page
-    // loads but returns no matches. Kept as a constant since this token may be reworked upstream.
-    private const string KaraFunQueryPrefix = "sc_";
-
     private readonly ILogger _log = logger ?? NullLogger<SongLinkBuilder>.Instance;
 
     /// <inheritdoc />
@@ -42,7 +38,7 @@ internal sealed class SongLinkBuilder(ILogger<SongLinkBuilder>? logger = null) :
         var query = string.IsNullOrWhiteSpace(artist)
             ? title.Trim()
             : $"{title.Trim()} {artist.Trim()}";
-        return $"https://www.karafun.com/{venueId.Trim()}/search?q={KaraFunQueryPrefix}" + Uri.EscapeDataString(query);
+        return $"https://www.karafun.com/{venueId.Trim()}/search?q=" + Uri.EscapeDataString(query);
     }
 
     /// <inheritdoc />
