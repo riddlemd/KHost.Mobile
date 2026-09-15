@@ -1,7 +1,11 @@
 using KHost.Mobile.Abstractions.Services;
 using KHost.Mobile.Clients;
 using KHost.Mobile.Infrastructure;
+// Android-only: the namespace lives in Platforms/Android, which MAUI leaves out of every
+// other target's compile.
+#if ANDROID
 using KHost.Mobile.Diagnostics;
+#endif
 using KHost.Mobile.Infrastructure.Diagnostics;
 using KHost.Mobile.Infrastructure.Services;
 using KHost.Mobile.Services;
