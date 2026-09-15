@@ -19,6 +19,11 @@ Developer-facing docs for **KHost Cue** — the reasoning behind a few non-obvio
   Then export `ANDROID_HOME` and `JAVA_HOME` at those paths so plain `dotnet build` finds them — otherwise every build needs the `-p:AndroidSdkDirectory=… -p:JavaSdkDirectory=…` flags. (The warnings that target logs on its *first* run are from the evaluation pass before the SDK exists; they clear once it's installed.)
 - **iOS**: a paired Mac (iOS cannot be built on Windows).
 - **macOS (Mac Catalyst)**: full **Xcode** — Command Line Tools alone is not enough. Point the toolchain at it with `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
+- **The Xcode version does not have to match the workload here, because the repo stops asking.** .NET for iOS pins one exact major.minor and names it in the error — *"requires Xcode 26.6. The current version of Xcode is 27.0."* — and it fails before the compiler runs, so a Mac on a newer Xcode loses both Apple heads and quietly stops compiling them at all. `Directory.Build.props` sets `ValidateXcodeVersion=false` so they keep building. Nothing else is needed: a plain `dotnet build` works on whatever Xcode you have.
+  What that buys is a compile check, not a blessing — Apple and Microsoft validate neither half of the pairing. To produce something you actually ship, install the Xcode the workload names alongside your current one (as, say, `/Applications/Xcode-26.6.app`) and point that build at it, rather than `xcode-select`, which is machine-wide and moves every other tool with it:
+  ```bash
+  DEVELOPER_DIR=/Applications/Xcode-26.6.app/Contents/Developer dotnet build src/KHost.Mobile/KHost.Mobile.csproj -f net10.0-maccatalyst
+  ```
 
 > Restore walks **every** target framework the project declares, even when you build a single head with `-f`, so a build fails until all of them have workloads. `dotnet workload restore src/KHost.Mobile/KHost.Mobile.csproj` installs exactly the set this project needs.
 

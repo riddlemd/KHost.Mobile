@@ -8,4 +8,13 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
+  <!-- .NET for iOS pins one exact Xcode major.minor and fails before the compiler runs, so a Mac
+       on a newer Xcode loses both Apple heads outright — and stops compiling them at all, which is
+       how two real build errors sat unseen behind it. Off, so the heads keep being compiled.
+       Apple and Microsoft validate neither half of the resulting pairing: an Apple head built here
+       is a compile check, and anything shipped wants the Xcode the workload actually names. -->
+  <PropertyGroup>
+    <ValidateXcodeVersion>false</ValidateXcodeVersion>
+  </PropertyGroup>
+
 </Project>
