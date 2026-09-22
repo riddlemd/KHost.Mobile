@@ -33,6 +33,8 @@ public sealed class MauiAppSettings : IAppSettings
     private const string TutorialCompletedKey = "settings.tutorial_completed";
     private const string TutorialSeededTonightIdsKey = "settings.tutorial_seeded_tonight_ids";
     private const string LastActiveSingerIdKey = "settings.last_active_singer_id";
+    private const string LastActiveVenueIdKey = "settings.last_active_venue_id";
+    private const string LastActiveVenuePinnedKey = "settings.last_active_venue_pinned";
     private const string HapticsKey = "settings.haptics";
     private const string Use24HourTimeKey = "settings.use_24h_time";
     private const string FloatFavoritesKey = "settings.float_favorites";
@@ -71,6 +73,20 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(LastActiveSingerIdKey, string.Empty);
         set => Preferences.Default.Set(LastActiveSingerIdKey, value);
+    }
+
+    // Empty default means "no remembered venue"; paired with the pin flag so a deliberate "not at a venue" pick
+    // (empty id, pinned) survives a relaunch as itself rather than as "never set".
+    public string LastActiveVenueId
+    {
+        get => Preferences.Default.Get(LastActiveVenueIdKey, string.Empty);
+        set => Preferences.Default.Set(LastActiveVenueIdKey, value);
+    }
+
+    public bool LastActiveVenuePinned
+    {
+        get => Preferences.Default.Get(LastActiveVenuePinnedKey, false);
+        set => Preferences.Default.Set(LastActiveVenuePinnedKey, value);
     }
 
     public bool YouTubeSearchEnabled

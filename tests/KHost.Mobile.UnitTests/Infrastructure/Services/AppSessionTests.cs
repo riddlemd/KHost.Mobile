@@ -53,6 +53,50 @@ public class AppSessionTests
         Assert.Equal(1, fired);
     }
 
+    // ---- persistence: the pin has to outlive the process (Android kills a backgrounded app freely) ----
+
+    [Fact]
+    public void SetActiveVenue_writes_the_venue_and_pin_through_to_settings()
+    {
+        var settings = new FakeAppSettings();
+        var session = new AppSession(settings);
+        var venue = Guid.NewGuid();
+
+        session.SetActiveVenue(venue, pinned: true);
+
+        Assert.Equal(venue.ToString(), settings.LastActiveVenueId);
+        Assert.True(settings.LastActiveVenuePinned);
+    }
+
+    [Fact]
+    public void Unpinning_the_same_venue_is_persisted_even_though_nothing_changed()
+    {
+        // The Auto/Pinned flip moves no venue, so a write gated on "the venue changed" would drop exactly the
+        // state this persistence exists for.
+        var settings = new FakeAppSettings();
+        var session = new AppSession(settings);
+        var venue = Guid.NewGuid();
+        session.SetActiveVenue(venue, pinned: true);
+
+        session.SetActiveVenue(venue, pinned: false);
+
+        Assert.Equal(venue.ToString(), settings.LastActiveVenueId);
+        Assert.False(settings.LastActiveVenuePinned);
+    }
+
+    [Fact]
+    public void A_deliberate_no_venue_pick_persists_as_an_empty_id_that_is_still_pinned()
+    {
+        // The bootstrap uses the pin to tell "not at a venue" apart from "never set" — both have an empty id.
+        var settings = new FakeAppSettings();
+        var session = new AppSession(settings);
+
+        session.SetActiveVenue(null, pinned: true);
+
+        Assert.Equal("", settings.LastActiveVenueId);
+        Assert.True(settings.LastActiveVenuePinned);
+    }
+
     [Fact]
     public void SetActiveVenue_records_the_pin_flag()
     {

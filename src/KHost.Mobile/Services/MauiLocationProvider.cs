@@ -11,10 +11,19 @@ namespace KHost.Mobile.Services;
 /// timeout) degrades to <c>null</c> rather than throwing. The whole lookup is marshalled to the main thread
 /// because the permission prompt requires it.
 /// </remarks>
-public sealed class MauiLocationProvider(ILogger<MauiLocationProvider> logger) : ILocationProvider
+public sealed class MauiLocationProvider(ILogger<MauiLocationProvider> logger, TimeProvider clock) : ILocationProvider
 {
     // A medium-accuracy fix is plenty to tell venues apart and is faster / lighter than best-accuracy GPS.
     private static readonly GeolocationRequest Request = new(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
+
+    // An old fix is worse than no fix: the last place this phone held a lock is usually the last venue, so handing
+    // it back silently re-selects that venue from the couch. Indoors the request above routinely times out, which
+    // makes the last-known fallback the common path rather than the rare one.
+    private static readonly TimeSpan MaxFixAge = TimeSpan.FromMinutes(2);
+
+    // A cell/wifi fix reports a neighbourhood centroid that can land inside any venue's radius by luck. Wider than
+    // the widest useful detection radius so a genuine GPS fix is never discarded.
+    private const double MaxFixAccuracyMeters = 500;
 
     public async Task<GeoPoint?> GetCurrentAsync(CancellationToken cancellationToken = default)
     {
@@ -36,6 +45,19 @@ public sealed class MauiLocationProvider(ILogger<MauiLocationProvider> logger) :
                 if (location is null)
                 {
                     logger.LogDebug("No location fix available");
+                    return null;
+                }
+
+                var age = clock.GetLocalNow() - location.Timestamp;
+                if (age > MaxFixAge)
+                {
+                    logger.LogDebug("Discarding stale location fix ({AgeMinutes:F1} min old)", age.TotalMinutes);
+                    return null;
+                }
+
+                if (location.Accuracy is double accuracy && accuracy > MaxFixAccuracyMeters)
+                {
+                    logger.LogDebug("Discarding imprecise location fix (±{Accuracy:F0} m)", accuracy);
                     return null;
                 }
 

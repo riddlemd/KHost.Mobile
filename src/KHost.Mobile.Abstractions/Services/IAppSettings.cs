@@ -22,6 +22,21 @@ public interface IAppSettings
     /// </summary>
     string LastActiveSingerId { get; set; }
 
+    /// <summary>
+    /// The id (as a string) of the venue that was active when the app last closed, restored by the launch
+    /// bootstrap. Empty means no venue — either never set, or a deliberate "not at a venue" (which
+    /// <see cref="LastActiveVenuePinned"/> distinguishes). The bootstrap clears it when it names a venue that no
+    /// longer exists. String-typed to sit in the same key/value store as the rest.
+    /// </summary>
+    string LastActiveVenueId { get; set; }
+
+    /// <summary>
+    /// Whether <see cref="LastActiveVenueId"/> was a manual pick rather than an auto-detected one. Persisted
+    /// because a pin that died with the process left location auto-detect free to re-select a venue on every
+    /// relaunch. Defaults to <c>false</c> — a fresh install starts on auto-detect.
+    /// </summary>
+    bool LastActiveVenuePinned { get; set; }
+
     /// <summary>When true, the YouTube quick link is offered for a song.</summary>
     bool YouTubeSearchEnabled { get; set; }
 

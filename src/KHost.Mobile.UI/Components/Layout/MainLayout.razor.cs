@@ -30,7 +30,30 @@ public sealed partial class MainLayout : IDisposable
 
         Session.SetActiveSinger(active.Id);
         Settings.LastActiveSingerId = active.Id.ToString();
+
+        await RestoreActiveVenueAsync();
         _ready = true;
+    }
+
+    // The venue pointer and its pin live in the session, which dies with the process — and Android kills a
+    // backgrounded app freely. Without this, every relaunch came back unpinned and let auto-detect re-pick.
+    // Runs before _ready because VenueChip (gated on it) starts location tracking the moment it initializes.
+    private async Task RestoreActiveVenueAsync()
+    {
+        var pinned = Settings.LastActiveVenuePinned;
+
+        if (!Guid.TryParse(Settings.LastActiveVenueId, out var last))
+        {
+            // Empty id + pinned is a deliberate "not at a venue"; empty + unpinned is just a fresh install.
+            if (pinned)
+                Session.SetActiveVenue(null, pinned: true);
+            return;
+        }
+
+        // A venue deleted since last launch must not leave the session pinned to nothing — drop it and let
+        // auto-detect have another go.
+        var venue = await Venues.GetAsync(last);
+        Session.SetActiveVenue(venue?.Id, pinned: venue is not null && pinned);
     }
 
     // IAppSettings has no Changed event and the layout persists across pages, so a navigation is the only cue to
