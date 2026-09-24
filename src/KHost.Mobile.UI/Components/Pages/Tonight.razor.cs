@@ -47,6 +47,8 @@ public sealed partial class Tonight : IDisposable
         Store.Changed += OnStoreChanged;
         TonightStore.Changed += OnTonightChanged;
         AlbumArt.Changed += OnArtChanged;   // covers arrive one at a time; paint each as it lands
+        Session.ActiveVenueChanged += OnVenueContextChanged;
+        Venues.Changed += OnVenueContextChanged;
         await RefreshAsync();
         _loading = false;
         await InvokeAsync(StateHasChanged);
@@ -281,6 +283,8 @@ public sealed partial class Tonight : IDisposable
         Store.Changed -= OnStoreChanged;
         TonightStore.Changed -= OnTonightChanged;
         AlbumArt.Changed -= OnArtChanged;
+        Session.ActiveVenueChanged -= OnVenueContextChanged;
+        Venues.Changed -= OnVenueContextChanged;
         _backGuard?.Dispose();
         // No scroll-lock cleanup here: the Sheet component re-reads it from the DOM as each sheet unmounts.
         _selfRef?.Dispose();
@@ -385,6 +389,25 @@ public sealed partial class Tonight : IDisposable
         _detailItem is null || _activeVenueKaraFunId is null
             ? Task.CompletedTask
             : Links.OpenAsync(Links2.KaraFunUrlFor(_activeVenueKaraFunId, _detailItem.Title, _detailItem.Artist));
+
+    // Neither store's Changed covers a venue switch, so without this the KaraFun button keeps the old venue's ID.
+    private void OnVenueContextChanged(object? sender, EventArgs e) => _ = RefreshVenueOnUiAsync();
+
+    private async Task RefreshVenueOnUiAsync()
+    {
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                await RefreshActiveVenueKaraFunAsync();
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Tonight venue refresh failed; keeping last-known KaraFun ID");
+        }
+    }
 
     private async Task RefreshActiveVenueKaraFunAsync()
     {
