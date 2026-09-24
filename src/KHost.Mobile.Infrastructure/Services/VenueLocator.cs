@@ -30,6 +30,12 @@ internal sealed class VenueLocator(
         if (here is null)
             return;
 
+        // Re-read the pin: the fix above can take seconds, and a manual pick made in that window must not be
+        // stomped by an answer that predates it — worse, the stomp also clears the pin, so every later re-check
+        // is then free to move the venue again.
+        if (session.ActiveVenuePinned)
+            return;
+
         // Read per-resolve, not cached: the setting can change between re-checks while the app stays open.
         var nearest = VenueProximity.Nearest(here, saved, settings.VenueDetectionMeters);
         if (nearest is not null && session.ActiveVenueId != nearest.Id)

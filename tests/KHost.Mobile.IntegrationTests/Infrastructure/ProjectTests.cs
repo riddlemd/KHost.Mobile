@@ -46,6 +46,22 @@ public sealed class ProjectTests : IDisposable
         });
     }
 
+    [Fact]
+    public void The_resolved_session_writes_the_active_venue_through_to_the_registered_settings()
+    {
+        // AppSession takes IAppSettings as an OPTIONAL constructor parameter so tests can new it bare. That makes
+        // "DI actually supplied it" invisible at compile time — miss it and the venue pin silently stops
+        // persisting while every unit test still passes.
+        using var provider = BuildProvider();
+        var settings = (StubSettings)provider.GetRequiredService<IAppSettings>();
+        var venue = Guid.NewGuid();
+
+        provider.GetRequiredService<IAppSession>().SetActiveVenue(venue, pinned: true);
+
+        Assert.Equal(venue.ToString(), settings.LastActiveVenueId);
+        Assert.True(settings.LastActiveVenuePinned);
+    }
+
     [Theory]
     [InlineData(typeof(ISongListStore))]
     [InlineData(typeof(ITonightStore))]
@@ -166,6 +182,8 @@ public sealed class ProjectTests : IDisposable
         public bool AutoFillMetadata { get; set; }
         public bool TonightEnabled { get; set; }
         public string LastActiveSingerId { get; set; } = "";
+        public string LastActiveVenueId { get; set; } = "";
+        public bool LastActiveVenuePinned { get; set; }
         public bool YouTubeSearchEnabled { get; set; }
         public bool SpotifySearchEnabled { get; set; }
         public bool KaraFunFeaturesEnabled { get; set; }

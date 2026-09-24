@@ -2,8 +2,12 @@ using KHost.Mobile.Abstractions.Models;
 using KHost.Mobile.Abstractions.Services;
 namespace KHost.Mobile.Infrastructure.Services;
 
-/// <summary>In-memory <see cref="IAppSession"/> — plain mutable flags, no persistence. Registered as a singleton.</summary>
-internal sealed class AppSession : IAppSession
+/// <summary>
+/// In-memory <see cref="IAppSession"/> — plain mutable flags, registered as a singleton. The one exception is the
+/// active venue, which writes through to <paramref name="settings"/> so a manual pin outlives the process; the
+/// launch bootstrap reads it back. Settings are optional so a test can <c>new</c> this bare and stay in memory.
+/// </summary>
+internal sealed class AppSession(IAppSettings? settings = null) : IAppSession
 {
     /// <inheritdoc />
     public bool LandingResolved { get; set; }
@@ -43,6 +47,15 @@ internal sealed class AppSession : IAppSession
         var venueChanged = ActiveVenueId != venueId;
         ActiveVenueId = venueId;
         ActiveVenuePinned = pinned;   // always reflects the latest caller (e.g. "resume auto" unpins the same venue)
+
+        // Unconditional, not gated on venueChanged: flipping Auto/Pinned on the same venue changes nothing but the
+        // pin, and that flip is exactly what has to survive a relaunch.
+        if (settings is not null)
+        {
+            settings.LastActiveVenueId = venueId?.ToString() ?? string.Empty;
+            settings.LastActiveVenuePinned = pinned;
+        }
+
         if (venueChanged)
             ActiveVenueChanged?.Invoke(this, EventArgs.Empty);
     }

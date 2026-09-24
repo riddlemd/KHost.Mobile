@@ -11,6 +11,8 @@ internal sealed class FakeAppSettings : IAppSettings
     public bool AutoFillMetadata { get; set; }
     public bool TonightEnabled { get; set; }
     public string LastActiveSingerId { get; set; } = "";
+    public string LastActiveVenueId { get; set; } = "";
+    public bool LastActiveVenuePinned { get; set; }
     public bool YouTubeSearchEnabled { get; set; }
     public bool SpotifySearchEnabled { get; set; }
     public bool KaraFunFeaturesEnabled { get; set; }

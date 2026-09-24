@@ -85,6 +85,21 @@ public class VenueLocatorTests
     }
 
     [Fact]
+    public async Task A_pick_made_while_the_fix_is_in_flight_is_not_overridden()
+    {
+        // The device read takes seconds, so a manual pick routinely lands inside it. The answer that comes back
+        // predates the pick and must be dropped — otherwise it both moves the venue and clears the pin, leaving
+        // every later re-check free to move it again.
+        var (locator, gps, session) = Build(TwoVenues(), AtNear);
+        gps.WhileFetching = () => session.SetActiveVenue(FarId, pinned: true);
+
+        await locator.ResolveActiveAsync();
+
+        Assert.Equal(FarId, session.ActiveVenueId);
+        Assert.True(session.ActiveVenuePinned);
+    }
+
+    [Fact]
     public async Task Leaves_the_active_venue_alone_when_there_is_no_fix()
     {
         var (locator, _, session) = Build(TwoVenues(), fix: null);
@@ -139,9 +154,13 @@ public class VenueLocatorTests
     {
         public bool WasAsked { get; private set; }
 
+        /// <summary>Stands in for the seconds a real device read takes — runs before the fix comes back.</summary>
+        public Action? WhileFetching { get; set; }
+
         public Task<GeoPoint?> GetCurrentAsync(CancellationToken cancellationToken = default)
         {
             WasAsked = true;
+            WhileFetching?.Invoke();
             return Task.FromResult(fix);
         }
     }
