@@ -49,6 +49,9 @@ public sealed partial class Tonight : IDisposable
         AlbumArt.Changed += OnArtChanged;   // covers arrive one at a time; paint each as it lands
         Session.ActiveVenueChanged += OnVenueContextChanged;
         Venues.Changed += OnVenueContextChanged;
+        // Auto-expire is checked here, as the tab opens, and nowhere on a timer: the page is rebuilt on every visit,
+        // so this is every time anyone looks at the set. Clearing raises Changed, which refreshes the tab badge.
+        await TonightStore.ExpireIfStaleAsync();
         await RefreshAsync();
         _loading = false;
         await InvokeAsync(StateHasChanged);

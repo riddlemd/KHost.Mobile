@@ -10,6 +10,7 @@ internal sealed class FakeAppSettings : IAppSettings
 {
     public bool AutoFillMetadata { get; set; }
     public bool TonightEnabled { get; set; }
+    public int TonightExpiryHours { get; set; }
     public string LastActiveSingerId { get; set; } = "";
     public string LastActiveVenueId { get; set; } = "";
     public bool LastActiveVenuePinned { get; set; }

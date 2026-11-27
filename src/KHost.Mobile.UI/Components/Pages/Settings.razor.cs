@@ -24,6 +24,9 @@ public sealed partial class Settings : IDisposable
         (15, "50 ft"), (30, "100 ft"), (75, "250 ft"), (150, "500 ft"), (300, "1000 ft"),
     ];
 
+    // Auto-end-the-night windows, in hours; 0 (Off) is rendered separately.
+    private static readonly int[] TonightExpiryChoices = [2, 3, 4, 5, 6, 8];
+
     // Collapsible sections: default to all expanded, so nothing is hidden on first visit.
     private readonly HashSet<string> _collapsed = [];
     private bool IsOpen(string id) => !_collapsed.Contains(id);

@@ -16,6 +16,14 @@ public interface IAppSettings
     bool TonightEnabled { get; set; }
 
     /// <summary>
+    /// Auto-expire for the Tonight set, in hours: once this long has passed since the most recent song was ADDED,
+    /// the set is cleared as if "End night" had been tapped (performances already logged are kept). Adding a song
+    /// restarts the clock; checking off or reordering does not. <c>0</c> (the default) is off — the set stays until
+    /// it's ended by hand, as it always did.
+    /// </summary>
+    int TonightExpiryHours { get; set; }
+
+    /// <summary>
     /// The id (as a string) of the singer that was active when the app last closed. Empty when never set; the
     /// bootstrap falls back to the first singer when it's empty or names a singer that no longer exists.
     /// String-typed to sit in the same key/value store as the rest.

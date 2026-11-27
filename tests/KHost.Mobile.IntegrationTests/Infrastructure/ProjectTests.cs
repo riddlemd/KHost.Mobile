@@ -62,6 +62,21 @@ public sealed class ProjectTests : IDisposable
         Assert.True(settings.LastActiveVenuePinned);
     }
 
+    [Fact]
+    public async Task The_resolved_tonight_store_reads_auto_expire_from_the_registered_settings()
+    {
+        // Same trap as the session above: the settings parameter is optional so tests can new the store bare, so
+        // only a resolved instance proves DI supplied it — miss it and auto-expire silently never fires.
+        // The real clock is registered, so the set on disk is made old instead: no singer is active yet, so the
+        // store reads the unsuffixed file.
+        await File.WriteAllTextAsync(_dir.FilePath("tonight.json"),
+            $$"""[{ "SongId": "{{Guid.NewGuid()}}", "Order": 0, "AddedAt": "2020-01-01T21:00:00-06:00" }]""");
+        using var provider = BuildProvider();
+        ((StubSettings)provider.GetRequiredService<IAppSettings>()).TonightExpiryHours = 2;
+
+        Assert.True(await provider.GetRequiredService<ITonightStore>().ExpireIfStaleAsync());
+    }
+
     [Theory]
     [InlineData(typeof(ISongListStore))]
     [InlineData(typeof(ITonightStore))]
@@ -174,50 +189,5 @@ public sealed class ProjectTests : IDisposable
     {
         public Task<GeoPoint?> GetCurrentAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<GeoPoint?>(null);
-    }
-
-    // IAppSettings is 39 tunables wide; nothing here reads a value, only the registration graph is under test.
-    private sealed class StubSettings : IAppSettings
-    {
-        public bool AutoFillMetadata { get; set; }
-        public bool TonightEnabled { get; set; }
-        public string LastActiveSingerId { get; set; } = "";
-        public string LastActiveVenueId { get; set; } = "";
-        public bool LastActiveVenuePinned { get; set; }
-        public bool YouTubeSearchEnabled { get; set; }
-        public bool SpotifySearchEnabled { get; set; }
-        public bool KaraFunFeaturesEnabled { get; set; }
-        public bool LocationAutoDetect { get; set; }
-        public int VenueRecheckMinutes { get; set; }
-        public bool LyricsEnabled { get; set; }
-        public bool LyricsCacheEnabled { get; set; }
-        public bool ScrollToFavorited { get; set; }
-        public bool TagsEnabled { get; set; }
-        public bool AlbumArtEnabled { get; set; }
-        public bool SurpriseEnabled { get; set; }
-        public bool SurpriseSkipSungToday { get; set; }
-        public bool SurpriseFavourWellSung { get; set; }
-        public bool SurpriseNeverSungOnly { get; set; }
-        public bool SurpriseFavoritesOnly { get; set; }
-        public bool SurpriseRespectFilters { get; set; }
-        public bool RatePerformances { get; set; }
-        public bool RecencyWeightedRatings { get; set; }
-        public bool UpdateCheckEnabled { get; set; }
-        public bool TutorialCompleted { get; set; }
-        public string TutorialSeededTonightIds { get; set; } = "";
-        public bool HapticsEnabled { get; set; }
-        public bool Use24HourTime { get; set; }
-        public bool FloatFavoritesToTop { get; set; }
-        public bool ConfirmSongDelete { get; set; }
-        public int UndoWindowSeconds { get; set; }
-        public string LaunchDestination { get; set; } = "";
-        public int RecencyHalfLifeDays { get; set; }
-        public int VenueDetectionMeters { get; set; }
-        public bool ShowDistanceInFeet { get; set; }
-        public int RatingPriorWeight { get; set; }
-        public int VenueHistoryEntries { get; set; }
-        public int SpellingSuggestionLevel { get; set; }
-        public string CatalogueRegion { get; set; } = "";
-        public int ImportLookupDelayMs { get; set; }
     }
 }

@@ -36,6 +36,26 @@
                 <span class="switch__track"><span class="switch__thumb"></span></span>
             </span>
         </label>
+
+        @if (Prefs.TonightEnabled)
+        {
+            <label class="setting setting--sub setting--stack">
+                <span class="setting__text">
+                    <span class="setting__title">Auto-end the night</span>
+                    <span class="setting__desc">
+                        Clear tonight's set this long after the last song was added. Adding a song restarts the clock;
+                        what you sang stays in your history.
+                    </span>
+                </span>
+                <select class="input setting-select" @bind="Prefs.TonightExpiryHours">
+                    <option value="0">Off</option>
+                    @foreach (var hours in TonightExpiryChoices)
+                    {
+                        <option value="@hours">@hours hours</option>
+                    }
+                </select>
+            </label>
+        }
         }
     </div>
 

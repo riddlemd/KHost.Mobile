@@ -25,7 +25,8 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
     // GetLocalNow, not GetUtcNow: every stored timestamp in this app is local, and switching would shift every
     // new entry by the UTC offset against the ones already on the device.
     private readonly TimeProvider _clock;
-
+    // Optional like the session: a bare test store never expires. DI supplies the real settings.
+    private readonly IAppSettings? _settings;
 
     /// <summary>
     /// The Tonight set is per-singer: it reads/writes the active singer's file (<see cref="IAppSession.ActiveSingerId"/>).
@@ -38,13 +39,15 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
         ILogger<JsonFileTonightStore>? logger = null,
         TimeProvider? timeProvider = null,
         IAtomicFileWriter? writer = null,
-        ISingerFileNames? names = null)
+        ISingerFileNames? names = null,
+        IAppSettings? settings = null)
         : base(logger ?? NullLogger<JsonFileTonightStore>.Instance, writer)
     {
         _names = names ?? new SingerFileNames();
         _paths = paths;
         _session = session;
         _clock = timeProvider ?? TimeProvider.System;
+        _settings = settings;
         if (_session is not null)
             _session.ActiveSingerChanged += OnActiveSingerChanged;
     }
@@ -80,6 +83,24 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
         }
     }
 
+    public async Task<bool> ExpireIfStaleAsync()
+    {
+        bool expired;
+        await Gate.WaitAsync();
+        try
+        {
+            expired = await ExpireLockedAsync(await LoadAsync());
+        }
+        finally
+        {
+            Gate.Release();
+        }
+
+        if (expired)
+            RaiseChanged();
+        return expired;
+    }
+
     public async Task AddAsync(Guid songId)
     {
         var changed = false;
@@ -87,6 +108,9 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
         try
         {
             var entries = await LoadAsync();
+            // Expire BEFORE adding: otherwise the new song's AddedAt would restart the clock and revive last
+            // night's set underneath it.
+            changed = await ExpireLockedAsync(entries);
             if (entries.Any(e => e.SongId == songId))
                 return;   // already queued
 
@@ -236,6 +260,26 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
 
         if (changed)
             RaiseChanged();
+    }
+
+    // Callers must hold Gate. Clears and persists a set whose newest entry is past the auto-expire window; the
+    // caller raises Changed after releasing the gate. Measured from the newest AddedAt so every add restarts the
+    // clock, and from the stored instant rather than a timer so it holds across an app kill or a night asleep.
+    private async Task<bool> ExpireLockedAsync(List<TonightEntry> entries)
+    {
+        var hours = _settings?.TonightExpiryHours ?? 0;
+        if (hours <= 0 || entries.Count == 0)
+            return false;
+
+        var lastAdded = entries.Max(e => e.AddedAt);
+        if (_clock.GetLocalNow() - lastAdded < TimeSpan.FromHours(hours))
+            return false;
+
+        Log.LogInformation("Tonight set expired: {Count} entries, last added {LastAdded}, window {Hours} h",
+            entries.Count, lastAdded, hours);
+        entries.Clear();
+        await SaveAsync(entries);
+        return true;
     }
 
     // Callers must hold Gate.
