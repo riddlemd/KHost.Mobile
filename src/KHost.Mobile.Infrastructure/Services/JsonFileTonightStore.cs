@@ -119,6 +119,9 @@ internal sealed class JsonFileTonightStore : JsonFileStore<TonightEntry>, ITonig
                 SongId = songId,
                 Order = entries.Count,
                 AddedAt = _clock.GetLocalNow(),
+                // Where it was signed up. Stamped here rather than by each caller so every way of adding a song
+                // (card button, detail sheet, tutorial) records it the same way.
+                VenueId = _session?.ActiveVenueId,
             });
             Renumber(entries);
             changed = true;

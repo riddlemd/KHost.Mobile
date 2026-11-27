@@ -1038,6 +1038,17 @@ body.kh-sheet-open { overflow: hidden; }
     background: var(--kh-surface); position: relative; touch-action: pan-y;
 }
 .setrow + .setrow { border-top: 1px solid var(--kh-border); }
+/* Venue header: opens each run of songs signed up at the same venue. Quieter than a row (small caps on the
+   surface-2 band, like .section-title) so it reads as a label, not as something to tap or drag. */
+.setgroup {
+    display: flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.7rem;
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--kh-text-muted); background: var(--kh-surface-2);
+}
+.setgroup + .setrow, .setrow + .setgroup { border-top: 1px solid var(--kh-border); }
+.setgroup__glyph { font-size: 0.85rem; line-height: 1; }
+.setgroup__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.setgroup__here { margin-left: auto; flex: 0 0 auto; text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--kh-primary); }
 .setrow--dragging { z-index: 2; box-shadow: var(--kh-shadow); border-radius: 0.6rem; background: var(--kh-surface-2); }
 /* Cover behind a set row. Everything theme-dependent comes from the --kh-rowart-* tokens (see :root): dark mode
    runs the cover at full strength under a scrim with white text; light mode ghosts it and keeps the row's own

@@ -41,8 +41,26 @@ else
         </div>
         <div class="tonight__progressbar"><span style="width:@Pct%"></span></div>
         <div class="tonight__body" @ref="_list">
+            @{ Guid? lastVenue = null; var firstRow = true; }
             @foreach (var (entry, song) in Rows())
             {
+                @* A venue header opens each run of songs signed up at the same place. It follows the set's order
+                   rather than sorting by venue, so drag-to-reorder still decides everything — a song dragged in
+                   among another venue's simply gets its own header. *@
+                if (ShowVenueGroups && (firstRow || entry.VenueId != lastVenue))
+                {
+                    var here = entry.VenueId is { } vid && vid == Session.ActiveVenueId;
+                    <div class="setgroup" @key="@($"venue-{entry.SongId}")" role="heading" aria-level="3">
+                        <span class="setgroup__glyph" aria-hidden="true">@VenueGlyphFor(entry.VenueId)</span>
+                        <span class="setgroup__name">@VenueLabelFor(entry.VenueId)</span>
+                        @if (here)
+                        {
+                            <span class="setgroup__here">you're here</span>
+                        }
+                    </div>
+                }
+                firstRow = false;
+                lastVenue = entry.VenueId;
                 @* data-tut anchors are on every row; the tour's querySelector spotlights the first one. *@
                 var art = AlbumArt.ViewFor(song);
                 <div class="setrow @(entry.Completed ? "done" : "") @(art.HasArt ? "setrow--art" : "") @(art.Loading ? "kh-art-loading" : "")"

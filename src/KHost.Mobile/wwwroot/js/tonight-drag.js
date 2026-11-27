@@ -27,9 +27,14 @@ window.khTonight = {
 
             const list = rows();
             const rect = row.getBoundingClientRect();
+            const mid = r => { const b = r.getBoundingClientRect(); return b.top + b.height / 2; };
             drag = {
                 row,
                 list,   // captured once — the row set can't change mid-drag, and pointermove runs per frame
+                // Every row's resting midpoint, captured before anything moves. The target slot comes from these
+                // rather than dy / rowH, because venue headers sit between some rows and a fixed row height would
+                // drift a slot per header crossed.
+                mids: list.map(mid),
                 pointerId: e.pointerId,
                 startY: e.clientY,
                 index: list.indexOf(row),
@@ -47,8 +52,10 @@ window.khTonight = {
             drag.row.style.transform = `translateY(${dy}px)`;
 
             const list = drag.list;
-            let target = drag.index + Math.round(dy / drag.rowH);
-            target = Math.max(0, Math.min(list.length - 1, target));
+            // New slot = how many of the OTHER rows the dragged row's centre has moved past.
+            const centre = drag.mids[drag.index] + dy;
+            let target = 0;
+            drag.mids.forEach((m, i) => { if (i !== drag.index && m < centre) target++; });
             drag.targetIndex = target;
 
             // Shuffle the non-dragged rows to open a gap at the target slot.

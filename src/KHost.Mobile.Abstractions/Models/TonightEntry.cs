@@ -27,4 +27,9 @@ public sealed class TonightEntry
 
     /// <summary>When it was added to tonight's set.</summary>
     public DateTimeOffset AddedAt { get; set; }
+
+    /// <summary>The venue that was active when the song was added — where it was signed up — or null when no venue
+    /// was set (and on every entry saved before this field existed). References <see cref="Venue.Id"/>; a venue
+    /// deleted since leaves the id dangling, which the page shows as a removed venue rather than guessing.</summary>
+    public Guid? VenueId { get; set; }
 }

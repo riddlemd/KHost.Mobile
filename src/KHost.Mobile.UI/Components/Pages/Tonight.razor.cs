@@ -133,6 +133,25 @@ public sealed partial class Tonight : IDisposable
                 yield return (entry, song);
     }
 
+    // ---- Venue groups ---------------------------------------------------------------------------
+    // Each entry remembers the venue it was signed up at (TonightEntry.VenueId). Shared venues, so one lookup
+    // serves every singer's set; refreshed with the venue context, so a rename or new glyph shows straight away.
+    private Dictionary<Guid, Venue> _venuesById = [];
+
+    // Headers only once something in the set carries a venue: a set saved before venues were recorded (or built
+    // entirely with no venue set) has nothing to say, and one "No venue" header over it would just be noise.
+    private bool ShowVenueGroups => _tonight.Any(e => e.VenueId is not null);
+
+    private string VenueLabelFor(Guid? venueId) => venueId switch
+    {
+        null => "No venue",
+        { } id when _venuesById.TryGetValue(id, out var v) => v.Name,
+        _ => "Removed venue",   // deleted since — say so rather than guess or hide where it came from
+    };
+
+    private string VenueGlyphFor(Guid? venueId) =>
+        venueId is { } id && _venuesById.TryGetValue(id, out var v) ? v.Glyph : "📍";
+
     private void ArmRemove(SongListItem song) => _removeSong = song;
     private void CancelRemove() => _removeSong = null;
 
@@ -414,6 +433,7 @@ public sealed partial class Tonight : IDisposable
 
     private async Task RefreshActiveVenueKaraFunAsync()
     {
+        _venuesById = (await Venues.GetAllAsync()).ToDictionary(v => v.Id);
         var venue = Session.ActiveVenueId is { } id ? await Venues.GetAsync(id) : null;
         _activeVenueKaraFunId = string.IsNullOrWhiteSpace(venue?.KaraFunVenueId) ? null : venue!.KaraFunVenueId;
     }
