@@ -1,6 +1,7 @@
 using KHost.Mobile.Abstractions.Clients.CoverArt;
 using KHost.Mobile.Abstractions.Clients.Lyrics;
 using KHost.Mobile.Abstractions.Clients.Metadata;
+using KHost.Mobile.Abstractions.Clients.Search;
 using KHost.Mobile.Abstractions.Clients.Spotify;
 using KHost.Mobile.Abstractions.Clients.Updates;
 using KHost.Mobile.Abstractions.Clients.YouTubeMusic;
@@ -46,6 +47,7 @@ public static class Project
         Add(services.AddHttpClient<ITrackMetadataLookup, ITunesTrackMetadataLookup>());
         Add(services.AddHttpClient<ICoverArtLookup, DeezerCoverArtLookup>());
         Add(services.AddHttpClient<ISpellingSuggestionLookup, DeezerSpellingSuggestionLookup>());
+        Add(services.AddHttpClient<ISongSearch, DeezerSongSearch>());
 
         Add(services.AddHttpClient<ILyricsLookup, LrcLibLyricsClient>(http =>
         {

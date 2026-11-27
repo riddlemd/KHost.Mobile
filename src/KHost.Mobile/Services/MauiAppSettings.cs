@@ -11,6 +11,7 @@ public sealed class MauiAppSettings : IAppSettings
 {
     private const string AutoFillMetadataKey = "settings.autofill_metadata";
     private const string TonightKey = "settings.tonight";
+    private const string SongSearchKey = "settings.song_search";
     private const string TonightExpiryHoursKey = "settings.tonight_expiry_hours";
     private const string SurpriseKey = "settings.surprise";
     private const string YouTubeSearchKey = "settings.youtube_search";
@@ -61,6 +62,12 @@ public sealed class MauiAppSettings : IAppSettings
     {
         get => Preferences.Default.Get(TonightKey, true);
         set => Preferences.Default.Set(TonightKey, value);
+    }
+
+    public bool SongSearchEnabled
+    {
+        get => Preferences.Default.Get(SongSearchKey, true);
+        set => Preferences.Default.Set(SongSearchKey, value);
     }
 
     // Defaults to 0 (off): the set has always waited for "End night".

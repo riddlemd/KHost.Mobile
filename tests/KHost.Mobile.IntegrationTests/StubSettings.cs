@@ -7,6 +7,7 @@ namespace KHost.Mobile.IntegrationTests;
 internal sealed class StubSettings : IAppSettings
 {
     public bool AutoFillMetadata { get; set; }
+    public bool SongSearchEnabled { get; set; }
     public bool TonightEnabled { get; set; }
     public int TonightExpiryHours { get; set; }
     public string LastActiveSingerId { get; set; } = "";

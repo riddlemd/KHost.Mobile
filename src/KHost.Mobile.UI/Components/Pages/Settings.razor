@@ -79,6 +79,20 @@
 
         <label class="setting">
             <span class="setting__text">
+                <span class="setting__title">Enable Song Search</span>
+                <span class="setting__desc">
+                    Suggest songs as you type a title when adding one: yours first, then from Deezer. Tap one to fill
+                    the form in.
+                </span>
+            </span>
+            <span class="switch">
+                <input class="switch__input" type="checkbox" @bind="Prefs.SongSearchEnabled" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
+        </label>
+
+        <label class="setting">
+            <span class="setting__text">
                 <span class="setting__title">Enable “Surprise me” Button</span>
                 <span class="setting__desc">Tap the 🎲 on My Songs to pick a song at random.</span>
             </span>

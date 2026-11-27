@@ -1,0 +1,92 @@
+@using KHost.Mobile.Abstractions.Clients.Search
+@inject ISongSearch Search
+@inject IAppSettings Settings
+@inject Microsoft.Extensions.Logging.ILogger<SongSearchPanel> Log
+
+@* Suggestions under the Add-a-song title/artist field: the singer's own songs first (offline, instant), then the
+   online catalogue. In-flow rather than a floating dropdown, so it pushes the form down instead of hiding under
+   the on-screen keyboard or getting clipped by the sheet's scroll box. Renders nothing until there's something
+   to say. *@
+@if (Visible)
+{
+    <div class="song-search" role="listbox" aria-label="Song suggestions">
+        @if (_local.Count > 0)
+        {
+            <div class="song-search__sec">In My Songs</div>
+            @foreach (var item in _local)
+            {
+                <button type="button" class="song-search__row song-search__row--mine" role="option" @key="item.Id"
+                        @onclick="() => OnOpen.InvokeAsync(item)">
+                    @if (Settings.AlbumArtEnabled && item.ArtworkUrl is { } mineArt)
+                    {
+                        <img class="song-search__art" src="@mineArt" alt="" loading="lazy" />
+                    }
+                    else
+                    {
+                        <span class="song-search__art song-search__art--mine" aria-hidden="true">🎤</span>
+                    }
+                    <span class="song-search__main">
+                        <span class="song-search__t">@item.Title</span>
+                        <span class="song-search__a">@MineDetail(item)</span>
+                    </span>
+                    <span class="song-search__open">Open ›</span>
+                </button>
+            }
+        }
+
+        @if (_hits is { Count: > 0 })
+        {
+            @if (_local.Count > 0)
+            {
+                <div class="song-search__sec">Online</div>
+            }
+            @foreach (var hit in _hits)
+            {
+                var mine = Existing(hit);
+                <button type="button" class="song-search__row" role="option" @key="@($"{hit.Title}|{hit.Artist}")"
+                        @onclick="() => mine is null ? OnPick.InvokeAsync(hit) : OnOpen.InvokeAsync(mine)">
+                    @if (hit.ThumbnailUrl is { } thumb)
+                    {
+                        <img class="song-search__art" src="@thumb" alt="" loading="lazy" />
+                    }
+                    else
+                    {
+                        <span class="song-search__art" aria-hidden="true">🎵</span>
+                    }
+                    <span class="song-search__main">
+                        <span class="song-search__t">
+                            @hit.Title
+                            @if (hit.OtherVersions > 0)
+                            {
+                                <span class="song-search__more" title="@($"{hit.OtherVersions} other versions folded in")">+@hit.OtherVersions</span>
+                            }
+                        </span>
+                        <span class="song-search__a">@hit.Artist@(string.IsNullOrWhiteSpace(hit.Album) ? "" : $" · {hit.Album}")</span>
+                    </span>
+                    @if (mine is not null)
+                    {
+                        <span class="song-search__open">In My Songs ›</span>
+                    }
+                </button>
+            }
+        }
+
+        @if (_loading && _hits is not { Count: > 0 })
+        {
+            <div class="song-search__status"><span class="song-search__spin" aria-hidden="true"></span>Searching…</div>
+        }
+        else if (_failed)
+        {
+            <div class="song-search__status">📡 Online search isn't available right now. Type the rest in as usual.</div>
+        }
+        else if (_hits is { Count: 0 } && _local.Count == 0)
+        {
+            <div class="song-search__status">No matches online. Type the rest in as usual.</div>
+        }
+
+        @if (_hits is { Count: > 0 })
+        {
+            <div class="song-search__foot"><span>Results from <b>Deezer</b></span><span>Not listed? Keep typing.</span></div>
+        }
+    </div>
+}

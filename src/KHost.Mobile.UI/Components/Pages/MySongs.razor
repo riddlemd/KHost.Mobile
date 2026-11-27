@@ -252,19 +252,59 @@
     <div class="sheet add-sheet" role="dialog" aria-modal="true" @ref="_addSheet">
         <button type="button" class="sheet__close" @onclick="CloseAdd" aria-label="Close">✕</button>
         <div class="sheet__title">Add a song you'd like to sing</div>
+        @if (PickValid)
+        {
+            <div class="picked">
+                @if (_picked!.ThumbnailUrl is { } pickedArt)
+                {
+                    <img class="picked__art" src="@pickedArt" alt="" />
+                }
+                <div class="picked__main">
+                    <div class="picked__t">@_picked.Title</div>
+                    <div class="picked__a">@_picked.Artist@(string.IsNullOrWhiteSpace(_picked.Album) ? "" : $" · {_picked.Album}")</div>
+                </div>
+                <button type="button" class="picked__undo" @onclick="UndoPick">Undo</button>
+            </div>
+        }
         <div class="field" style="margin-top:0.85rem">
             <label class="field__label" for="title">Song title</label>
-            <input id="title" class="input" placeholder="e.g. Bohemian Rhapsody"
-                   @bind="_title" @bind:event="oninput" @bind:after="OnAddFieldChanged" />
+            <input id="title" class="input" autocomplete="off"
+                   placeholder="@(Settings.SongSearchEnabled ? "Search, or type a song title" : "e.g. Bohemian Rhapsody")"
+                   @bind="_title" @bind:event="oninput" @bind:after="OnAddFieldChanged"
+                   @onfocus='() => _searchField = "title"' />
+            @if (SearchOpenFor("title"))
+            {
+                <SongSearchPanel Title="@_title" Artist="@_artist" Library="_items" OnPick="PickSearchHitAsync" OnOpen="OpenFromSearchAsync" />
+            }
         </div>
         <div class="field">
-            <label class="field__label" for="artist">Artist</label>
-            <input id="artist" class="input" placeholder="e.g. Queen"
-                   @bind="_artist" @bind:event="oninput" @bind:after="OnAddFieldChanged" />
+            <label class="field__label" for="artist">
+                Artist
+                @if (PickValid)
+                {
+                    <span class="from-search">✨ from search</span>
+                }
+            </label>
+            <input id="artist" class="input" autocomplete="off" placeholder="e.g. Queen"
+                   @bind="_artist" @bind:event="oninput" @bind:after="OnAddFieldChanged"
+                   @onfocus='() => _searchField = "artist"' />
+            @if (SearchOpenFor("artist"))
+            {
+                <SongSearchPanel Title="@_title" Artist="@_artist" Library="_items" OnPick="PickSearchHitAsync" OnOpen="OpenFromSearchAsync" />
+            }
         </div>
+        @if (_pickLookupLoading)
+        {
+            <p class="autofill-note autofill-note--busy">⏳ Looking up year &amp; genre…</p>
+        }
         <div class="field">
-            <label class="field__label" for="genre">Genre <span class="autofill-star" title="We'll look this up online if you leave it blank">✨</span> <span class="field__hint">— optional</span></label>
-            <select id="genre" class="input" @bind="_genre">
+            <label class="field__label" for="genre">Genre <span class="autofill-star" title="We'll look this up online if you leave it blank">✨</span> <span class="field__hint">— optional</span>
+                @if (_genreFromSearch)
+                {
+                    <span class="from-search">from search</span>
+                }
+            </label>
+            <select id="genre" class="input" @bind="_genre" @onfocus="() => _searchField = null">
                 <option value=""></option>
                 @foreach (var g in Genres.All)
                 {
@@ -273,9 +313,14 @@
             </select>
         </div>
         <div class="field">
-            <label class="field__label" for="year">Release year <span class="autofill-star" title="We'll look this up online if you leave it blank">✨</span> <span class="field__hint">— optional</span></label>
+            <label class="field__label" for="year">Release year <span class="autofill-star" title="We'll look this up online if you leave it blank">✨</span> <span class="field__hint">— optional</span>
+                @if (_yearFromSearch)
+                {
+                    <span class="from-search">from search</span>
+                }
+            </label>
             <input id="year" class="input num-year" type="text" inputmode="numeric" maxlength="4"
-                   placeholder="e.g. 1975" @bind="_year" @bind:event="oninput" />
+                   placeholder="e.g. 1975" @bind="_year" @bind:event="oninput" @onfocus="() => _searchField = null" />
             @if (_year.HasValue && !YearValid)
             {
                 <div class="field__error">Enter a year between 1 and @CurrentYear.</div>
@@ -283,7 +328,7 @@
         </div>
         @if (Settings.TagsEnabled)
         {
-            <div class="field">
+            <div class="field" @onfocusin="() => _searchField = null">
                 <label class="field__label">Tags <span class="field__hint">— your own labels, optional</span></label>
                 <TagInput Tags="_tags" TagsChanged="v => _tags = v" Suggestions="UsedTags" />
             </div>

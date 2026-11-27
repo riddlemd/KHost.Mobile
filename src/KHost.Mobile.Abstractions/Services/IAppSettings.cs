@@ -10,6 +10,13 @@ public interface IAppSettings
     bool AutoFillMetadata { get; set; }
 
     /// <summary>
+    /// When true, typing a title on the Add-a-song sheet suggests matching songs underneath it: your own songs
+    /// first (offline), then an online catalogue (what you type is sent to Deezer). Picking one fills in the form.
+    /// When false the sheet is the plain form it always was.
+    /// </summary>
+    bool SongSearchEnabled { get; set; }
+
+    /// <summary>
     /// When true, the "Tonight" on-deck set list is available. When false it's hidden everywhere, but the saved set
     /// is left untouched, so turning it back on restores it.
     /// </summary>

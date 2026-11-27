@@ -1,6 +1,7 @@
 using KHost.Mobile.Abstractions.Clients.CoverArt;
 using KHost.Mobile.Abstractions.Clients.Lyrics;
 using KHost.Mobile.Abstractions.Clients.Metadata;
+using KHost.Mobile.Abstractions.Clients.Search;
 using Microsoft.Extensions.Logging;
 
 namespace KHost.Mobile.UI.Components.Pages;
@@ -141,6 +142,122 @@ public sealed partial class MySongs : IDisposable
             : $"You already have \"{_title.Trim()}\" by {_artist.Trim()} in your list.";
 
     private void OnAddFieldChanged() => _confirmedDuplicate = false;
+
+    // ---- Add-a-song search (SongSearchPanel) ----
+    // Which field's suggestions are showing: "title", "artist", or null. Set on focus, so the panel follows the
+    // field being typed in and folds away when you move on to genre/year/tags; cleared by a pick.
+    private string? _searchField;
+
+    private bool SearchOpenFor(string field) => Settings.SongSearchEnabled && _searchField == field;
+
+    // The online result the form was filled from, and what had been typed before (for Undo). A pick only counts
+    // while title and artist still say what it set — retyping either means the singer has moved off it, and its
+    // cover and lookup must not ride along onto a different song.
+    private SongSearchHit? _picked;
+    private string _typedTitle = string.Empty;
+    private string _typedArtist = string.Empty;
+    private bool PickValid => _picked is not null && _title == _picked.Title && _artist == _picked.Artist;
+
+    // The year/genre lookup a pick runs straight away (so the form shows them before Add), kept so Add can stamp
+    // the song as already looked up instead of spending the same rate-limited call again in the background.
+    private SongEnrichment? _pickEnrichment;
+    private bool _pickLookupLoading;
+    private bool _genreFromSearch;
+    private bool _yearFromSearch;
+    private CancellationTokenSource? _pickCts;
+
+    private async Task PickSearchHitAsync(SongSearchHit hit)
+    {
+        if (!PickValid)
+        {
+            _typedTitle = _title;
+            _typedArtist = _artist;
+        }
+        ClearPickFills();
+        _picked = hit;
+        _title = hit.Title;
+        _artist = hit.Artist;
+        _searchField = null;
+        _confirmedDuplicate = false;
+
+        if (!Enricher.ShouldEnrich(hit.Title, hit.Artist, metadataLookedUp: false))
+            return;   // auto-fill is off: title, artist and cover are everything a pick can fill
+
+        _pickCts = new CancellationTokenSource();
+        var token = _pickCts.Token;
+        _pickLookupLoading = true;
+        StateHasChanged();
+        try
+        {
+            var result = await Enricher.EnrichAsync(new SongLookupState(hit.Title, hit.Artist, _genre, _year), token);
+            if (token.IsCancellationRequested || !PickValid || _picked != hit)
+                return;
+
+            _pickEnrichment = result;
+            // Only into blanks: a genre or year the singer chose themselves is never overwritten.
+            if (result?.Genre is { } genre && string.IsNullOrWhiteSpace(_genre))
+            {
+                _genre = genre;
+                _genreFromSearch = true;
+            }
+            if (result?.Year is { } year && _year is null)
+            {
+                _year = year;
+                _yearFromSearch = true;
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            // best-effort: Add still runs the usual background lookup when this one didn't land
+            Log.LogWarning(ex, "Year/genre lookup for a picked search result failed");
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+                _pickLookupLoading = false;
+        }
+    }
+
+    // Puts back what was typed before the pick, and takes away only what the pick filled in.
+    private void UndoPick()
+    {
+        ClearPickFills();
+        _title = _typedTitle;
+        _artist = _typedArtist;
+        _picked = null;
+        _searchField = "title";
+    }
+
+    private void ClearPickFills()
+    {
+        _pickCts?.Cancel();
+        _pickCts = null;
+        _pickLookupLoading = false;
+        _pickEnrichment = null;
+        if (_genreFromSearch)
+            _genre = string.Empty;
+        if (_yearFromSearch)
+            _year = null;
+        _genreFromSearch = _yearFromSearch = false;
+    }
+
+    private void ResetSearchState()
+    {
+        ClearPickFills();
+        _picked = null;
+        _searchField = null;
+        _typedTitle = _typedArtist = string.Empty;
+    }
+
+    // A song the singer already has: open it instead of adding a duplicate. What was typed stays in the form for
+    // if they come back to add something else.
+    private async Task OpenFromSearchAsync(SongListItem item)
+    {
+        _searchField = null;
+        _addOpen = false;
+        await OpenDetailAsync(item.Id.ToString());
+    }
 
     private void SortBy(SortColumn column)
     {
@@ -380,7 +497,13 @@ public sealed partial class MySongs : IDisposable
     // ---- Add-a-song sheet (floating "+") ----
     private void OpenAdd() => _addOpen = true;
 
-    private void CloseAdd() => _addOpen = false;
+    private void CloseAdd()
+    {
+        _addOpen = false;
+        _searchField = null;   // the typed text stays for next time; the panel reopens when the field is focused
+        _pickCts?.Cancel();
+        _pickLookupLoading = false;
+    }
 
     // Pull-down-to-dismiss from khSheet (the add sheet already animated off-screen).
     [JSInvokable]
@@ -892,6 +1015,7 @@ public sealed partial class MySongs : IDisposable
         if (_ratingPromptItem is not null) { CloseRatingPrompt(); return true; }
         if (_historyItem is not null) { CloseHistory(); return true; }
         if (_lyricsItem is not null) { CloseLyrics(); return true; }
+        if (_addOpen && SearchOpenFor(_searchField ?? "")) { _searchField = null; return true; }   // suggestions first
         if (_addOpen) { CloseAdd(); return true; }
         if (_filterSheetOpen) { CloseFilterSheet(); return true; }
         if (_surpriseSheetOpen) { CloseSurpriseOptions(); return true; }
@@ -1218,11 +1342,37 @@ public sealed partial class MySongs : IDisposable
         var added = await Store.AddAsync(_title, _artist, _notes, _genre, _year);
         // AddAsync has no tags parameter — persist any in a follow-up write so the store stays simple.
         var tags = SongTags.Normalize(_tags);
+        var dirty = false;
         if (tags.Count > 0)
         {
             added.Tags = tags;
-            await Store.UpdateAsync(added);
+            dirty = true;
         }
+
+        // A search pick brings its own cover, and its year/genre lookup has already been spent — stamp both so the
+        // background auto-fill below doesn't repeat it. Only while the form still shows the picked song.
+        var lookupDone = false;
+        if (PickValid)
+        {
+            if (_picked!.ArtworkUrl is { } art)
+            {
+                added.ArtworkUrl = art;
+                added.ArtworkLookedUp = true;
+                dirty = true;
+            }
+            if (_pickEnrichment is { } done)
+            {
+                added.MetadataLookedUp = true;
+                added.SuggestedTitle = done.Suggestion?.Title;
+                added.SuggestedArtist = done.Suggestion?.Artist;
+                if (added.ArtworkUrl is null && done.ArtworkUrl is not null)
+                    added.ArtworkUrl = done.ArtworkUrl;
+                added.ArtworkLookedUp |= done.ArtworkLookedUp;
+                lookupDone = dirty = true;
+            }
+        }
+        if (dirty)
+            await Store.UpdateAsync(added);
         // Switch to newest-first so the song they just added is right at the top (favorites still float above it).
         _sort = SortColumn.Added;
         _sortDescending = true;
@@ -1232,10 +1382,13 @@ public sealed partial class MySongs : IDisposable
         _year = null;
         _confirmedDuplicate = false;
         _addOpen = false;   // collapse the form on a successful add; the new song is now visible at the top
+        _genreFromSearch = _yearFromSearch = false;   // the fills are the song's now; don't let a reset clear the next form
+        ResetSearchState();
 
         // Background so the add returns immediately and never blocks on the network; when the lookup lands,
         // Store.UpdateAsync fires Changed → the list re-renders with it.
-        _ = AutoFillAddedAsync(added);
+        if (!lookupDone)
+            _ = AutoFillAddedAsync(added);
     }
 
     // Fire-and-forget from AddAsync: swallows its own failures (a lookup must never crash the app) and is
@@ -1408,6 +1561,7 @@ public sealed partial class MySongs : IDisposable
         _undoCts?.Dispose();
         _suggestCts?.Cancel();
         _suggestCts?.Dispose();
+        _pickCts?.Cancel();
         _lyricsCts?.Cancel();
         _lyricsCts?.Dispose();
         _bgFillCts.Cancel();

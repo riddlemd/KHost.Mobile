@@ -1,6 +1,7 @@
 using KHost.Mobile.Abstractions.Clients.CoverArt;
 using KHost.Mobile.Abstractions.Clients.Lyrics;
 using KHost.Mobile.Abstractions.Clients.Metadata;
+using KHost.Mobile.Abstractions.Clients.Search;
 using KHost.Mobile.Abstractions.Clients.Spotify;
 using KHost.Mobile.Abstractions.Clients.Updates;
 using KHost.Mobile.Abstractions.Clients.YouTubeMusic;
@@ -114,6 +115,7 @@ public sealed class ProjectTests : IDisposable
     [InlineData(typeof(ITrackMetadataLookup))]
     [InlineData(typeof(ICoverArtLookup))]
     [InlineData(typeof(ISpellingSuggestionLookup))]
+    [InlineData(typeof(ISongSearch))]
     [InlineData(typeof(ILyricsLookup))]
     [InlineData(typeof(IUpdateLookup))]
     [InlineData(typeof(ISpotifyImportService))]
@@ -157,7 +159,7 @@ public sealed class ProjectTests : IDisposable
 
         using var provider = BuildProvider(_ => configured++);
 
-        Assert.Equal(7, configured);
+        Assert.Equal(8, configured);
     }
 
     [Fact]

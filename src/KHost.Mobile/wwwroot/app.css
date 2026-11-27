@@ -1008,6 +1008,64 @@ body.kh-sheet-open { overflow: hidden; }
 .lyrics__status { margin-top: 1rem; color: var(--kh-text-muted); }
 .lyrics__attribution { margin-top: 0.85rem; font-size: 0.75rem; color: var(--kh-text-muted); }
 
+/* ---- Add-a-song search (SongSearchPanel) ------------------------------------ */
+/* In-flow under the field it belongs to, so it pushes the form down rather than floating under the keyboard. */
+.song-search {
+    margin-top: 0.35rem; background: var(--kh-surface); border: 1px solid var(--kh-border); border-radius: 0.7rem;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); overflow: hidden;
+}
+.song-search__sec {
+    font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--kh-text-muted); padding: 0.45rem 0.7rem 0.25rem;
+}
+.song-search__row {
+    display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.4rem 0.7rem; text-align: left;
+    background: none; border: none; color: var(--kh-text); font: inherit; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.song-search__row + .song-search__row { border-top: 1px solid color-mix(in srgb, var(--kh-border) 60%, transparent); }
+.song-search__row:active { background: color-mix(in srgb, var(--kh-primary) 10%, transparent); }
+.song-search__art {
+    width: 2.4rem; height: 2.4rem; flex: 0 0 auto; border-radius: 0.35rem; object-fit: cover;
+    background: var(--kh-surface-2); display: grid; place-items: center; font-size: 1rem;
+}
+.song-search__art--mine { background: var(--kh-tag-bg); }
+.song-search__main { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
+.song-search__t { font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-search__a { font-size: 0.74rem; color: var(--kh-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-search__more {
+    font-size: 0.64rem; font-weight: 600; color: var(--kh-text-muted); border: 1px solid var(--kh-border);
+    border-radius: 999px; padding: 0 0.35rem; margin-left: 0.3rem; vertical-align: 1px;
+}
+.song-search__open { flex: 0 0 auto; font-size: 0.7rem; font-weight: 600; color: var(--kh-warn); }
+.song-search__status { display: flex; align-items: center; gap: 0.45rem; padding: 0.55rem 0.7rem; font-size: 0.78rem; color: var(--kh-text-muted); }
+.song-search__spin {
+    width: 0.85rem; height: 0.85rem; border-radius: 50%; border: 2px solid var(--kh-border);
+    border-top-color: var(--kh-primary); animation: song-search-spin 0.8s linear infinite;
+}
+@keyframes song-search-spin { to { transform: rotate(360deg); } }
+.song-search__foot {
+    display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.4rem 0.7rem; font-size: 0.66rem;
+    color: var(--kh-text-muted); border-top: 1px solid var(--kh-border); background: var(--kh-surface-2);
+}
+.song-search__foot b { color: var(--kh-text); font-weight: 600; }
+/* The song a search pick filled the form from, with Undo back to what was typed. */
+.picked {
+    display: flex; align-items: center; gap: 0.7rem; margin-top: 0.85rem; padding: 0.55rem;
+    border-radius: 0.6rem; background: var(--kh-surface-2); border: 1px solid var(--kh-border);
+}
+.picked__art { width: 3.2rem; height: 3.2rem; flex: 0 0 auto; border-radius: 0.4rem; object-fit: cover; }
+.picked__main { min-width: 0; flex: 1 1 auto; }
+.picked__t { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.picked__a { font-size: 0.8rem; color: var(--kh-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.picked__undo { flex: 0 0 auto; background: none; border: none; font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--kh-primary); cursor: pointer; padding: 0.3rem; }
+/* "✨ from search" beside a label the pick filled. */
+.from-search {
+    display: inline-flex; margin-left: 0.35rem; font-size: 0.66rem; font-weight: 600; padding: 0.05rem 0.4rem;
+    border-radius: 999px; background: var(--kh-tag-bg); color: var(--kh-tag-fg); vertical-align: 1px;
+}
+.autofill-note--busy { color: var(--kh-primary); margin-top: 0; }
+
 /* ---- "Tonight" on-deck set list ---------------------------------------- */
 /* The Tonight tab's set-list card. Accent-tinted so it reads as the active in-venue mode. */
 .card.tonight { border: 1px solid var(--kh-primary); box-shadow: 0 2px 14px color-mix(in srgb, var(--kh-primary) 18%, transparent); padding: 0; overflow: hidden; }
