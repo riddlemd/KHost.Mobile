@@ -1,6 +1,7 @@
 @using KHost.Mobile.Abstractions.Clients.Search
 @inject ISongSearch Search
 @inject IAppSettings Settings
+@inject IAlbumArtService AlbumArt
 @inject Microsoft.Extensions.Logging.ILogger<SongSearchPanel> Log
 
 @* Suggestions under the Add-a-song title/artist field: the singer's own songs first (offline, instant), then the
@@ -17,9 +18,12 @@
             {
                 <button type="button" class="song-search__row song-search__row--mine" role="option" @key="item.Id"
                         @onclick="() => OnOpen.InvokeAsync(item)">
-                    @if (Settings.AlbumArtEnabled && item.ArtworkUrl is { } mineArt)
+                    @* The on-device copy the list already shows, never the remote URL: this row is the one that has to
+                       work offline, and a remote <img> there paints a broken-image icon. *@
+                    @{ var mineArt = Settings.AlbumArtEnabled ? AlbumArt.ViewFor(item) : AlbumArtView.None; }
+                    @if (mineArt.HasArt)
                     {
-                        <img class="song-search__art" src="@mineArt" alt="" loading="lazy" />
+                        <span class="song-search__art song-search__art--cached" style="@mineArt.Style" aria-hidden="true"></span>
                     }
                     else
                     {

@@ -1030,6 +1030,7 @@ body.kh-sheet-open { overflow: hidden; }
     background: var(--kh-surface-2); display: grid; place-items: center; font-size: 1rem;
 }
 .song-search__art--mine { background: var(--kh-tag-bg); }
+.song-search__art--cached { background-image: var(--kh-card-art); background-size: cover; background-position: center; }
 .song-search__main { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
 .song-search__t { font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .song-search__a { font-size: 0.74rem; color: var(--kh-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
